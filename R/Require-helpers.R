@@ -23,6 +23,7 @@ utils::globalVariables(c(
 #' @return
 #' `parseGitHub` returns a `data.table` with added columns.
 #'
+#' @family version specifications
 #' @export
 #' @rdname GitHubTools
 #' @param pkgDT A pkgDT data.table.
@@ -74,6 +75,7 @@ parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
   pkgDT[]
 }
 
+#' @return `DESCRIPTIONFileVersionV()` and `DESCRIPTIONFileOtherV()` return a character vector with one element per `file` (the `Version` field, or the field named in `other`); `dlGitHubDESCRIPTION()` returns the `data.table` of parsed GitHub refs with the local path of each downloaded DESCRIPTION file in a `DESCFile` column.
 #' @rdname DESCRIPTION-helpers
 #' @param file A file path to a DESCRIPTION file
 DESCRIPTIONFileVersionV <- function(file, purge = getOption("Require.purge", FALSE)) {
@@ -295,6 +297,10 @@ dlGitHubFile <- function(pkg, filename = "DESCRIPTION",
 #' These are wrappers around available.packages and also get the archived versions
 #' available on CRAN.
 #'
+#' @return `dlArchiveVersionsAvailable()`: a list with one `data.table` per `package`, the
+#'   versions found in the CRAN archive (`repo`, `PackageUrl` and file metadata), empty when
+#'   none. `available.packagesCached()`: the available-packages table for `repos`, as a
+#'   `data.table` (default) or a matrix as `utils::available.packages()` returns it.
 #' @rdname availableVersions
 #' @export
 #' @param package A single package name (without version or github specifications)
@@ -473,8 +479,16 @@ useLoadedIfSufficient <- function(pkgDT,
       ok <- isTRUE(compareVersion2(loadedVer, vSpec, ineq))
       if (!ok) next
     }
-    lp <- tryCatch(dirname(system.file(package = pkg)),
-                   error = function(e) NA_character_)
+    # suppressWarnings: this is a best-effort "where does pkg live" probe. When a
+    # namespace stays loaded after its files were removed (the very case the
+    # hasDescOnDisk check below handles), system.file()/find.package() walk the
+    # libPaths and read.dcf() the stale DESCRIPTION path, emitting "cannot open
+    # compressed file '<lib>/<pkg>/DESCRIPTION'". (Pronounced under devtools::test,
+    # where pkgload shims system.file().) tryCatch only traps errors, so that
+    # warning leaked out and tripped tests asserting a clean warning set. The
+    # missing-files case is already handled below; the warning is pure noise here.
+    lp <- suppressWarnings(tryCatch(dirname(system.file(package = pkg)),
+                                    error = function(e) NA_character_))
     if (!nzchar(lp)) lp <- NA_character_
     if (!is.na(lp) && !normPath(lp) %in% effectiveLibPaths) next
     ## Disk-presence check: a namespace can stay loaded after its files are
@@ -641,8 +655,16 @@ isBinary <- function(fn, needRepoCheck = TRUE, repos = getOption("repos")) {
   theTest
 }
 
-isBinaryCRANRepo <- function(curCRANRepo = getOption("repos")[["CRAN"]],
+isBinaryCRANRepo <- function(curCRANRepo = NULL,
                              repoToTest = formals(setLinuxBinaryRepo)[["binaryLinux"]]) {
+  if (is.null(curCRANRepo)) {
+    r <- getOption("repos")
+    # `r[["CRAN"]]` throws "subscript out of bounds" on a named character
+    # vector when no element is named "CRAN" -- can happen if a caller has
+    # rebuilt `options("repos")` in a way that drops names (e.g. via
+    # `unique(c(extraRepo, getOption("repos")))`).
+    curCRANRepo <- if ("CRAN" %in% names(r)) r[["CRAN"]] else NA_character_
+  }
   if (isWindows() || isMacOS()) {
     isBin <- grepl("[\\|/])|/bin[\\|/]", curCRANRepo)
   } else {
@@ -1839,6 +1861,27 @@ rmEmptyFiles <- function(files, minSize = 100) {
 }
 
 
+#' GET a URL with a GitHub token, falling back to an unauthenticated request
+#'
+#' Signs the request with `httr::add_headers(Authorization = token)` when a
+#' token is supplied, and retries without credentials if GitHub rejects them or
+#' returns a 404. `token` must carry the `"token "` prefix that
+#' [getGitCredsToken()] produces -- a bare PAT authenticates nothing.
+#'
+#' Exported for the SpaDES packages, which query the GitHub API for module
+#' repositories and need the same authentication behaviour as `Require`. Not
+#' part of the advertised API.
+#'
+#' @param url The URL to GET.
+#' @param token A GitHub token of the form `"token <pat>"`, or `NULL` for an
+#'   unauthenticated request.
+#' @param verbose Numeric or logical, controlling messaging verbosity.
+#'
+#' @return The `httr` response object.
+#'
+#' @export
+#' @keywords internal
+#' @rdname GETWauthThenNonAuth
 GETWauthThenNonAuth <- function(url, token, verbose = getOption("Require.verbose")) {
   if (is.null(token)) {
     a <- httr::GET(url)
@@ -1896,7 +1939,36 @@ masterOrMainFromGitRefs <- function(gitRefsSplit2) {
   br
 }
 
+#' Find a GitHub token, from the git credential store or the environment
+#'
+#' `gitcreds::gitcreds_get()` reads the *git credential store* only; it does not
+#' consult `GITHUB_PAT` or `GITHUB_TOKEN`. CI runners routinely set the
+#' environment variable and configure no credential helper, so relying on
+#' gitcreds alone left API calls unauthenticated and subject to GitHub's
+#' 60-request/hour per-IP limit -- which surfaces as intermittent HTTP 403s
+#' spread across whichever job happens to exhaust the quota.
+#'
+#' The credential store still wins when it has something, so behaviour on a
+#' developer machine is unchanged; the environment is only a fallback.
+#'
+#' Exported for the SpaDES packages, which authenticate GitHub API calls the
+#' same way. Not part of the advertised API.
+#'
+#' @return The `"token <pat>"` string [GETWauthThenNonAuth()] expects, or `NULL`.
+#' @export
+#' @keywords internal
+#' @rdname getGitCredsToken
 getGitCredsToken <- function() {
+  token <- gitcredsToken()
+  if (is.null(token)) {
+    token <- envToken()
+  }
+  token
+}
+
+## Kept as its own function so tests can drive the "no credential store" case
+## without mocking another package's bindings.
+gitcredsToken <- function() {
   token <- tryCatch(
     gitcreds::gitcreds_get(use_cache = FALSE),
     error = function(e) NULL
@@ -1905,6 +1977,14 @@ getGitCredsToken <- function() {
     token <- paste0("token ", token$password)
   }
   token
+}
+
+envToken <- function() {
+  pat <- Sys.getenv("GITHUB_PAT", unset = "")
+  if (!nzchar(pat)) {
+    pat <- Sys.getenv("GITHUB_TOKEN", unset = "")
+  }
+  if (nzchar(pat)) paste0("token ", pat) else NULL
 }
 
 

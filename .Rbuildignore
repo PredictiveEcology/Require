@@ -31,3 +31,4 @@ inst\timings.csv
 ^HANDOFF\.md$
 ^\.vscode$
 ^\.positai$
+^winbuilder-https-upload\.md$

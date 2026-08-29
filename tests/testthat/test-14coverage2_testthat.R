@@ -402,3 +402,66 @@ test_that("removeOldFlatCachePkgs removes flat .tar.gz files", {
     testthat::expect_false(file.exists(fakeFile))
   })
 })
+
+test_that("pkgsInSearch skips non-package entries on the search path", {
+  ## attach() puts non-package environments on the search path: pkgload uses
+  ## devtools_shims, and a .Rprofile may attach its own helpers. These used to
+  ## be passed to the resolver, which then hung trying to resolve them -- so
+  ## this asserts on the selection itself, not via pkgDepTopoSort(), which
+  ## would hang rather than fail if this regressed.
+  attach(list(), name = "devtools-shims", warn.conflicts = FALSE)
+  on.exit(detach("devtools-shims", character.only = TRUE), add = TRUE)
+  attach(list(), name = "aRandomAttachedObject", warn.conflicts = FALSE)
+  on.exit(detach("aRandomAttachedObject", character.only = TRUE), add = TRUE)
+
+  out <- Require:::pkgsInSearch()
+
+  expect_false("devtools-shims" %in% out)
+  expect_false("aRandomAttachedObject" %in% out)
+  ## every remaining entry is a package that is actually attached
+  expect_true(all(paste0("package:", out) %in% search()))
+  ## and a genuinely attached package still comes through
+  expect_true("Require" %in% out || !("package:Require" %in% search()))
+})
+
+test_that("pkgDepTopoSort orders and levels a supplied graph", {
+  ## a -> b, c ; b -> d ; c -> d ; e -> a ; f alone ; g -> zzz (not in the set)
+  g <- list(a = c("b", "c"), b = "d", c = "d", d = character(),
+            e = "a", f = character(), g = "zzz")
+  out <- pkgDepTopoSort(names(g), deps = g)
+  lvl <- unlist(attr(out, "installSafeGroups"))
+
+  expect_setequal(names(out), names(g))
+  ## every in-set dependency sits in a strictly earlier level ...
+  for (p in names(g)) {
+    d <- intersect(g[[p]], names(g))
+    if (length(d)) expect_true(all(lvl[d] < lvl[p]), label = p)
+  }
+  ## ... and the order agrees with the levels
+  expect_false(is.unsorted(lvl[names(out)]))
+  ## a package with no in-set deps is level 0, even if it depends on something outside
+  expect_identical(unname(lvl[c("d", "f", "g")]), c(0L, 0L, 0L))
+  ## the longest chain d -> b -> a -> e spans four levels
+  expect_identical(unname(lvl[c("d", "b", "a", "e")]), 0:3)
+  ## returnFull = FALSE gives each package's in-set deps
+  expect_identical(pkgDepTopoSort(names(g), deps = g, returnFull = FALSE)[["a"]], c("b", "c"))
+
+  expect_warning(pkgDepTopoSort(c("x", "y", "z"), deps = list(x = "y", y = "x", z = character())),
+                 "mutually dependent")
+})
+
+test_that("pakPinnedResolve keeps the graph and drops what the snapshot did not pin", {
+  ## a solve of a 'snapshot' that pins a and b, where a Imports b and Suggests s,
+  ## and pak brought in c because b Imports it -- c is not pinned
+  mkdeps <- function(...) data.frame(package = c(...), type = rep("Imports", length(c(...))))
+  pak_result <- data.frame(package = c("a", "b", "c"), version = c("1", "2", "3"))
+  pak_result$deps <- list(rbind(mkdeps("b"), data.frame(package = "s", type = "Suggests")),
+                          mkdeps("c"), mkdeps())
+  pkgDT <- data.table::data.table(Package = c("a", "b", "c"))
+
+  expect_warning(out <- Require:::pakPinnedResolve(pkgDT, pak_result, pinned = c("a", "b"), verbose = -2),
+                 "not pinned.*: c$")
+  expect_identical(out$Package, c("a", "b"))
+  graph <- Require:::pakHardDepGraph(pak_result)
+  expect_identical(graph, list(a = "b", b = "c", c = character()))   # Suggests excluded
+})

@@ -37,33 +37,29 @@
 #' @export
 #' @importFrom utils compareVersion
 #' @inheritParams Require
-#' @examples
-#' \donttest{
-#' if (Require:::.runLongExamples()) {
-#'   opts <- Require:::.setupExample()
-#'   origDir <- setwd(tempdir())
-#'   td <- tempdir()
-#'   setLibPaths(td) # set a new R package library locally
-#'   setLibPaths() # reset it to original
-#'   setwd(origDir)
-#'   # Using standAlone = FALSE means that newly installed packages
-#'   #   will be installed
-#'   #   in the new package library, but loading packages can come
-#'   #   from any of the ones listed in .libPaths()
+#' @examplesIf Require:::.runLongExamples()
+#' opts <- Require:::.setupExample()
+#' origDir <- setwd(tempdir())
+#' td <- tempdir()
+#' setLibPaths(td) # set a new R package library locally
+#' setLibPaths() # reset it to original
+#' setwd(origDir)
+#' # Using standAlone = FALSE means that newly installed packages
+#' #   will be installed
+#' #   in the new package library, but loading packages can come
+#' #   from any of the ones listed in .libPaths()
 #'
-#'   # will have 2 or more paths
-#'   otherLib <- file.path(td, "newProjectLib")
-#'   setLibPaths(otherLib, standAlone = FALSE)
-#'   # Can restart R, and changes will stay
+#' # will have 2 or more paths
+#' otherLib <- file.path(td, "newProjectLib")
+#' setLibPaths(otherLib, standAlone = FALSE)
+#' # Can restart R, and changes will stay
 #'
-#'   # remove the custom .libPaths()
-#'   setLibPaths() # reset to previous; remove from .Rprofile
-#'   # because libPath arg is empty
+#' # remove the custom .libPaths()
+#' setLibPaths() # reset to previous; remove from .Rprofile
+#' # because libPath arg is empty
 #'
-#'   Require:::.cleanup(opts)
-#'   unlink(otherLib, recursive = TRUE)
-#' }
-#' }
+#' Require:::.cleanup(opts)
+#' unlink(otherLib, recursive = TRUE)
 #'
 setLibPaths <- function(libPaths, standAlone = TRUE,
                         updateRprofile = getOption("Require.updateRprofile", FALSE),

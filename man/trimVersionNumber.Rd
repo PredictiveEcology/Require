@@ -9,6 +9,9 @@ trimVersionNumber(pkgs)
 \arguments{
 \item{pkgs}{A character string vector of packages with or without GitHub path or versions}
 }
+\value{
+A character vector the length of \code{pkgs}, each element with its version specification (and any pak source prefix) removed.
+}
 \description{
 The resulting string(s) will have only name (including github.com repository if it exists).
 }
@@ -17,4 +20,11 @@ trimVersionNumber("PredictiveEcology/Require (<=0.0.1)")
 }
 \seealso{
 \code{\link[=extractPkgName]{extractPkgName()}}
+
+Other version specifications:
+\code{\link[=compareVersion2]{compareVersion2()}},
+\code{\link[=extractPkgName]{extractPkgName()}},
+\code{\link[=parseGitHub]{parseGitHub()}},
+\code{\link[=trimRedundancies]{trimRedundancies()}}
 }
+\concept{version specifications}

@@ -1,0 +1,56 @@
+Package,Version,LibPath,Depends,Imports,LinkingTo,Remotes,GithubRepo,GithubUsername,GithubRef,GithubSHA1,GithubSubFolder,Repository,GitSubFolder
+"R","4.4",NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
+"askpass","1.2.1","/tmp/RtmpURv7cY/snapshotLib","","sys (>= 2.1)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"assertthat","0.2.1","/tmp/RtmpURv7cY/snapshotLib","","tools","","",NA,NA,NA,NA,NA,"RSPM",NA
+"backports","1.4.1","/tmp/RtmpURv7cY/snapshotLib","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"BH","1.90.0-1","/tmp/RtmpURv7cY/snapshotLib","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"bit","4.6.0","/tmp/RtmpURv7cY/snapshotLib","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"bit64","4.8.4","/tmp/RtmpURv7cY/snapshotLib","","bit (>= 4.0.0), graphics, methods, stats, utils","","",NA,NA,NA,NA,NA,"RSPM",NA
+"bitops","1.0-7","/tmp/RtmpURv7cY/snapshotLib","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"callr","3.8.0","/tmp/RtmpURv7cY/snapshotLib","","otel (>= 0.2.0), processx (>= 3.6.1), R6, utils","","",NA,NA,NA,NA,NA,"RSPM",NA
+"cli","3.6.6","/tmp/RtmpURv7cY/snapshotLib","","utils","","",NA,NA,NA,NA,NA,"RSPM",NA
+"crayon","1.5.3","/tmp/RtmpURv7cY/snapshotLib","","grDevices, methods, utils","","",NA,NA,NA,NA,NA,"RSPM",NA
+"curl","8.0.0","/tmp/RtmpURv7cY/snapshotLib","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"data.table","1.18.6.1","/tmp/RtmpURv7cY/snapshotLib","","methods","","",NA,NA,NA,NA,NA,"RSPM",NA
+"digest","0.6.39","/tmp/RtmpURv7cY/snapshotLib","","utils","","",NA,NA,NA,NA,NA,"RSPM",NA
+"dplyr","1.2.1","/tmp/RtmpURv7cY/snapshotLib","","cli (>= 3.6.2), generics, glue (>= 1.3.2), lifecycle (>=        1.0.5), magrittr (>= 1.5), methods, pillar (>= 1.9.0), R6, rlang (>= 1.1.7), tibble (>= 3.2.0), tidyselect (>= 1.2.0), utils, vctrs (>= 0.7.1)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"dqrng","0.4.1","/tmp/RtmpURv7cY/snapshotLib","","Rcpp (>= 0.12.16)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"fastmap","1.2.0","/tmp/RtmpURv7cY/snapshotLib","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"fastmatch","1.1-8","/tmp/RtmpURv7cY/snapshotLib","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"fpCompare","0.2.6","/tmp/RtmpURv7cY/snapshotLib","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"fs","2.1.0","/tmp/RtmpURv7cY/snapshotLib","","methods","","",NA,NA,NA,NA,NA,"RSPM",NA
+"generics","0.1.4","/tmp/RtmpURv7cY/snapshotLib","","methods","","",NA,NA,NA,NA,NA,"RSPM",NA
+"glue","1.8.1","/tmp/RtmpURv7cY/snapshotLib","","methods","","",NA,NA,NA,NA,NA,"RSPM",NA
+"here","1.0.2","/tmp/RtmpURv7cY/snapshotLib","","rprojroot (>= 2.1.0)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"ini","0.3.1","/tmp/RtmpURv7cY/snapshotLib","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"jsonlite","2.0.0","/tmp/RtmpURv7cY/snapshotLib","methods","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"lifecycle","1.0.5","/tmp/RtmpURv7cY/snapshotLib","","cli (>= 3.4.0), rlang (>= 1.1.0)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"magrittr","2.0.5","/tmp/RtmpURv7cY/snapshotLib","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"openssl","2.4.2","/tmp/RtmpURv7cY/snapshotLib","","askpass","","",NA,NA,NA,NA,NA,"RSPM",NA
+"otel","0.2.0","/tmp/RtmpURv7cY/snapshotLib","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"pillar","1.11.1","/tmp/RtmpURv7cY/snapshotLib","","cli (>= 2.3.0), glue, lifecycle, rlang (>= 1.0.2), utf8 (>=        1.1.0), utils, vctrs (>= 0.5.0)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"pkgconfig","2.0.3","/tmp/RtmpURv7cY/snapshotLib","","utils","","",NA,NA,NA,NA,NA,"RSPM",NA
+"png","0.1-9","/tmp/RtmpURv7cY/snapshotLib","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"praise","1.0.0","/tmp/RtmpURv7cY/snapshotLib","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"processx","3.9.0","/tmp/RtmpURv7cY/snapshotLib","","ps (>= 1.9.3), R6, utils","","",NA,NA,NA,NA,NA,"RSPM",NA
+"ps","1.9.3","/tmp/RtmpURv7cY/snapshotLib","","utils","","",NA,NA,NA,NA,NA,"RSPM",NA
+"R.methodsS3","1.8.2","/tmp/RtmpURv7cY/snapshotLib","","utils","","",NA,NA,NA,NA,NA,"RSPM",NA
+"R.oo","1.27.1","/tmp/RtmpURv7cY/snapshotLib","R.methodsS3 (>= 1.8.2)","methods, utils","","",NA,NA,NA,NA,NA,"RSPM",NA
+"R.utils","2.13.0","/tmp/RtmpURv7cY/snapshotLib","R.oo","methods, utils, tools, R.methodsS3","","",NA,NA,NA,NA,NA,"RSPM",NA
+"R6","2.6.1","/tmp/RtmpURv7cY/snapshotLib","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"Rcpp","1.1.2","/tmp/RtmpURv7cY/snapshotLib","","methods, utils","","",NA,NA,NA,NA,NA,"RSPM",NA
+"rlang","1.3.0","/tmp/RtmpURv7cY/snapshotLib","","utils","","",NA,NA,NA,NA,NA,"RSPM",NA
+"rprojroot","2.1.1","/tmp/RtmpURv7cY/snapshotLib","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"sitmo","2.0.2","/tmp/RtmpURv7cY/snapshotLib","","Rcpp (>= 0.12.13)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"stringi","1.8.9","/tmp/RtmpURv7cY/snapshotLib","","tools, utils, stats","","",NA,NA,NA,NA,NA,"RSPM",NA
+"stringr","1.6.0","/tmp/RtmpURv7cY/snapshotLib","","cli, glue (>= 1.6.1), lifecycle (>= 1.0.3), magrittr, rlang        (>= 1.0.0), stringi (>= 1.5.3), vctrs (>= 0.4.0)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"sys","3.4.3","/tmp/RtmpURv7cY/snapshotLib","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"tibble","3.3.1","/tmp/RtmpURv7cY/snapshotLib","","cli, lifecycle (>= 1.0.0), magrittr, methods, pillar (>=        1.8.1), pkgconfig, rlang (>= 1.0.2), utils, vctrs (>= 0.5.0)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"tidyselect","1.2.1","/tmp/RtmpURv7cY/snapshotLib","","cli (>= 3.3.0), glue (>= 1.3.0), lifecycle (>= 1.0.3), rlang        (>= 1.0.4), vctrs (>= 0.5.2), withr","","",NA,NA,NA,NA,NA,"RSPM",NA
+"utf8","1.2.6","/tmp/RtmpURv7cY/snapshotLib","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"vctrs","0.7.3","/tmp/RtmpURv7cY/snapshotLib","","cli (>= 3.4.0), glue, lifecycle (>= 1.0.3), rlang (>= 1.1.7)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"visualTest","1.0.0","/tmp/RtmpURv7cY/snapshotLib","","graphics, grDevices, methods, stats, tools","","","visualTest","MangoTheCat","9b835a7","9b835a707479a9162ca50f108308a5d814bbc923",NA,NA,NA
+"whisker","0.4.1","/tmp/RtmpURv7cY/snapshotLib","","","","",NA,NA,NA,NA,NA,"RSPM",NA
+"withr","3.0.3","/tmp/RtmpURv7cY/snapshotLib","","graphics, grDevices","","",NA,NA,NA,NA,NA,"RSPM",NA
+"xml2","1.6.0","/tmp/RtmpURv7cY/snapshotLib","","cli, methods, rlang (>= 1.1.0)","","",NA,NA,NA,NA,NA,"RSPM",NA
+"yaml","2.3.12","/tmp/RtmpURv7cY/snapshotLib","","","","",NA,NA,NA,NA,NA,"RSPM",NA

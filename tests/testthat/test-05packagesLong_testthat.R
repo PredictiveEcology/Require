@@ -5,10 +5,10 @@ test_that("test 5", {
   setupInitial <- setupTest()
   # on.exit(endTest(setupInitial))
 
-  # isDev <- getOption("Require.isDev")
-  # isDevAndInteractive <- getOption("Require.isDevAndInteractive")
+  # notOnCranOrCI <- getOption("Require.notOnCranOrCI")
+  # notOnCranOrCIInteractive <- getOption("Require.notOnCranOrCIInteractive")
 
-  # if (isDevAndInteractive) {
+  # if (notOnCranOrCIInteractive) {
   tmpdir <- file.path(tempdir2(paste0("RequireTmp", sample(1e5, 1))))
 
   dir.create(tmpdir, showWarnings = FALSE, recursive = TRUE)
@@ -36,9 +36,17 @@ test_that("test 5", {
     any(grepl("^data\\.table( |$)", sort(pkgDepTest1[[1]])))
   })
 
-  testthat::expect_true({
-    length(pkgDepTest2[[1]]) == 2
-  })
+  ## pkgDep2("Require")[[1]] enumerates Require's non-base Imports. The
+  ## set evolves over time (data.table, pak, sys + new additions like
+  ## callr/processx as Require grows). Don't pin to an exact count --
+  ## just assert the core deps are present.
+  ## pkgDep2() returns names with version constraints attached
+  ## (e.g. "data.table (>= 1.10.4)"); strip to bare names before %in%.
+  pkgDep2Names <- Require:::extractPkgName(names(pkgDepTest2[[1]]))
+  testthat::expect_true(
+    all(c("data.table", "pak") %in% pkgDep2Names),
+    info = paste("pkgDepTest2[[1]] names (after extractPkgName):",
+                 paste(sort(pkgDep2Names), collapse = ", ")))
   testthat::expect_true({
     all(sort(names(pkgDepTest2$Require)) == sort(pkgDepTest1$Require))
   })
@@ -133,15 +141,23 @@ test_that("test 5", {
 
     test <- testWarnsInUsePleaseChange(warns)
     # if (!isTRUE(test)) browser()
-    expect_true(test)
+    expect_true(test,
+                info = paste("pkg =", paste(pkg, collapse = ", "),
+                             "; unexpected warns:",
+                             paste(warns, collapse = " | ")))
 
     # Rerun it to get output table, but capture messages for quiet; should be no installs
     (out <- Require(pkg, standAlone = FALSE, require = FALSE, returnDetails = TRUE)) |>
       capture_warnings() -> warns
+    warns <- grep(.txtPleaseChangeReqdVers, warns, invert = TRUE, value = TRUE)
+    warns <- grep(.txtCouldNotBeInstalled, warns, invert = TRUE, value = TRUE)
 
     test <- testWarnsInUsePleaseChange(warns)
     # test <- testCouldNotBeInstalled(test)
-    expect_true(test)
+    expect_true(test,
+                info = paste("pkg =", paste(pkg, collapse = ", "),
+                             "; unexpected warns (2nd run):",
+                             paste(warns, collapse = " | ")))
 
     testthat::expect_true(
       all.equal(out, outFromRequire, check.attributes = FALSE)

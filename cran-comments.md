@@ -1,78 +1,58 @@
 ## Release information
 
-Note on the previous (cancelled) submission:
+Require 2.1.0.
 
-- The earlier submission of this version was correctly cancelled because, during the package's tests, the installation engine
-  attempted to use sudo. We investigated this immediately.
-
-- The package itself contains no calls to sudo or any other privilege-escalation command. The cause was the pak package, which this
-  release adopts as its default installation engine. On Linux,
-  pak includes an optional feature that automatically installs missing
-  system libraries, and to do so it checks for and uses sudo. This `Require` package did not disable that feature before relying on pak, and
-  one of the integration tests caused pak to run during the check, which triggered the sudo attempt on the check machine.
-
-- Once aware of the issue, we were able to reproduce it, and now we test for it.
-
-- This has been corrected in two parallel ways:
-
-  1. The package now disables pak's automatic system-library installation when it loads, before any call to pak is made. It will
-  never attempt to install system software or use elevated privileges. Installing system libraries remains the responsibility of the
-  user or system administrator. This setting is applied only when the user has not explicitly chosen otherwise, so an informed user
-  who deliberately enables the feature retains that choice.
-  2. The integration tests that install packages over the network (and therefore exercise pak) are now skipped on CRAN, so they no
-  longer run during the check. These tests continue to run in the project's continuous-integration environment. Tests that do not
-  require network access are unaffected and still run on CRAN.
-
-- We have verified that loading the package disables the feature, and that the affected tests are skipped under the CRAN check
-  environment. We apologise for the earlier submission and have taken care to ensure the package no longer attempts any system-level
-  installation or privilege escalation.
-
-- This is a major release (2.0.0). The major change is that the package
-dependency and installation engine now defaults to `pak`. The legacy
-non-pak code path is retained for users who set
-`options(Require.usePak = FALSE)`, but `pak` is the only actively
-maintained installer going forward -- the version bump signals the
-backbone switch. See `NEWS.md` for the full list of changes. 
-
-We updated the vignette that explains in detail why 
-this package plays a different role than `pak`, `renv` and `base` functions like
-`install.packages` and `require` for package management. 
-
+This release adds the `Require.noRemotes` option, which resolves GitHub-style
+package specifications from configured repositories rather than building them
+from source -- removing the need for git authentication and a compiler
+toolchain. It also exports `trimRedundancies()`, `GETWauthThenNonAuth()` and
+`getGitCredsToken()`, and fixes a number of installation-correctness bugs: exact version pins now
+reach the dependency solver, installs proceed one dependency level at a time,
+and `getCRANrepos()` no longer discards non-CRAN repositories when resolving
+the `"@CRAN@"` placeholder. See NEWS.md.
 
 ## Test environments
 
-  Require is a pure-R package (no compiled code), so the GitHub Actions +
-  win-builder matrix covers the OS / R-version surface; rhub flavours
-  that target compiled-code or numeric-precision issues (ASAN/UBSAN,
-  valgrind, ATLAS, noLD) were skipped as they add no value here.
-
-  ### GitHub Actions (run on the submitted commit)
-  The current R release is 4.6.0; the older versions below are
-  R CMD check's oldrel-1/2/3, not the release.
-  * Ubuntu 24.04 - R-devel, R 4.6.0 (release), R 4.5.3 (oldrel-1),
-    R 4.4.3 (oldrel-2), R 4.3.3 (oldrel-3)
-  * Windows Server - R-devel, R 4.6.0 (release), R 4.5.3 (oldrel-1),
-    R 4.4.3 (oldrel-2), R 4.3.3 (oldrel-3)
-  * macOS - R 4.6.0 (release)
+  ### local
+  * Ubuntu 24.04 - R 4.6.1, R 4.5.3, R 4.4.3 (the full test suite, including
+    the tests gated behind `NOT_CRAN`, passes on R 4.6.1: 822 tests)
 
   ### win-builder
-  * Windows - R-devel
-  * Windows - R 4.6.0 (current release)
+  * Windows - R-devel (2026-08-27 r90452, UCRT)
+  * Windows - R 4.6.1 (release)
   * Windows - R 4.5.3 (oldrelease)
+
+  ### GitHub Actions
+  * Ubuntu - R-devel, R 4.6 (release), R 4.5 (oldrel-1), R 4.4 (oldrel-2),
+    R 4.3 (oldrel-3)
+  * Windows Server - R-devel, R 4.6 (release), R 4.5 (oldrel-1),
+    R 4.4 (oldrel-2)
+  * macOS - R 4.6 (release)
+
+  ### R-hub
+  * macOS - R release (x86_64 and arm64)
 
 ## R CMD check results
 
-0 errors | 0 warnings | 0 notes
+0 errors | 0 warnings | 1 note
+
+The note came from the win-builder R-oldrelease (R 4.5.3) run, under "checking
+CRAN incoming feasibility". It is an HTTP 403 Forbidden on a URL in
+`man/setLibPaths.Rd`:
+
+    Found the following (possibly) invalid URLs:
+      URL: https://stackoverflow.com/a/36873741/3890027
+        From: man/setLibPaths.Rd
+        Status: 403
+        Message: Forbidden
+
+The URL is correct and opens normally in a browser. Stack Overflow returns
+403 Forbidden to non-browser clients, so the URL checker cannot fetch it -- the
+well-known false positive for stackoverflow.com links. No other platform
+flagged it: the win-builder R-devel and R-release runs, all GitHub Actions
+runs, the R-hub macOS runs and the local checks were 0 errors | 0 warnings |
+0 notes.
 
 ## Downstream dependencies
 
-We checked the 1 reverse dependency (`SpaDES.core`) from CRAN, comparing
-R CMD check results across CRAN and dev versions of this package.
-
- * We saw 0 new problems
- * We failed to check 0 packages
-
-SpaDES.core has 1 pre-existing vignette error (an `ii-modules.Rmd`
-sentinel about an interrupted `spades()` call) that occurs identically
-on both the CRAN and dev versions of Require. It is unrelated to this
-package and was present before the 2.0.0 changes.
+There are no reverse dependencies on CRAN.

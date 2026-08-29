@@ -22,3 +22,11 @@ Alternative to \code{utils::compareVersion} that is vectorized on \code{version}
 \code{versionSpec} and/or \code{inequality}. This will also return an NA element
 in the returned vector if one of the arguments has NA for that element.
 }
+\seealso{
+Other version specifications:
+\code{\link[=extractPkgName]{extractPkgName()}},
+\code{\link[=parseGitHub]{parseGitHub()}},
+\code{\link[=trimRedundancies]{trimRedundancies()}},
+\code{\link[=trimVersionNumber]{trimVersionNumber()}}
+}
+\concept{version specifications}

@@ -156,42 +156,38 @@
 #' @inheritParams pkgDep
 #' @importFrom data.table fwrite
 #' @importFrom utils write.table
-#' @examples
-#' \donttest{
-#' if (Require:::.runLongExamples()) {
-#'   opts <- Require:::.setupExample()
+#' @examplesIf Require:::.runLongExamples()
+#' opts <- Require:::.setupExample()
 #'
-#'   # install one archived version so that below does something interesting
-#'   libForThisEx <- tempdir2("Example")
-#'   Require("crayon (==1.5.1)", libPaths = libForThisEx, require = FALSE)
-#'   # Normal use -- using the libForThisEx for example;
-#'   #    normally libPaths would be omitted to get all
-#'   #    packages in user or project library
-#'   tf <- tempfile()
+#' # install one archived version so that below does something interesting
+#' libForThisEx <- tempdir2("Example")
+#' Require("crayon (==1.5.1)", libPaths = libForThisEx, require = FALSE)
+#' # Normal use -- using the libForThisEx for example;
+#' #    normally libPaths would be omitted to get all
+#' #    packages in user or project library
+#' tf <- tempfile()
 #'
-#'   # writes to getOption("Require.packageVersionFile")
-#'   # within project; also returns a vector
-#'   # of packages with version
-#'   pkgs <- pkgSnapshot(
-#'     packageVersionFile = tf,
-#'     libPaths = libForThisEx, standAlone = TRUE # only this library
-#'   )
+#' # writes to getOption("Require.packageVersionFile")
+#' # within project; also returns a vector
+#' # of packages with version
+#' pkgs <- pkgSnapshot(
+#'   packageVersionFile = tf,
+#'   libPaths = libForThisEx, standAlone = TRUE # only this library
+#' )
 #'
-#'   # Now move this file to another computer e.g. by committing in git,
-#'   #   emailing, googledrive
-#'   #   on next computer/project
-#'   Require(packageVersionFile = tf, libPaths = libForThisEx)
+#' # Now move this file to another computer e.g. by committing in git,
+#' #   emailing, googledrive
+#' #   on next computer/project
+#' Require(packageVersionFile = tf, libPaths = libForThisEx)
 #'
-#'   # Using pkgSnapshot2 to get the vector of packages and versions
-#'   pkgs <- pkgSnapshot2(
-#'     libPaths = libForThisEx, standAlone = TRUE
-#'   )
-#'   Install(pkgs) # will install packages from previous line
+#' # Using pkgSnapshot2 to get the vector of packages and versions
+#' pkgs <- pkgSnapshot2(
+#'   libPaths = libForThisEx, standAlone = TRUE
+#' )
+#' Install(pkgs) # will install packages from previous line
 #'
-#'   Require:::.cleanup(opts)
-#'   unlink(getOption("Require.packageVersionFile"))
-#' }
-#' }
+#' Require:::.cleanup(opts)
+#' unlink(getOption("Require.packageVersionFile"))
 #'
 #' @rdname pkgSnapshot
 pkgSnapshot <- function(packageVersionFile = getOption("Require.packageVersionFile"),
@@ -362,6 +358,16 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ## CRAN pin: match Version exactly.
   ## GH pin: match RemoteSha (if recorded) against GithubSHA1.
   destLib <- libPaths[1]
+
+  ## Require.snapshotInstaller = "install.packages" means exactly that: do not
+  ## touch pak at all. This chain is legacy -- retained, no longer developed --
+  ## and the only reason to exercise it is to cover code pak has otherwise
+  ## replaced. Keying the branches below on requireNamespace("pak") instead of
+  ## on the option meant that with pak installed (effectively always) the
+  ## install still went through pak, and the pure install.packages path was
+  ## unreachable. pak's own machinery is covered elsewhere.
+  useIP <- identical(getOption("Require.snapshotInstaller", "pak"),
+                     "install.packages")
 
   ## Cache the just-built binaries in pkgcache. Registered via on.exit
   ## so an interrupted run (Ctrl-C during compile, error mid-install,
@@ -1297,8 +1303,15 @@ installSnapshotViaInstallPackages <- function(snapshot,
                pkgs$GithubRepo[i], "/archive/",
                pkgs$GithubSHA1[i], ".tar.gz")
       } else {
-        rowRepo <- pkgs$Repository[i]
-        baseRepo <- if (!is.na(rowRepo) && grepl("^https?://", rowRepo))
+        ## A snapshot need not carry a Repository column at all -- a
+        ## hand-written pin list, or the rows pak adds for a dependency that
+        ## was not itself pinned, have none. pkgs$Repository is then NULL and
+        ## pkgs$Repository[i] is NULL, so `!is.na(NULL) && ...` is logical(0)
+        ## and the `if` errors with "missing value where TRUE/FALSE needed".
+        ## Guarded the same way as buildUrls() above.
+        rowRepo <- if (!is.null(pkgs$Repository)) pkgs$Repository[i] else NA_character_
+        baseRepo <- if (length(rowRepo) && !is.na(rowRepo) &&
+                        grepl("^https?://", rowRepo))
                       rowRepo
                     else if (length(ppmRepos)) ppmRepos[1]
                     else cranRepos[1]
@@ -1640,7 +1653,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
   pakErr <- NULL
   pakDetail <- character()
   pakPlanInfo <- character()
-  if (requireNamespace("pak", quietly = TRUE) && length(pakInputRefs)) {
+  if (!useIP && requireNamespace("pak", quietly = TRUE) && length(pakInputRefs)) {
     messageVerbose("Trying pak::pkg_install with ", length(pakInputRefs),
                    " ", refStrategyLabel, " refs, lib=", destLib,
                    " (fallback: install.packages)",
@@ -1851,7 +1864,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
         type = "source", dependencies = NA, Ncpus = Ncpus,
         keep_outputs = outDir,
         quiet = isTRUE(verbose < 1)))
-  } else if (requireNamespace("pak", quietly = TRUE)) {
+  } else if (!useIP && requireNamespace("pak", quietly = TRUE)) {
     messageVerbose("[snapshotInstaller] installed via pak (binary cache)",
                    verbose = verbose, verboseLevel = 1)
   } else {

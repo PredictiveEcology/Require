@@ -5,8 +5,8 @@ test_that("test 6", {
   tmpdir <- tempdir2(.rndstr())
   .libPaths(tmpdir)
 
-  isDev <- getOption("Require.isDev")
-  # isDevAndInteractive <- getOption("Require.isDevAndInteractive")
+  notOnCranOrCI <- getOption("Require.notOnCranOrCI")
+  # notOnCranOrCIInteractive <- getOption("Require.notOnCranOrCIInteractive")
 
   a <- pkgDep("Require", recursive = TRUE)
   testthat::expect_true({
@@ -128,7 +128,10 @@ test_that("test 6", {
 
   # MUST HAVE the "knownRevDeps" installed first
   skip_on_cran()
-  skip_on_ci()
+  # pkgDepTopoSort below force-installs Require from GitHub: measured 626s
+  # (10.4 min) warm-cache locally, more on a cold runner. Too heavy for all
+  # 11 matrix entries; runs on the single `runLong: true` entry instead.
+  if (!nzchar(Sys.getenv("R_REQUIRE_RUN_LONG_CI"))) skip_on_ci()
   knownRevDeps <- list(
     Require = c(
       # "reproducible",
@@ -176,7 +179,7 @@ test_that("test 6", {
     knownRevDeps[[p]][!knownRevDeps[[p]] %in% out[[p]]]
   }))
 
-  # if (isDev) {
+  # if (notOnCranOrCI) {
   testthat::expect_true({
     length(test) == 0
   })

@@ -1,14 +1,14 @@
 test_that("test 8", {
 
   # skip_if(getOption("Require.usePak"), message = "Not an option on usePak = TRUE")
-  setupInitial <- setupTest()
+  setupInitial <- setupTest(needRequireInNewLib = TRUE)
 
-  isDev <- getOption("Require.isDev")
-  isDevAndInteractive <- getOption("Require.isDevAndInteractive")
+  notOnCranOrCI <- getOption("Require.notOnCranOrCI")
+  notOnCranOrCIInteractive <- getOption("Require.notOnCranOrCIInteractive")
 
   # Skip on CI: this test installs ~100 packages (incl. heavy LandR/SpaDES
   # transitive dep tree) which routinely takes >2h on GH-hosted runners and
-  # times out. Runs locally for devs via R_REQUIRE_RUN_ALL_TESTS=true.
+  # times out. Runs locally for devs, where NOT_CRAN=true.
   skip_on_ci()
   # Same rationale applies to CRAN's check farm: 100+ source compiles leave
   # gcc `.s` intermediates in /tmp which trip the "detritus in the temp
@@ -16,7 +16,7 @@ test_that("test 8", {
   # check budget. This is a developer-only end-to-end test, not a Require
   # behaviour test that CRAN needs to run.
   skip_on_cran()
-  if (isDev) {
+  if (notOnCranOrCI) {
     projectDir <- Require:::tempdir2(Require:::.rndstr(1))
     # setLinuxBinaryRepo()
     pkgDir <- file.path(projectDir, "R")
@@ -93,6 +93,23 @@ test_that("test 8", {
     }
     # THE INSTALL
     pkgs <- c(pkgs, "xml2 (>=1.5.2)")
+
+    ## Deriv 4.3.0 calls R_ClosureFormals(), added to R's C API in 4.5.0, while
+    ## declaring only `Depends: Rcpp`. On R < 4.5 the metadata therefore says it
+    ## is installable and the build fails with
+    ##   derive_simplif.cpp:376: 'R_ClosureFormals' was not declared in this scope
+    ## Nothing downstream can resolve that -- there is no declared requirement
+    ## to fall back from -- and ggpubr reaches Deriv via rstatix -> car -> doBy,
+    ## so ggpubr became uninstallable too.
+    ##
+    ## Pin the last version that predates the API use rather than excusing
+    ## ggpubr from the check. Deriv 4.2.0 is pure R (NeedsCompilation: no, no
+    ## src/ at all), so it cannot fail to build on any R version, and CRAN
+    ## serves it from the Archive indefinitely. Only on R < 4.5: on newer R the
+    ## pin would be a pointless downgrade.
+    if (getRversion() < "4.5.0")
+      pkgs <- c("Deriv (==4.2.0)", pkgs)
+
     pkgs <- omitPkgsTemporarily(pkgs)
 
     (
@@ -100,7 +117,9 @@ test_that("test 8", {
     ) |>
       capture_warnings() -> warns
     test <- testWarnsInUsePleaseChange(warns)
-    expect_true(test)# "Require" is in use
+    expect_true(test,
+                info = paste("unexpected warns:",
+                             paste(warns, collapse = " | "))) # "Require" is in use
 
     # THE POST INSTALL COMPARISON
     ip <- data.table::as.data.table(installed.packages(lib.loc = .libPaths()[1], noCache = TRUE))
@@ -241,6 +260,11 @@ test_that("test 8", {
                     ## cascades to a load-time failure even though its own code
                     ## is fine.
                     "fireSenseUtils")
+    ## pryr 0.1.6 -- its last release, archived -- uses C entry points R removed
+    ## from the API in 4.5.0 (NAMED, FRAME, CLOENV, PRVALUE, ...), and its GitHub
+    ## HEAD is the same code, so on R >= 4.5 there is no buildable pryr anywhere.
+    if (getRversion() >= "4.5.0")
+      knownFails <- c(knownFails, "pryr")
     allInstalledPre <- allInstalled
     allInstalled <- setdiff(allInstalled, knownFails)
     cat("\n=== test-08 allInstalled diagnostic ===\n",

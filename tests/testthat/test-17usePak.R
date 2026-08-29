@@ -219,6 +219,91 @@ test_that("pakDepsResolve disk cache hit emits message at verbose = 1", {
 })
 
 # ---------------------------------------------------------------------------
+# 5b. pakPkgDepsCached: per-package (single-ref) cache. The per-package fallback
+# loop caches each ref independently so a repeat call with only a few changed
+# refs re-resolves online just those. Both cache-hit tests short-circuit before
+# any pak::pkg_deps() call, so they need no network.
+# ---------------------------------------------------------------------------
+
+test_that("pakPkgDepsCached returns from in-memory cache without network", {
+  skip_if_not_installed("pak")
+
+  query <- "any::data.table"
+  wh    <- c("Imports", "Depends", "LinkingTo")
+  repos <- c(CRAN = "https://cloud.r-project.org")
+
+  key    <- Require:::pakDepsCacheKey(query, wh, repos)
+  envKey <- paste0("pakDeps1_", key)
+  fake   <- data.frame(package = "data.table", version = "1.15.0",
+                       ref = "data.table", direct = TRUE,
+                       stringsAsFactors = FALSE)
+  assign(envKey, fake, envir = Require:::pakEnv())
+  on.exit(rm(list = envKey, envir = Require:::pakEnv()), add = TRUE)
+
+  assign(".pakPkgDepsHits", 0L, envir = Require:::pakEnv())
+  res <- Require:::pakPkgDepsCached(query, wh, repos, verbose = 0, purge = FALSE)
+  testthat::expect_identical(res, fake)
+  testthat::expect_equal(
+    get0(".pakPkgDepsHits", envir = Require:::pakEnv(), ifnotfound = 0L), 1L)
+})
+
+test_that("pakPkgDepsCached returns from disk cache and promotes to memory", {
+  skip_if_not_installed("pak")
+
+  query     <- "any::digest"
+  wh        <- c("Imports", "Depends", "LinkingTo")
+  repos     <- c(CRAN = "https://cloud.r-project.org")
+  key       <- Require:::pakDepsCacheKey(query, wh, repos)
+  envKey    <- paste0("pakDeps1_", key)
+  cacheDir  <- Require:::pakDepsCacheDirOne()
+  cacheFile <- file.path(cacheDir, paste0(key, ".rds"))
+  fake      <- data.frame(package = "digest", version = "0.6.35",
+                          ref = "digest", direct = TRUE,
+                          stringsAsFactors = FALSE)
+  dir.create(cacheDir, recursive = TRUE, showWarnings = FALSE)
+  saveRDS(fake, cacheFile)
+  on.exit(unlink(cacheFile), add = TRUE)
+
+  # No in-memory entry, so the disk path is exercised.
+  if (exists(envKey, envir = Require:::pakEnv(), inherits = FALSE))
+    rm(list = envKey, envir = Require:::pakEnv())
+  on.exit(if (exists(envKey, envir = Require:::pakEnv(), inherits = FALSE))
+            rm(list = envKey, envir = Require:::pakEnv()), add = TRUE)
+
+  res <- Require:::pakPkgDepsCached(query, wh, repos, verbose = 0, purge = FALSE)
+  testthat::expect_equal(res, fake)
+  # Promoted to the in-memory tier for subsequent same-session calls.
+  testthat::expect_true(exists(envKey, envir = Require:::pakEnv(), inherits = FALSE))
+})
+
+test_that("pakPkgDepsCached bypasses cache when purge = TRUE", {
+  skip_if_not_installed("pak")
+
+  query  <- "any::data.table"
+  wh     <- c("Imports", "Depends", "LinkingTo")
+  repos  <- c(CRAN = "https://cloud.r-project.org")
+  key    <- Require:::pakDepsCacheKey(query, wh, repos)
+  envKey <- paste0("pakDeps1_", key)
+
+  # Inject a sentinel; with purge = TRUE it must NOT be returned (the helper
+  # would instead attempt a real resolution, which we don't run here).
+  sentinel <- data.frame(package = "SENTINEL", stringsAsFactors = FALSE)
+  assign(envKey, sentinel, envir = Require:::pakEnv())
+  on.exit(if (exists(envKey, envir = Require:::pakEnv(), inherits = FALSE))
+            rm(list = envKey, envir = Require:::pakEnv()), add = TRUE)
+
+  assign(".pakPkgDepsHits", 0L, envir = Require:::pakEnv())
+  # We only assert the cache was NOT consulted (hit counter stays 0); the
+  # subsequent network resolution is allowed to fail/return anything.
+  suppressWarnings(suppressMessages(
+    try(Require:::pakPkgDepsCached(query, wh, repos, verbose = 0, purge = TRUE),
+        silent = TRUE)
+  ))
+  testthat::expect_equal(
+    get0(".pakPkgDepsHits", envir = Require:::pakEnv(), ifnotfound = 0L), 0L)
+})
+
+# ---------------------------------------------------------------------------
 # 6. recordLoadOrder: GitHub ref replaced by CRAN version-spec ref
 # ---------------------------------------------------------------------------
 
@@ -569,6 +654,34 @@ test_that("versionChanged is FALSE when preVer is NA (first-time install failure
 # ---------------------------------------------------------------------------
 # 13. pakRetryLoop upgrade flag: GitHub refs → upgrade=TRUE; CRAN → upgrade=FALSE
 # ---------------------------------------------------------------------------
+
+test_that("isGH() accepts the account names GitHub actually allows", {
+  ## Regression: the account class was "[[:alpha:]]+", so any account carrying
+  ## a hyphen or a digit -- r-lib, e-sensing, s-u, user123 -- was classified as
+  ## NOT GitHub, while extractPkgGitHub() (and so isGitHub()) classified it as
+  ## GitHub. That disagreement turned
+  ##   Install("r-lib/crancache (==0.0.0.9001)")
+  ## into a request for the git ref @0.0.0.9001: the GitHub-detecting path
+  ## built a ref out of the version, and the isGH()-gated code that treats a
+  ## trailing (==ver) as a *version* never ran.
+  gh <- c("PredictiveEcology/reproducible", "achubaty/fpCompare",
+          "r-lib/crancache", "r-lib/remotes", "e-sensing/sits",
+          "s-u/fastmatch", "user123/pkg", "cran4linux/foo",
+          "r-lib/crancache@main", "r-lib/crancache (==0.0.0.9001)")
+  testthat::expect_true(all(Require:::isGH(gh)))
+
+  notGH <- c("crancache", "crancache (==1.0)", "any::crancache",
+             "bioc::S4Vectors", "url::https://example.com/a.tar.gz",
+             "local::/home/x/pkg", "/abs/path/pkg", "C:/some/path")
+  testthat::expect_false(any(Require:::isGH(notGH)))
+
+  ## The two detectors must not drift apart again: one regex, one definition.
+  both <- c(gh, notGH)
+  testthat::expect_identical(Require:::isGH(both),
+                             !is.na(Require:::extractPkgGitHub(both)))
+  testthat::expect_identical(Require:::isGH(both),
+                             grepl(Require:::.ghRefRegex, both))
+})
 
 test_that("isGH correctly distinguishes GitHub refs from CRAN refs for upgrade flag logic", {
   # The pakRetryLoop split: ghOrUrl <- isGH(packages) | startsWith(packages, "url::")
@@ -1365,30 +1478,35 @@ test_that("pakRetryLoop GitHub batch still uses upgrade=TRUE", {
   src <- deparse(body(Require:::pakInstallFiltered))
   oneLine <- paste(src, collapse = "\n")
 
-  ## In the two-call branch (mixed batch), the GitHub call must hard-code
-  ## upgrade=TRUE to force fetching the latest commit from the branch.
-  ## Find pak::pak(packages[ghOrUrl], ...) and confirm upgrade = TRUE in
-  ## the same arg list (allowing whitespace + line breaks).
+  ## The GitHub/url batch is installed one dependency level at a time by
+  ## pakGhByLevel(); its pak::pak(lvl, ...) call must hard-code upgrade=TRUE
+  ## to force fetching the latest commit from the branch. Confirm upgrade =
+  ## TRUE in that arg list (allowing whitespace + line breaks).
   ghCall <- regmatches(oneLine, regexpr(
-    "pak::pak\\(packages\\[ghOrUrl\\][^)]*\\)", oneLine))
+    "pak::pak\\(lvl,[^)]*\\)", oneLine))
   testthat::expect_true(length(ghCall) > 0L,
-    info = "must find the pak::pak(packages[ghOrUrl], ...) call")
+    info = "must find pakGhByLevel's pak::pak(lvl, ...) call")
   testthat::expect_true(
     grepl("upgrade\\s*=\\s*TRUE", ghCall),
     info = "GitHub-batch pak call must keep upgrade=TRUE so latest commits are fetched"
   )
 })
 
-# (b) -- single-call branch upgrade flag is `any(ghOrUrl) || cranUp`,
-#         so a CRAN-only batch tracks cranUp (=forceUpgrade) and a GH-only
-#         batch always upgrades. No leaking of forceUpgrade through any
-#         other path.
-test_that("pakRetryLoop single-call branch combines ghOrUrl with cranUp (not forceUpgrade directly)", {
+# (b) -- single-call branch: a batch with any GitHub/url ref goes through
+#         pakGhByLevel() (upgrade=TRUE), and a CRAN-only batch tracks cranUp
+#         (=forceUpgrade). No leaking of forceUpgrade through any other path.
+test_that("pakRetryLoop single-call branch routes GitHub refs by level and CRAN by cranUp", {
   src <- deparse(body(Require:::pakInstallFiltered))
   oneLine <- paste(src, collapse = "\n")
+  ## Assert on the calls, not their layout: covr rewrites the body around
+  ## them, so adjacency to the `if (any(ghOrUrl))` test cannot be relied on.
   testthat::expect_true(
-    grepl("up\\s*<-\\s*any\\(ghOrUrl\\)\\s*\\|\\|\\s*cranUp", oneLine),
-    info = "single-call branch must combine ghOrUrl with cranUp")
+    grepl("pakGhByLevel\\(packages\\)", oneLine),
+    info = "a batch with GitHub/url refs must go through pakGhByLevel()")
+  cranCall <- regmatches(oneLine, regexpr(
+    "pak::pak\\(packages, [^)]*dependencies = cranDeps[^)]*\\)", oneLine))
+  testthat::expect_true(length(cranCall) > 0L && grepl("upgrade\\s*=\\s*cranUp", cranCall),
+    info = "the CRAN-only call must use upgrade = cranUp")
 })
 
 # (c) -- pakDepsToPkgDT must pin installed user packages even under
@@ -1484,4 +1602,456 @@ test_that("pinInstalledForPak skips user-version-constrained packages", {
   ## data.table had no user spec and is installed -> pinned to installed version.
   testthat::expect_true(grepl("^data.table@", out[2]),
     info = "bare user packages with no constraint must be pinned to installed version to keep deps stable")
+})
+
+# ---------------------------------------------------------------------------
+# Regression: a GitHub ref pinned by BOTH @sha and (== version) must not be
+# turned into a malformed double-@ ref `owner/repo@sha@version` by the install
+# path. equalsToAt() used to run on the whole ref, appending @version to the
+# already-@sha-pinned ref; pak then could not install it and silently kept the
+# installed version, after which Require warned "pak resolved X but only Y is
+# available as a binary". The install path now skips equalsToAt()/lessThanToAt()
+# for refs that already carry an `@` pin. (R/pak.R, pakInstallFiltered ~L3160.)
+# ---------------------------------------------------------------------------
+test_that("GitHub @sha + (== version) ref is not double-@'d by the install path", {
+  ref <- "PredictiveEcology/reproducible@63cf18a80efa5dcf40957d6f207fce55fa0fdc19 (== 3.1.1.9036)"
+  # Reproduce the pakInstallFiltered transform sequence that builds the pak ref.
+  pkgs <- Require:::HEADtoNone(ref)
+  whUnpinned <- !grepl("@", pkgs)
+  pkgs[whUnpinned] <- Require:::equalsToAt(pkgs[whUnpinned])
+  whGH <- Require:::isGH(pkgs)
+  if (any(whGH)) pkgs[whGH] <- Require:::trimVersionNumber(pkgs[whGH])
+  testthat::expect_equal(
+    pkgs, "PredictiveEcology/reproducible@63cf18a80efa5dcf40957d6f207fce55fa0fdc19")
+  testthat::expect_equal(
+    lengths(regmatches(pkgs, gregexpr("@", pkgs, fixed = TRUE))), 1L,
+    info = "ref must carry exactly one @ (the sha), never @sha@version")
+
+  # Non-GitHub (== version) refs still get pak's @version exact pin.
+  testthat::expect_equal(Require:::equalsToAt("qs (== 0.27.3)"), "qs@0.27.3")
+  # A GitHub ref WITHOUT an @ still gets the @version form (unchanged behaviour).
+  gh <- "owner/repo (== 1.2.3)"
+  whU <- !grepl("@", gh)
+  gh[whU] <- Require:::equalsToAt(gh[whU])
+  testthat::expect_equal(gh, "owner/repo@1.2.3")
+})
+
+# ---------------------------------------------------------------------------
+# 18. Cascade-casualty regression (issue: googledrive installed without gargle)
+#
+# When a few GitHub Remotes refs make the BATCH dependency solve unsolvable,
+# pak reports a cascade of innocent CRAN packages as "dependency conflict".
+# pakDepsResolve strips those CRAN refs from `pkgsForPak` to coax the batch
+# solver -- but the per-package fallback must still resolve the ORIGINAL ref
+# set (in isolation there are no cross-package conflicts), otherwise a stripped
+# top-level package (e.g. googledrive) is later installed via `user_pkgFN`
+# WITHOUT its transitive deps (e.g. gargle): a half-installed, broken namespace.
+#
+# These tests are network-free: the batch pak::pkg_deps() call is mocked to
+# throw the real conflict error, and each single-ref call returns a small fake
+# dep tree. Cache writes are redirected to a tempdir via R_REQUIRE_CACHE.
+# ---------------------------------------------------------------------------
+
+# A pak::pkg_deps()-shaped result for a single package. googledrive carries a
+# transitive `gargle` dep (both as a row and in its `deps` sub-table).
+.fakePakTreeForTest <- function(refOrName) {
+  nm <- Require:::extractPkgName(refOrName)
+  emptyDeps <- function()
+    data.frame(ref = character(), type = character(), package = character(),
+               op = character(), version = character(), stringsAsFactors = FALSE)
+  if (identical(nm, "googledrive")) {
+    pkgs <- c("googledrive", "gargle")
+    deps <- list(
+      data.frame(ref = "gargle", type = "imports", package = "gargle",
+                 op = "", version = "", stringsAsFactors = FALSE),
+      emptyDeps())
+  } else {
+    pkgs <- nm
+    deps <- list(emptyDeps())
+  }
+  data.frame(package = pkgs, version = NA_character_, ref = pkgs,
+             direct = pkgs == nm, lib_status = "new",
+             deps = I(deps), stringsAsFactors = FALSE)
+}
+
+# The real attempt-1 error shape: cascade casualties as "dependency conflict",
+# plus the genuine cross-package GitHub conflict that the batch can't solve.
+.fakeBatchConflictErr <- paste(
+  "! error in pak subprocess",
+  "Caused by error: ",
+  "! Could not solve package dependencies:",
+  "* googledrive: dependency conflict",
+  "* data.table: dependency conflict",
+  "* PredictiveEcology/quickPlot@development: Conflicts with quickPlot",
+  sep = "\n")
+
+test_that("pakDepsResolve per-package fallback keeps a cascade-casualty's transitive deps (gargle)", {
+  skip_if_not_installed("pak")
+
+  # 2 GitHub refs remain after the CRAN casualties are stripped, so the batch
+  # still has length > 1 and keeps failing -> the per-package fallback fires.
+  pkgsForPak <- c("googledrive", "data.table",
+                  "PredictiveEcology/quickPlot@development",
+                  "PredictiveEcology/SpaDES.tools@development")
+  wh    <- NA
+  repos <- c(CRAN = "https://cloud.r-project.org")
+
+  mock_pkg_deps <- function(pkg, dependencies = NA, ...) {
+    if (length(pkg) > 1L) stop(.fakeBatchConflictErr, call. = FALSE) # batch unsolvable
+    .fakePakTreeForTest(pkg)                                          # single ref: resolves
+  }
+
+  res <- withr::with_envvar(c(R_REQUIRE_CACHE = tempfile("reqcache")), {
+    withr::with_options(list(Require.purge = TRUE, Require.offlineMode = FALSE), {
+      testthat::with_mocked_bindings(
+        Require:::pakDepsResolve(pkgsForPak, wh, repos, verbose = 0, purge = TRUE),
+        pkg_deps = mock_pkg_deps, .package = "pak")
+    })
+  })
+
+  testthat::expect_false(is.null(res))
+  # The casualty (googledrive) and its transitive dep (gargle) both survive.
+  testthat::expect_true("googledrive" %in% res$package)
+  testthat::expect_true("gargle" %in% res$package,
+    info = "gargle must survive: per-package fallback resolves the ORIGINAL ref set, not the conflict-stripped one")
+})
+
+test_that("pakDepsToPkgDT closure guard re-resolves a user CRAN pkg dropped from the tree (gargle lands in pkgDT)", {
+  skip_if_not_installed("pak")
+
+  # Simulate the batch-success-with-stripped-casualty path: the resolver returns
+  # a tree that does NOT contain googledrive (it was stripped), but googledrive
+  # is a user-requested CRAN package, so the guard must resolve it individually
+  # and bring its dep (gargle) into the plan.
+  packages <- c("googledrive", "data.table")
+
+  # pakDepsResolve returns a tree WITHOUT googledrive/gargle.
+  fake_resolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NULL,
+                           type = getOption("pkgType")) {
+    data.frame(package = "data.table", version = "1.15.0", ref = "data.table",
+               direct = TRUE, lib_status = "new",
+               deps = I(list(data.frame(ref = character(), type = character(),
+                                        package = character(), op = character(),
+                                        version = character(),
+                                        stringsAsFactors = FALSE))),
+               stringsAsFactors = FALSE)
+  }
+  # The guard resolves the missing googledrive individually.
+  fake_pkgdepscached <- function(query, wh, repos, verbose, purge,
+                                 type = getOption("pkgType")) {
+    if (identical(Require:::extractPkgName(query), "googledrive"))
+      .fakePakTreeForTest("googledrive")
+    else NULL
+  }
+
+  pkgDT <- withr::with_envvar(c(R_REQUIRE_CACHE = tempfile("reqcache")), {
+    withr::with_options(list(Require.purge = TRUE), {
+      testthat::with_mocked_bindings(
+        pakDepsResolve   = fake_resolve,
+        pakPkgDepsCached = fake_pkgdepscached,
+        Require:::pakDepsToPkgDT(packages,
+                                 which = c("Imports", "Depends", "LinkingTo"),
+                                 libPaths = .libPaths(), standAlone = FALSE,
+                                 verbose = 0, purge = TRUE)
+      )
+    })
+  })
+
+  testthat::expect_true("gargle" %in% pkgDT$Package,
+    info = "closure guard must pull a dropped user CRAN package's transitive deps into the plan")
+})
+
+# ---------------------------------------------------------------------------
+# 19. dedupInstallRefs: prevent the CRAN-vs-GitHub "Conflicts with" self-conflict
+#     that forces pak into the slow one-at-a-time install fallback.
+#
+# When a package appears in the install set as BOTH a plain-CRAN ref and a
+# GitHub ref (e.g. `SpaDES.tools (>= 2.0.0)` from a module's reqdPkgs AND
+# `PredictiveEcology/SpaDES.tools@development`), pak::pak() rejects the whole
+# batch with "Conflicts with" even under dependencies = FALSE -- so the offline
+# installer degrades to installing one ref at a time (very slow) instead of one
+# parallel batch. dedupInstallRefs() drops the redundant CRAN row, keeping the
+# GitHub ref, so the parallel batch install proceeds.
+# ---------------------------------------------------------------------------
+test_that("dedupInstallRefs keeps the GitHub ref and drops the same-package CRAN ref", {
+  dt <- data.table::data.table(
+    Package         = c("SpaDES.tools", "SpaDES.tools", "DBI"),
+    packageFullName = c("SpaDES.tools (>= 2.0.0)",
+                        "PredictiveEcology/SpaDES.tools@development", "DBI"),
+    inequality      = c(">=", NA, NA),
+    needInstall     = "install")
+  out <- Require:::dedupInstallRefs(dt)
+
+  testthat::expect_false(anyDuplicated(out$Package) > 0)
+  testthat::expect_equal(
+    out[Package == "SpaDES.tools"]$packageFullName,
+    "PredictiveEcology/SpaDES.tools@development",
+    info = "the GitHub ref must win so pak does not see a CRAN-vs-GitHub conflict")
+  testthat::expect_true("DBI" %in% out$Package)   # untouched
+})
+
+test_that("dedupInstallRefs keeps the strictest constraint among duplicate CRAN rows", {
+  dt <- data.table::data.table(
+    Package         = c("stringfish", "stringfish"),
+    packageFullName = c("stringfish (<= 0.15.8)", "stringfish (>= 0.15.1)"),
+    inequality      = c("<=", ">="),
+    needInstall     = "install")
+  out <- Require:::dedupInstallRefs(dt)
+  testthat::expect_equal(nrow(out), 1L)
+  testthat::expect_equal(out$packageFullName, "stringfish (<= 0.15.8)",
+    info = "the user's '<=' pin must survive (== > <= > < > >= > >), not the transitive '>='")
+})
+
+test_that("dedupInstallRefs is a no-op when there are no duplicate packages", {
+  dt <- data.table::data.table(
+    Package         = c("DBI", "terra"),
+    packageFullName = c("DBI", "terra (>= 1.7)"),
+    inequality      = c(NA, ">="),
+    needInstall     = "install")
+  out <- Require:::dedupInstallRefs(dt)
+  testthat::expect_equal(nrow(out), 2L)
+  testthat::expect_setequal(out$Package, c("DBI", "terra"))
+})
+
+test_that("dedupInstallRefs handles a toInstall with no inequality column", {
+  dt <- data.table::data.table(
+    Package         = c("SpaDES.tools", "SpaDES.tools"),
+    packageFullName = c("SpaDES.tools", "PredictiveEcology/SpaDES.tools@development"),
+    needInstall     = "install")
+  out <- Require:::dedupInstallRefs(dt)
+  testthat::expect_equal(nrow(out), 1L)
+  testthat::expect_equal(out$packageFullName,
+                         "PredictiveEcology/SpaDES.tools@development")
+})
+
+# ---------------------------------------------------------------------------
+# A pinned GitHub commit (`owner/repo@<sha>`) is treated as an exact-version pin
+# under pak: pakDepsToPkgDT (step 4b) attaches `(== <pak-resolved-version>)` so
+# the commit's version drives whichToInstall (install when the installed version
+# differs; equal version is satisfied). isExplicitShaPin() decides which refs
+# qualify. Branch refs, (HEAD) refs, already-constrained refs, and non-GitHub
+# refs must NOT qualify.
+# ---------------------------------------------------------------------------
+test_that("isExplicitShaPin qualifies only bare GitHub @sha refs", {
+  sha <- "63cf18a80efa5dcf40957d6f207fce55fa0fdc19"
+  qualifies <- Require:::isExplicitShaPin(c(
+    paste0("PredictiveEcology/reproducible@", sha),                 # 1 bare sha   -> TRUE
+    paste0("PredictiveEcology/reproducible@", sha, " (== 3.1.1.9036)"), # 2 == set -> FALSE
+    paste0("PredictiveEcology/reproducible@", sha, " (HEAD)"),      # 3 HEAD       -> FALSE
+    "PredictiveEcology/reproducible@development",                   # 4 branch     -> FALSE
+    "PredictiveEcology/reproducible@63cf18a8",                      # 5 abbrev sha -> TRUE
+    "PredictiveEcology/reproducible",                              # 6 no @       -> FALSE
+    "reproducible (>= 2.0.0)",                                     # 7 CRAN spec  -> FALSE
+    "qs"                                                          # 8 plain      -> FALSE
+  ))
+  testthat::expect_equal(qualifies,
+                         c(TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE))
+})
+
+# ---------------------------------------------------------------------------
+# A user `>=` / `>` constraint on an already-installed-but-insufficient package
+# must UPGRADE it, not keep the old version. pak has no native lower-bound ref
+# form; the install path used to strip the constraint to a bare `any::pkg` ref,
+# and pak + upgrade=FALSE then treats an installed version as satisfying `any::`
+# and KEEPS it (e.g. reproducible 3.1.1 stayed when (>= 3.1.1.9054) was asked
+# and available). pakInstallFiltered now pins such refs to the version pak
+# resolved (pakResolvedVersionMap) -> `pkg@<version>`, which pak installs
+# regardless of the upgrade flag (and the `@` keeps `any::` off).
+# ---------------------------------------------------------------------------
+test_that(">= refs are pinned to the pak-resolved version (not stripped to any::)", {
+  on.exit(suppressWarnings(rm("pakResolvedVersionMap", envir = Require:::pakEnv())),
+          add = TRUE)
+  assign("pakResolvedVersionMap",
+         c(reproducible = "3.1.1.9054", terra = "1.9-27"),
+         envir = Require:::pakEnv())
+
+  pkgs <- c("reproducible (>= 3.1.1.9054)", "terra (> 1.5.0)", "ggplot2")
+  # replicate pakInstallFiltered's >= pinning step (R/pak.R ~3275)
+  m <- get0("pakResolvedVersionMap", envir = Require:::pakEnv(), inherits = FALSE)
+  whGE <- grepl("\\([[:space:]]*>=?[[:space:]]*[^)]+\\)", pkgs) &
+          !grepl("@", pkgs) & !Require:::isGH(pkgs)
+  for (.k in which(whGE)) {
+    .nm <- Require:::extractPkgName(pkgs[.k]); .v <- unname(m[.nm])
+    if (!is.na(.v) && nzchar(.v)) pkgs[.k] <- paste0(.nm, "@", .v)
+  }
+  testthat::expect_identical(pkgs[1], "reproducible@3.1.1.9054")
+  testthat::expect_identical(pkgs[2], "terra@1.9-27")
+  testthat::expect_identical(pkgs[3], "ggplot2")            # no constraint -> untouched
+  # a package absent from the resolved map keeps its constraint (falls through to strip)
+  pkgs2 <- "somePkg (>= 1.0)"
+  whGE2 <- grepl("\\([[:space:]]*>=?[[:space:]]*[^)]+\\)", pkgs2) & !grepl("@", pkgs2)
+  v2 <- unname(m[Require:::extractPkgName(pkgs2)])
+  testthat::expect_true(is.na(v2))   # not pinned; downstream strip handles it
+})
+
+# ---------------------------------------------------------------------------
+# flagRestartForLoadedInsufficient: a package can be installed at a satisfying
+# version while an OLDER, insufficient version is still LOADED (e.g. a dep pulled
+# in via another package's Imports from a different library before the new
+# version was installed). R can't hot-swap a loaded namespace, so Require now
+# flags these so the "Please restart R" warning fires.
+# ---------------------------------------------------------------------------
+test_that("flagRestartForLoadedInsufficient flags loaded-but-insufficient, leaves others", {
+  loadedVer <- as.character(getNamespaceVersion("data.table"))  # data.table is loaded in tests
+  hi <- "9999.0.0"
+
+  # loaded data.table fails (>= 9999.0.0) but the on-disk Version meets it -> restart
+  d1 <- data.table::data.table(Package = "data.table", versionSpec = hi,
+                               inequality = ">=", Version = hi, installResult = "OK")
+  o1 <- Require:::flagRestartForLoadedInsufficient(d1)
+  testthat::expect_match(o1$installResult, "restart", fixed = TRUE)
+
+  # loaded version already satisfies -> untouched
+  d2 <- data.table::data.table(Package = "data.table", versionSpec = "0.0.1",
+                               inequality = ">=", Version = loadedVer, installResult = "OK")
+  testthat::expect_identical(
+    Require:::flagRestartForLoadedInsufficient(d2)$installResult, "OK")
+
+  # package not loaded -> untouched
+  d3 <- data.table::data.table(Package = "notLoadedPkgXYZ", versionSpec = hi,
+                               inequality = ">=", Version = hi, installResult = "OK")
+  testthat::expect_identical(
+    Require:::flagRestartForLoadedInsufficient(d3)$installResult, "OK")
+
+  # no constraint -> untouched (a bare loaded package is never "insufficient")
+  d4 <- data.table::data.table(Package = "data.table", versionSpec = NA_character_,
+                               inequality = NA_character_, Version = loadedVer, installResult = "OK")
+  testthat::expect_identical(
+    Require:::flagRestartForLoadedInsufficient(d4)$installResult, "OK")
+})
+
+# ---------------------------------------------------------------------------
+# Resilience to the transient `cannot open URL 'http://bioconductor.org/config.yaml'`
+# failure: setBiocConfigEnvForPak() points pak/pkgcache at its own bundled bioc
+# config (file://) and pins R_BIOC_VERSION, so pak never reaches bioc.org. Only
+# sets unset env vars (respects the user), only when the bundled fixture exists.
+# ---------------------------------------------------------------------------
+test_that("setBiocConfigEnvForPak uses bundled bioc config, idempotent, respects user", {
+  skip_if_not_installed("pak")
+  old <- Sys.getenv(c("R_BIOC_VERSION", "R_BIOC_CONFIG_URL"), names = TRUE, unset = NA)
+  on.exit({
+    for (nm in names(old))
+      if (is.na(old[[nm]])) Sys.unsetenv(nm) else do.call(Sys.setenv, setNames(list(old[[nm]]), nm))
+  }, add = TRUE)
+
+  Sys.unsetenv("R_BIOC_VERSION"); Sys.unsetenv("R_BIOC_CONFIG_URL")
+  bf <- Require:::pakBiocFixture()
+  testthat::skip_if(is.na(bf$version) || !nzchar(bf$path), "pkgcache bioc fixture not found")
+
+  testthat::expect_true(Require:::setBiocConfigEnvForPak())                 # sets
+  testthat::expect_true(nzchar(Sys.getenv("R_BIOC_VERSION")))
+  testthat::expect_match(Sys.getenv("R_BIOC_CONFIG_URL"), "^file://")
+  testthat::expect_false(Require:::setBiocConfigEnvForPak())                # idempotent
+
+  Sys.setenv(R_BIOC_VERSION = "9.9", R_BIOC_CONFIG_URL = "file:///x")       # explicit user values
+  Require:::setBiocConfigEnvForPak()
+  testthat::expect_identical(Sys.getenv("R_BIOC_VERSION"), "9.9")
+})
+
+# ---------------------------------------------------------------------------
+# The bioc-config resilience is FAILURE-TRIGGERED: pakCall() runs the pak call
+# normally (so the real Bioc config is used when bioc.org is reachable) and only
+# falls back to the bundled config + retries once when the call dies on the bioc
+# fetch. It must NOT pin the Bioc config pre-emptively on success.
+# ---------------------------------------------------------------------------
+test_that("isBiocConfigFetchError detects the bioc fetch error via the cause chain", {
+  e <- simpleError("error in pak subprocess")
+  e$parent <- simpleError("cannot open URL 'http://bioconductor.org/config.yaml'")
+  testthat::expect_true(Require:::isBiocConfigFetchError(e))
+  testthat::expect_false(Require:::isBiocConfigFetchError(simpleError("Could not solve package dependencies")))
+  testthat::expect_false(Require:::isBiocConfigFetchError(NULL))
+})
+
+test_that("pakCall is failure-triggered: no proactive pin on success; retries once on bioc error", {
+  old <- Sys.getenv(c("R_BIOC_VERSION", "R_BIOC_CONFIG_URL"), names = TRUE, unset = NA)
+  on.exit({
+    for (nm in names(old))
+      if (is.na(old[[nm]])) Sys.unsetenv(nm) else do.call(Sys.setenv, setNames(list(old[[nm]]), nm))
+  }, add = TRUE)
+
+  # success path must not set the bioc env
+  Sys.unsetenv("R_BIOC_VERSION"); Sys.unsetenv("R_BIOC_CONFIG_URL")
+  testthat::expect_identical(Require:::pakCall("ok", verbose = 0), "ok")
+  testthat::expect_false(nzchar(Sys.getenv("R_BIOC_VERSION")))
+
+  # bioc fetch error -> fall back + retry once
+  bf <- Require:::pakBiocFixture()
+  testthat::skip_if(is.na(bf$version) || !nzchar(bf$path), "pkgcache bioc fixture not found")
+  Sys.unsetenv("R_BIOC_VERSION"); Sys.unsetenv("R_BIOC_CONFIG_URL")
+  n <- 0L
+  f <- function() {
+    n <<- n + 1L
+    if (n == 1L) {
+      e <- simpleError("error in pak subprocess")
+      e$parent <- simpleError("cannot open URL 'http://bioconductor.org/config.yaml'")
+      stop(e)
+    }
+    "retried"
+  }
+  testthat::expect_identical(Require:::pakCall(f(), verbose = 0), "retried")
+  testthat::expect_identical(n, 2L)                              # exactly one retry
+  testthat::expect_true(nzchar(Sys.getenv("R_BIOC_VERSION")))    # env set only on fallback
+
+  # a non-bioc error propagates without retry
+  m <- 0L
+  g <- function() { m <<- m + 1L; stop("Could not solve package dependencies") }
+  testthat::expect_error(Require:::pakCall(g(), verbose = 0), "solve package")
+  testthat::expect_identical(m, 1L)
+})
+
+# ---------------------------------------------------------------------------
+# getCRANrepos must resolve the "@CRAN@" placeholder IN PLACE, preserving other
+# repos (e.g. an r-universe). Regression: previously, when "@CRAN@" was present
+# AND CRAN_REPO was set (RStudio's default state), it replaced the entire repos
+# vector with CRAN-only, silently dropping r-universe and breaking
+# Require.noRemotes installs of PredictiveEcology packages.
+# ---------------------------------------------------------------------------
+test_that("getCRANrepos preserves non-CRAN repos when resolving @CRAN@", {
+  oldRepos <- getOption("repos"); oldEnv <- Sys.getenv("CRAN_REPO", unset = NA)
+  on.exit({
+    options(repos = oldRepos)
+    if (is.na(oldEnv)) Sys.unsetenv("CRAN_REPO") else Sys.setenv(CRAN_REPO = oldEnv)
+  }, add = TRUE)
+
+  peUniv <- "https://predictiveecology.r-universe.dev"
+
+  # GEDET5 case: r-universe + an unnamed "@CRAN@" + CRAN_REPO set
+  Sys.setenv(CRAN_REPO = "https://cran.rstudio.com/")
+  options(repos = c(CRAN = "https://cloud.r-project.org", peUniv, "@CRAN@"))
+  invisible(getCRANrepos(ind = 1))
+  testthat::expect_true(any(peUniv == unname(getOption("repos"))))   # r-universe kept
+  testthat::expect_false(any("@CRAN@" == unname(getOption("repos")))) # placeholder resolved
+
+  # no @CRAN@ -> untouched
+  options(repos = c(CRAN = "https://cloud.r-project.org", peUniv))
+  invisible(getCRANrepos(ind = 1))
+  testthat::expect_true(any(peUniv == unname(getOption("repos"))))
+})
+
+# ---------------------------------------------------------------------------
+# orderRefsByMissingDepEdges: deferred build-failure culprits must install in
+# dependency order. When both a dependency and its dependent are deferred (e.g.
+# LandR + LandR.CS), the serial pass must build the dependency first, inferred
+# from pak's "dependency 'X' is not available for package 'Y'" lines.
+# ---------------------------------------------------------------------------
+test_that("orderRefsByMissingDepEdges puts a deferred dependency before its dependent", {
+  ord <- Require:::orderRefsByMissingDepEdges
+  pn  <- Require:::extractPkgName
+  refs <- c("ianmseddy/LandR.CS@development", "PredictiveEcology/LandR@development", "data.table")
+
+  # dependent listed before its dependency; edge from pak's (curly-quote) message
+  out <- ord(refs, "ERROR: dependency ‘LandR’ is not available for package ‘LandR.CS’")
+  testthat::expect_lt(which(pn(out) == "LandR"), which(pn(out) == "LandR.CS"))
+  testthat::expect_setequal(pn(out), pn(refs))                 # no ref dropped/duplicated
+
+  # straight-quote variant parses the same
+  out2 <- ord(refs, "dependency 'LandR' is not available for package 'LandR.CS'")
+  testthat::expect_identical(pn(out2), pn(out))
+
+  # no parseable edge -> order unchanged
+  testthat::expect_identical(ord(refs, "an unrelated message"), refs)
+  # edge whose dependency is not in the ref set -> ignored, order unchanged
+  testthat::expect_identical(
+    ord(c("a", "b"), "dependency ‘zzz’ is not available for package ‘a’"),
+    c("a", "b"))
 })

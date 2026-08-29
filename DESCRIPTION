@@ -15,8 +15,8 @@ Description: A single key function, 'Require' that makes rerun-tolerant
 URL: 
     https://Require.predictiveecology.org,
     https://github.com/PredictiveEcology/Require
-Date: 2026-05-15
-Version: 2.0.0
+Date: 2026-08-29
+Version: 2.1.0
 Authors@R: c(
     person(given = "Eliot J B",
            family = "McIntire",
@@ -35,14 +35,15 @@ Authors@R: c(
 Depends:
     R (>= 4.1)
 Imports:
+    callr,
     data.table (>= 1.10.4),
     methods,
     pak,
+    processx,
     sys,
     tools,
     utils
 Suggests:
-    callr,
     cli,
     covr,
     curl,
@@ -70,7 +71,7 @@ VignetteBuilder: knitr, rmarkdown
 BugReports: https://github.com/PredictiveEcology/Require/issues
 ByteCompile: yes
 Roxygen: list(markdown = TRUE)
-Config/roxygen2/version: 8.0.0
+Config/roxygen2/version: 8.1.0
 Collate: 
     'CRAN.R'
     'Require-helpers.R'

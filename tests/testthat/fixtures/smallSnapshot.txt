@@ -1,6 +1,9 @@
 Package,Version,GithubRepo,GithubUsername,GithubRef,GithubSHA1
-"crayon","1.4.0",NA,NA,NA,NA
-"lifecycle","1.0.0",NA,NA,NA,NA
+"iterators","1.0.12",NA,NA,NA,NA
+"itertools","0.1-1",NA,NA,NA,NA
+"futile.logger","1.4.3",NA,NA,NA,NA
 "assertthat","0.2.0",NA,NA,NA,NA
-"withr","2.5.0",NA,NA,NA,NA
-"R6",NA,"R6","r-lib","main","507867875fdeaffbe7f7038291256b798f6bb042"
+"R.methodsS3",NA,"R.methodsS3","HenrikBengtsson","master","c842db47c1eab9524bddfd789955ca0c9aa817bc"
+"lambda.r","1.2.4",NA,NA,NA,NA
+"futile.options","1.0.1",NA,NA,NA,NA
+"formatR","1.14",NA,NA,NA,NA

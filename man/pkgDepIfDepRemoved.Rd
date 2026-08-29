@@ -37,14 +37,11 @@ recursive dependencies would be if a package was removed from the immediate
 dependencies.
 }
 \examples{
-\donttest{
-if (Require:::.runLongExamples()) {
-  opts <- Require:::.setupExample()
+\dontshow{if (Require:::.runLongExamples()) withAutoprint(\{ # examplesIf}
+opts <- Require:::.setupExample()
 
-  pkgDepIfDepRemoved("reproducible", "data.table")
+pkgDepIfDepRemoved("reproducible", "data.table")
 
-  Require:::.cleanup(opts)
-}
-}
-
+Require:::.cleanup(opts)
+\dontshow{\}) # examplesIf}
 }

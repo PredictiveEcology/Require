@@ -10,7 +10,7 @@ test_that("test 4", {
   setupInitial <- setupTest()
   # on.exit(endTest(setupInitial))
 
-  isDev <- getOption("Require.isDev")
+  notOnCranOrCI <- getOption("Require.notOnCranOrCI")
   # Test misspelled
 
   warns <- capture_warnings(
@@ -42,13 +42,13 @@ test_that("test 4", {
 
 
   pkgDep("data.table", purge = FALSE)
-  if (!isDev) {
+  if (!notOnCranOrCI) {
     pkgDep("data.table", purge = TRUE)
   }
 
   skip_if_offline2()
   if (isTRUE(tryCatch(packageVersion("fpCompare"), error = function(e) "0.0.0") < "0.2.5")) {
-    if (isDev) {
+    if (notOnCranOrCI) {
       mess <- capture_messages(
         warns <- capture_warnings(
           Require::Install(c("fpCompare (>= 0.2.4)", "PredictiveEcology/fpCompare@development (>= 0.2.4.9000)"),
@@ -204,7 +204,7 @@ test_that("test 4", {
     testArgs <- setdiff(testArgs, c("roxygen2", "rmarkdown", "fpCompare", "pkgcache"))
     testthat::expect_identical(testArgs, character())
   }
-  if (isDev) {
+  if (notOnCranOrCI) {
     # this was a bug created a warning when there was a package not on CRAN, but there
     #   were multiple repos; ffbase is no longer on CRAN
     # can't quiet this down on linux because ffbase is not binary but rest are ...

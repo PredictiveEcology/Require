@@ -263,6 +263,7 @@ messageDF <-
 #'   temporary dir should be placed. Defaults to `.RequireTempPath()`
 #' @param create Logical. Should the directory be created. Default `TRUE`
 #' @seealso [tempfile2()]
+#' @return The normalized path to the temporary (sub-)directory, created when `create = TRUE`.
 #' @export
 tempdir2 <- function(sub = "",
                      tempdir = getOption("Require.tempPath", .RequireTempPath()),
@@ -287,6 +288,7 @@ tempdir3 <- function(sub = "Require") {
 #' @seealso [tempdir2()]
 #' @inheritParams tempdir2
 #' @param ... passed to `tempfile`, e.g., `fileext`
+#' @return The normalized path to a temporary file inside `tempdir2(sub)`; the file is not created.
 #' @export
 tempfile2 <- function(sub = "",
                       tempdir = getOption("Require.tempPath", .RequireTempPath()),
@@ -338,6 +340,7 @@ invertList <- function(l) {
 #' `keep.null = TRUE` by default.
 #' @inheritParams utils::modifyList
 #'
+#' @return A list: the first argument with each subsequent argument's elements merged in, later ones overriding earlier ones of the same name.
 #' @export
 #' @param ... One or more named lists.
 #' @importFrom utils modifyList
@@ -604,7 +607,7 @@ SysInfo <-
 
 .cleanup <- function(opts = list()) {
   unlink(file.path(tempdir(), "Require"), recursive = TRUE)
-  unlink(Require::tempdir2(create = FALSE), recursive = TRUE)
+  unlink(tempdir2(create = FALSE), recursive = TRUE)
   cacheClearPackages(
     ask = FALSE,
     Rversion = versionMajorMinor(),
@@ -630,17 +633,8 @@ SysInfo <-
   options(opts$opts)
 }
 
-#' @importFrom utils packageDescription
-.isDevelVersion <- function() {
-  length(strsplit(packageDescription("Require")$Version, "\\.")[[1]]) > 3
-}
-
-.runLongTests <- function() {
-  .isDevelVersion() || Sys.getenv("R_REQUIRE_RUN_ALL_TESTS") == "true"
-}
-
 .runLongExamples <- function() {
-  # Auto-enable based on .isDevelVersion() is unsafe: with
+  # Auto-enabling from the package version is unsafe: with
   # `--run-dontrun --run-donttest` (default in r-lib/actions/check-r-package),
   # every dev-version R CMD check runs the full Require::Install() cascade
   # for every example in Require.Rd — hours on a cold CI runner.

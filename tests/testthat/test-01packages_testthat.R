@@ -13,7 +13,7 @@ test_that("test 1", {
   setupInitial <- setupTest()
   # on.exit(endTest(setupInitial))
 
-  isDev <- getOption("Require.isDev")
+  notOnCranOrCI <- getOption("Require.notOnCranOrCI")
 
   ## cover CRAN in case of having a environment variable set, which CI seems to
   origCRAN_REPO <- Sys.getenv("CRAN_REPO")
@@ -89,7 +89,7 @@ test_that("test 1", {
 
   # Try older version
   if (identical(tolower(Sys.getenv("CI")), "true") || # travis
-      isDevAndInteractive || # interactive
+      notOnCranOrCIInteractive || # interactive
       identical(Sys.getenv("NOT_CRAN"), "true")) { # CTRL-SHIFT-E
     dir2 <- rpackageFolder(tempdir3())
     dir2 <- checkPath(dir2, create = TRUE)
@@ -261,7 +261,7 @@ test_that("test 1", {
 
   # Code coverage
   skip_on_cran()
-  # if (isDev) { # i.e., GA, R CMD check etc.
+  # if (notOnCranOrCI) { # i.e., GA, R CMD check etc.
 
   # Issue 87
   try(remove.packages("reproducible"), silent = TRUE) |> suppressMessages()
@@ -274,6 +274,19 @@ test_that("test 1", {
   Require::Install("reproducible") |> suppressWarnings() # "package 'reproducible' was built under ..." ... load it
 
   warnsReq <- capture_warnings(Require::Install("Require"))
+  # Issue 87 is about a pinned GitHub SHA resolving to the COMMIT's version
+  # (2.0.2.9001) rather than CRAN's (2.0.2). pak crashes ("unzip_class"/processx
+  # build-worker death during re-packaging) when it tries to UPDATE IN PLACE over
+  # an installed + loaded newer reproducible (3.1.1.9035 -> 2.0.2.9001); the same
+  # SHA installs cleanly into a fresh state (verified standalone). Drop the loaded
+  # /installed newer copy first so pak does a clean install, not the crashing
+  # in-place downgrade -- this still exercises issue 87's intent (SHA -> commit
+  # version). See pak in-place-update/packaging crash, tracked separately.
+  dropReproducible <- function() {
+    try(unloadNamespace("reproducible"), silent = TRUE)
+    suppressMessages(try(remove.packages("reproducible"), silent = TRUE))
+  }
+  dropReproducible()
   (Require::Install(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))) |>
     capture_warnings() -> warns
 
@@ -293,7 +306,9 @@ test_that("test 1", {
   testthat::expect_equal(vers, "2.0.2.9001") #
   # detach("package:reproducible", unload = TRUE);
   unloadNamespace("package:fpCompare")
-  # now installs correct SHA which is 2.0.2.9001
+  # now installs correct SHA which is 2.0.2.9001 (clean install again -- see note
+  # above on the pak in-place-update crash)
+  dropReproducible()
   warnsHere <- capture_warnings(  # "package 'reproducible' was built under ...
     Require::Install(c("CeresBarros/reproducible@51ecfd2b1b9915da3bd012ce23f47d4b98a9f212 (HEAD)"))
   )
@@ -362,7 +377,7 @@ test_that("test 1", {
   # warn <- tryCatch(out <- Require("Require (>=0.0.1)", dependencies = FALSE,
   #                                 install = "force"),
   #                  error = function(x) x)
-  if (isDevAndInteractive) {
+  if (notOnCranOrCIInteractive) {
     warn <- tryCatch(
       {
         out <- Require("A3 (<=0.0.1)", dependencies = FALSE, install = "force")

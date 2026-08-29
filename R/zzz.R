@@ -58,16 +58,21 @@ envPkgCreate()
       options(pkg.sysreqs_sudo = FALSE)
   }
 
-  # if (FALSE) {
-  if (isTRUE(getOption("Require.usePak"))) {
-    if (requireNamespace("pak", quietly = TRUE)) {
-      # tryCatch: under R CMD check, pak::cache_summary() errors with
-      # "R_USER_CACHE_DIR env var not set during package check" (pkgcache
-      # CRAN policy). The probed value isn't used downstream — the call is
-      # only here to warm pak — so swallow the error.
-      tryCatch(pak::cache_summary(), error = function(e) NULL)
-    }
-  }
+  ## NOTE: we deliberately do NOT pre-emptively pin the Bioconductor config here.
+  ## pak/pkgcache fetch bioconductor.org/config.yaml at startup, and the whole
+  ## pak call dies when bioc.org is unreachable -- but globally pinning
+  ## R_BIOC_VERSION to pkgcache's bundled (snapshot) config would silently freeze
+  ## the Bioc version for *every* Require user, even those who never hit the
+  ## fetch failure and who actually use Bioconductor. Instead, pakCall() catches
+  ## that specific fetch error and retries ONCE with the bundled config -- so the
+  ## real, current Bioc config is used whenever bioc.org is reachable, and the
+  ## fallback kicks in only when it genuinely fails. See pakCall() / setBiocConfigEnvForPak().
+
+  ## DELIBERATELY do NOT eagerly load pak here. Loading pak grabs a Windows
+  ## DLL lock that prevents `ensurePakInProjectLib()` from later reinstalling
+  ## pak in libPaths[1] when needed (e.g. when pak is missing from the
+  ## project lib after a project-bootstrap). Pak is loaded on first actual
+  ## use by `requireNamespace("pak")` checks in R/pak.R.
 
   opts.Require <- RequireOptions()
   toset <- !(names(opts.Require) %in% names(opts))

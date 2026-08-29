@@ -20,6 +20,9 @@ temporary dir should be placed. Defaults to \code{.RequireTempPath()}}
 
 \item{create}{Logical. Should the directory be created. Default \code{TRUE}}
 }
+\value{
+The normalized path to the temporary (sub-)directory, created when \code{create = TRUE}.
+}
 \description{
 Create a temporary subdirectory in \code{.RequireTempPath()}, or a
 temporary file in that temporary subdirectory.

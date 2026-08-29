@@ -445,7 +445,6 @@ test_that("pakGetArchive constructs CRAN-archive URL for archived package", {
   # round-trip (which exercises the archive fallback path inside
   # pakInstallFiltered) is environment-sensitive and runs in the larger
   # integration test below.
-  if (!nzchar(Sys.getenv("R_REQUIRE_RUN_LONG_CI"))) skip_on_ci()
   skip_on_cran()
   skip_if_offline2()
   skip_if_not_installed("pak")
@@ -469,7 +468,6 @@ test_that("pakGetArchive constructs CRAN-archive URL for archived package", {
 # so the caller can skip cleanly.
 # ---------------------------------------------------------------------------
 test_that("pakGetArchive returns unchanged packages when no concrete CRAN repo", {
-  if (!nzchar(Sys.getenv("R_REQUIRE_RUN_LONG_CI"))) skip_on_ci()
   skip_on_cran()
   skip_if_offline2()
   skip_if_not_installed("pak")
@@ -510,7 +508,7 @@ test_that("pak::pak installs an archived-CRAN ref via url::", {
   skip_if_offline2()
   skip_if_not_installed("pak")
 
-  testlib <- file.path(tempdir(), paste0("rqlib_pryrurl_", sample(1e5, 1)))
+  testlib <- file.path(tempdir(), paste0("rqlib_archurl_", sample(1e5, 1)))
   dir.create(testlib, recursive = TRUE)
   on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
 
@@ -526,21 +524,22 @@ test_that("pak::pak installs an archived-CRAN ref via url::", {
   .libPaths(c(testlib, .Library))  # .Library is the cross-platform base R lib
   withr::local_options(repos = c(CRAN = "https://cran.rstudio.com"))
 
-  ref <- "url::https://cran.rstudio.com/src/contrib/Archive/pryr/pryr_0.1.6.tar.gz"
+  ## assertthat 0.2.0: archived, pure R, no dependencies -- builds on any R
+  ## (pryr was used before; its last release cannot compile on R >= 4.5).
+  ref <- "url::https://cran.rstudio.com/src/contrib/Archive/assertthat/assertthat_0.2.0.tar.gz"
   res <- try(pak::pak(ref, lib = testlib, ask = FALSE,
                       dependencies = NA, upgrade = FALSE), silent = TRUE)
   if (inherits(res, "try-error")) skip(paste("pak install failed:", as.character(res)))
 
-  expect_true("pryr" %in% rownames(installed.packages(testlib)),
-              info = "pryr should be installed via direct pak::pak(url::...)")
+  expect_true("assertthat" %in% rownames(installed.packages(testlib)),
+              info = "assertthat should be installed via direct pak::pak(url::...)")
 })
 
 # ---------------------------------------------------------------------------
-# Cross-archive deps: disk.frame depends on pryr (>= 0.1.4); both are
-# archived from CRAN, so pak::pak("any::disk.frame") fails with
-# "Can't find package called pryr". The archive-fallback batch must pass
-# both archive URLs together so pak resolves disk.frame -> pryr from the
-# same plan.
+# Cross-archive deps: R.oo 1.25.0 depends on R.methodsS3 (>= 1.8.1); both
+# versions are archived from CRAN, so pak::pak("any::R.oo@1.25.0") cannot
+# resolve the dependency. The archive-fallback batch must pass both archive
+# URLs together so pak resolves R.oo -> R.methodsS3 from the same plan.
 # ---------------------------------------------------------------------------
 test_that("pak::pak installs cross-dependent archived refs in one batch", {
   if (!nzchar(Sys.getenv("R_REQUIRE_RUN_LONG_CI"))) skip_on_ci()
@@ -565,15 +564,17 @@ test_that("pak::pak installs cross-dependent archived refs in one batch", {
   withr::local_options(repos = c(CRAN = "https://cran.rstudio.com"))
 
   refs <- c(
-    "url::https://cran.rstudio.com/src/contrib/Archive/disk.frame/disk.frame_0.8.3.tar.gz",
-    "url::https://cran.rstudio.com/src/contrib/Archive/pryr/pryr_0.1.6.tar.gz")
+    ## R.oo Depends on R.methodsS3; both archived versions, both pure R
+    ## (disk.frame + pryr were used before; pryr cannot compile on R >= 4.5).
+    "url::https://cran.rstudio.com/src/contrib/Archive/R.oo/R.oo_1.25.0.tar.gz",
+    "url::https://cran.rstudio.com/src/contrib/Archive/R.methodsS3/R.methodsS3_1.8.1.tar.gz")
   res <- try(pak::pak(refs, lib = testlib, ask = FALSE,
                       dependencies = NA, upgrade = FALSE), silent = TRUE)
   if (inherits(res, "try-error")) skip(paste("pak install failed:", as.character(res)))
 
   inst <- rownames(installed.packages(testlib))
-  expect_true("disk.frame" %in% inst, info = "disk.frame should be installed")
-  expect_true("pryr"       %in% inst, info = "pryr should be installed")
+  expect_true("R.oo"        %in% inst, info = "R.oo should be installed")
+  expect_true("R.methodsS3" %in% inst, info = "R.methodsS3 should be installed")
 })
 
 # ---------------------------------------------------------------------------
@@ -582,7 +583,6 @@ test_that("pak::pak installs cross-dependent archived refs in one batch", {
 # in pakEnv()$.lastInstallFailures.
 # ---------------------------------------------------------------------------
 test_that("pakEnv()$.lastInstallFailures is populated after a successful install", {
-  if (!nzchar(Sys.getenv("R_REQUIRE_RUN_LONG_CI"))) skip_on_ci()
   skip_on_cran()
   skip_if_offline2()
   skip_if_not_installed("pak")
@@ -636,14 +636,20 @@ test_that("pakEnv()$.lastInstallFailures is populated after a successful install
 # ---------------------------------------------------------------------------
 test_that("identify-and-defer recovers from PSPclean-style cascade", {
   skip_on_cran()
-  skip_on_ci()
+  if (!nzchar(Sys.getenv("R_REQUIRE_RUN_LONG_CI"))) skip_on_ci()
   skip_if_offline2()
   skip_if_not_installed("pak")
   if (identical(tolower(Sys.getenv("R_REQUIRE_RUN_LARGE_INTEGRATION", "true")),
                 "false")) {
     skip("R_REQUIRE_RUN_LARGE_INTEGRATION=false; skipping multi-minute install")
   }
-  skip_if_not_installed("SpaDES.project")
+  ## Not skip_if_not_installed(): when SpaDES.project is installed but its
+  ## namespace cannot load (e.g. a dependency left loaded at another version
+  ## by an earlier test), that reports "not installed" and sends people to
+  ## check their library. Report the real reason instead.
+  spOK <- tryCatch({ loadNamespace("SpaDES.project"); TRUE },
+                   error = function(e) conditionMessage(e))
+  if (!isTRUE(spOK)) skip(paste("SpaDES.project cannot be loaded:", spOK))
 
   testlib <- file.path(tempdir(), paste0("rqlib_landr_", sample(1e5, 1)))
   dir.create(testlib, recursive = TRUE)
@@ -693,4 +699,72 @@ test_that("identify-and-defer recovers from PSPclean-style cascade", {
     expect_true(all(nzchar(failures$reason_type)))
     expect_true(all(nzchar(failures$reason_brief)))
   }
+})
+
+# ---------------------------------------------------------------------------
+# Regression: binary-lag silent "OK"
+#
+# Field case (Mac, Require 2.0.0):
+#   > Require::Install("reproducible (>= 3.1.0)")
+#   Installed 1 packages in 6.4 secs
+#   > packageVersion("reproducible")
+#   [1] '3.0.0'
+#
+# CRAN had reproducible 3.1.0 in source but only 3.0.0 as a Mac binary, so
+# pak's `pkg_deps` resolver pinned 3.1.0 in `pakResolvedVersionMap` while
+# `pak::pak()` chose to "keep" the 3.0.0 binary. The post-install
+# reconciliation in pakInstallFiltered fell back to `pakResolvedVer` without
+# checking that it matched what was actually on disk, so the install was
+# reported as successful. The fix: only trust pak's resolved version when
+# it matches the version actually present.
+# ---------------------------------------------------------------------------
+test_that("pakConstraintSatisfied is FALSE when pak resolved newer than installed", {
+  # Binary-lag scenario: disk has 3.0.0, pak resolved to 3.1.0.
+  # Must be FALSE -- the install did not satisfy >= 3.1.0.
+  expect_false(Require:::pakConstraintSatisfied(
+    installedVer   = "3.0.0",
+    versionSpec    = "3.1.0",
+    inequality     = ">=",
+    pakResolvedVer = "3.1.0"
+  ))
+})
+
+test_that("pakConstraintSatisfied is TRUE when installed version meets constraint", {
+  expect_true(Require:::pakConstraintSatisfied(
+    installedVer   = "3.1.0",
+    versionSpec    = "3.1.0",
+    inequality     = ">=",
+    pakResolvedVer = "3.1.0"
+  ))
+  expect_true(Require:::pakConstraintSatisfied(
+    installedVer   = "3.2.0",
+    versionSpec    = "3.1.0",
+    inequality     = ">=",
+    pakResolvedVer = NA_character_
+  ))
+})
+
+test_that("pakConstraintSatisfied is FALSE when neither installed nor pakRes meets constraint", {
+  # pak chose to install installedVer (matches what's on disk) but neither
+  # satisfies the user constraint -- the install is a real failure.
+  expect_false(Require:::pakConstraintSatisfied(
+    installedVer   = "3.0.0",
+    versionSpec    = "3.1.0",
+    inequality     = ">=",
+    pakResolvedVer = "3.0.0"
+  ))
+})
+
+test_that("pakConstraintSatisfied tolerates missing / blank pakResolvedVer", {
+  # When pakResolvedVer is unavailable, fall back solely to installedVer.
+  expect_false(Require:::pakConstraintSatisfied(
+    installedVer = "3.0.0", versionSpec = "3.1.0", inequality = ">="))
+  expect_false(Require:::pakConstraintSatisfied(
+    installedVer = "3.0.0", versionSpec = "3.1.0", inequality = ">=",
+    pakResolvedVer = NA_character_))
+  expect_false(Require:::pakConstraintSatisfied(
+    installedVer = "3.0.0", versionSpec = "3.1.0", inequality = ">=",
+    pakResolvedVer = ""))
+  expect_true(Require:::pakConstraintSatisfied(
+    installedVer = "3.1.0", versionSpec = "3.1.0", inequality = ">="))
 })

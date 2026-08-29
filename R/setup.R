@@ -249,6 +249,8 @@ RequireGitHubCacheDir <- function(create) {
 #' 4. Else if the option is `FALSE`, return `NULL`.
 #' 5. Otherwise, return `cachePkgDir(FALSE)`.
 #'
+#' @return The package cache directory, or `NULL` when caching is disabled. Deprecated
+#'   in favour of `cachePkgDir()`.
 #' @export
 cacheGetOptionCachePkgDir <- function() {
   .Deprecated("cachePkgDir", package = "Require",
@@ -311,6 +313,7 @@ cacheGetOptionCachePkgDir <- function() {
 #' @inheritParams setLibPaths
 #' @inheritParams Require
 #'
+#' @return Nothing (`invisible()`); called for its side effects on `.libPaths()`, the package cache and options. Deprecated.
 #' @export
 #' @rdname setup
 #'
@@ -393,6 +396,7 @@ setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbos
 #' @param backupCRAN If there is no CRAN repository set
 #'
 #' @importFrom utils read.csv
+#' @return Called for its side effect on `options("repos")`; returns that `options()` result invisibly, or `NULL` when nothing needed changing.
 #' @export
 setLinuxBinaryRepo <- function(binaryLinux = urlForArchivedPkgs,
                                backupCRAN = srcPackageURLOnCRAN) {
@@ -452,10 +456,19 @@ whIsOfficialCRANrepo <- function(currentRepos = getOption("repos"), backupCRAN =
         download.file("https://cran.r-project.org/CRAN_mirrors.csv",
                       destfile = mirrorsLocalFile, quiet = TRUE),
         silent = TRUE))
-    a <- try(read.csv(mirrorsLocalFile), silent = TRUE)
+    ## Even with `try(silent = TRUE)`, `read.csv` on a missing file signals a
+    ## "cannot open file" warning before erroring (via file()). That warning
+    ## escapes `try()` and can be caught by callers' withCallingHandlers (e.g.
+    ## SpaDES.project) that then probe the stack for vars not in our code path.
+    ## Skip the read when the file is absent, and suppress the warning otherwise.
+    a <- if (file.exists(mirrorsLocalFile)) {
+      try(suppressWarnings(read.csv(mirrorsLocalFile)), silent = TRUE)
+    } else {
+      structure("download failed", class = "try-error")
+    }
     if (!is(a, "try-error"))
       break
-    unlink(mirrorsLocalFile)
+    if (file.exists(mirrorsLocalFile)) unlink(mirrorsLocalFile)
     if (attempt == 2) {
       # https://stackoverflow.com/a/76684292/3890027
       enableSSLWorkaround()

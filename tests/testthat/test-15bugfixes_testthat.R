@@ -929,3 +929,633 @@ test_that("extractMissingSysreqs parses pak's 'Missing N system packages' block"
   expect_identical(Require:::extractMissingSysreqs("nothing relevant"), character(0))
   expect_identical(Require:::extractMissingSysreqs(character(0)), character(0))
 })
+
+test_that("whIsOfficialCRANrepo does not leak 'cannot open file' warning when .mirrors.csv is absent", {
+  # Regression: when the cached .mirrors.csv is absent AND download.file fails
+  # (offline / fresh cache), `try(read.csv(...), silent = TRUE)` swallowed the
+  # error but `file()` signals a "cannot open file" warning before erroring,
+  # which escaped try(). That warning was caught by callers' withCallingHandlers
+  # (e.g. SpaDES.project::setupProject) whose handlers probed the call stack
+  # for `pkgDT` -- a variable that doesn't exist on the pak code path --
+  # crashing with: Error in get(obj, envir = env, inherits = FALSE).
+
+  tmpCache <- tempfile("requireMirrorsTest")
+  dir.create(tmpCache)
+  on.exit(unlink(tmpCache, recursive = TRUE), add = TRUE)
+
+  caught <- character()
+  withr::with_envvar(
+    c(R_REQUIRE_CACHE = tmpCache),
+    {
+      with_mocked_bindings(
+        download.file = function(...) stop("simulated offline"),
+        .package = "Require",
+        {
+          withCallingHandlers(
+            try(Require:::whIsOfficialCRANrepo(
+              currentRepos = c(CRAN = "https://cloud.r-project.org")
+            ), silent = TRUE),
+            warning = function(w) {
+              caught <<- c(caught, conditionMessage(w))
+              invokeRestart("muffleWarning")
+            }
+          )
+        }
+      )
+    }
+  )
+
+  expect_false(
+    any(grepl("cannot open", caught)),
+    info = paste("Leaked warnings:", paste(caught, collapse = "; "))
+  )
+})
+
+test_that("isBinaryCRANRepo() default arg is resilient when 'CRAN' is not a name in options(repos)", {
+  # Regression: the default arg `curCRANRepo = getOption("repos")[["CRAN"]]`
+  # threw "subscript out of bounds" on a named character vector when no
+  # element was named "CRAN" -- triggered when caller code rebuilt
+  # options("repos") in a way that dropped names, e.g.
+  #   unique(c("https://predictiveecology.r-universe.dev", getOption("repos")))
+  # which on a fresh session yields an unnamed character vector.
+
+  withr::with_options(
+    list(repos = c(
+      "https://predictiveecology.r-universe.dev",
+      "https://cloud.r-project.org"
+    )),  # deliberately unnamed -- no "CRAN" name present
+    {
+      # Pre-fix: this errored with "subscript out of bounds".
+      # Post-fix: returns without erroring; value is FALSE/NA depending on platform.
+      expect_no_error(out <- Require:::isBinaryCRANRepo())
+      # The result must not be TRUE -- there is no recognised CRAN entry to classify.
+      expect_false(isTRUE(any(out)))
+    }
+  )
+
+  # Sanity: when CRAN *is* named, the function still works (no regression).
+  withr::with_options(
+    list(repos = c(CRAN = "https://cloud.r-project.org")),
+    {
+      expect_no_error(Require:::isBinaryCRANRepo())
+    }
+  )
+})
+
+test_that(".pakNoCopyPkgs() includes pak, callr, processx, cli", {
+  out <- Require:::.pakNoCopyPkgs()
+  expect_true(all(c("pak", "callr", "processx", "cli") %in% out),
+              info = paste("got:", paste(out, collapse = ", ")))
+})
+
+test_that(".preferGHrefDedup() collapses multi-form refs preferring GH > CRAN", {
+  # Regression: user lists of the form
+  #   c("PredictiveEcology/reproducible@development",
+  #     "PredictiveEcology/reproducible",
+  #     "reproducible")
+  # have no versionSpec on any row, so trimRedundancies() can't dedup them.
+  # All three survived into pakOfflineInstall and poisoned the pak batch
+  # with `reproducible@<v>: Conflicts with reproducible@<v>`.
+  refs <- c("PredictiveEcology/reproducible@development",
+            "PredictiveEcology/reproducible",
+            "reproducible",
+            "data.table")
+  expect_identical(
+    Require:::.preferGHrefDedup(refs),
+    c("PredictiveEcology/reproducible@development", "data.table"))
+
+  # No GH ref present: keep first occurrence per package.
+  expect_identical(
+    Require:::.preferGHrefDedup(c("reproducible", "reproducible@1.2.3", "data.table")),
+    c("reproducible", "data.table"))
+
+  # Multiple GH refs for same package: keep the first (typically the most
+  # specific @branch/@SHA form -- user-input order wins).
+  expect_identical(
+    Require:::.preferGHrefDedup(c("acct/pkg@dev", "acct/pkg", "pkg")),
+    "acct/pkg@dev")
+
+  # No-op when there are no duplicates.
+  refs2 <- c("data.table", "fpCompare", "digest")
+  expect_identical(Require:::.preferGHrefDedup(refs2), refs2)
+
+  # Empty / single inputs return unchanged.
+  expect_identical(Require:::.preferGHrefDedup(character(0)), character(0))
+  expect_identical(Require:::.preferGHrefDedup("data.table"), "data.table")
+})
+
+test_that(".isSessionLibPath() distinguishes real project libs from ephemeral tempdirs", {
+  # A path that IS in .libPaths() must be recognised as a session lib path.
+  expect_true(Require:::.isSessionLibPath(.libPaths()[1]))
+  # A fresh tempdir is NOT in .libPaths() and must be rejected.
+  td <- tempfile("notASessionLib")
+  dir.create(td)
+  on.exit(unlink(td, recursive = TRUE), add = TRUE)
+  expect_false(Require:::.isSessionLibPath(td))
+  # Empty / NULL inputs are FALSE.
+  expect_false(Require:::.isSessionLibPath(""))
+  expect_false(Require:::.isSessionLibPath(character(0)))
+  expect_false(Require:::.isSessionLibPath(NULL))
+})
+
+test_that(".pakNeedsReinstall() flags pak-not-on-.libPaths and forceReinstall opt-in", {
+  # Not reachable anywhere on .libPaths()
+  expect_match(Require:::.pakNeedsReinstall(character(0)), "not available on .libPaths")
+  expect_match(Require:::.pakNeedsReinstall(""),           "not available on .libPaths")
+  expect_match(Require:::.pakNeedsReinstall(NULL),         "not available on .libPaths")
+
+  # Reachable on .libPaths() + no force => no install
+  expect_identical(Require:::.pakNeedsReinstall("/some/path/pak"), "")
+  expect_identical(Require:::.pakNeedsReinstall("/some/path/pak",
+                                                 forceReinstall = FALSE), "")
+
+  # forceReinstall opt-in (Require.forcePakReinstall) => reinstall
+  expect_match(
+    Require:::.pakNeedsReinstall("/some/path/pak", forceReinstall = TRUE),
+    "forcePakReinstall = TRUE")
+})
+
+test_that("a damaged-pak error is detected through pak's wrapper and annotated", {
+  broken <- simpleError("Native call to processx_exec failed: Command '' not found")
+  expect_true(Require:::isPakBrokenInstallError(broken))
+  expect_false(Require:::isPakBrokenInstallError(simpleError("some other failure")))
+  expect_false(Require:::isPakBrokenInstallError(NULL))
+
+  ## pak nests the subprocess's real error inside its own wrapper condition,
+  ## so conditionMessage() alone does not see the signature.
+  nested <- simpleError("! error in pak subprocess")
+  nested$parent <- broken
+  expect_false(grepl("processx_exec", conditionMessage(nested), fixed = TRUE))
+  expect_true(Require:::isPakBrokenInstallError(nested))
+
+  ## pakCall() appends the remedy and keeps pak's own condition intact
+  e <- tryCatch(Require:::pakCall(stop(broken), verbose = -2),
+                error = function(e) e)
+  expect_s3_class(e, "simpleError")
+  expect_match(conditionMessage(e), "processx_exec", fixed = TRUE)
+  expect_match(conditionMessage(e), "Require.forcePakReinstall = TRUE", fixed = TRUE)
+
+  ## an unrelated pak error is re-raised untouched
+  e2 <- tryCatch(Require:::pakCall(stop(simpleError("plain failure")), verbose = -2),
+                 error = function(e) e)
+  expect_identical(conditionMessage(e2), "plain failure")
+})
+
+test_that("the pak-not-on-.libPaths hint names the cause, not the metadata cache", {
+  ## Regression: this branch used to replace the error with
+  ## "Try running: pak::meta_clean()", which addresses the metadata cache --
+  ## not the library path that actually causes it.
+  expect_match(Require:::.txtPakNotOnLibPaths, ".libPaths()", fixed = TRUE)
+  expect_match(Require:::.txtPakNotOnLibPaths, "setLibPaths(", fixed = TRUE)
+  expect_match(Require:::.txtPakBrokenInstall, "Require.forcePakReinstall = TRUE",
+               fixed = TRUE)
+})
+
+test_that("linkOrCopyPackageFiles() excludes pak/callr/processx/cli even when asked", {
+  # Regression: SpaDES.project::setupPackages (pre-pak) used to file-copy
+  # the system lib into the project lib; pak's embedded callr/processx
+  # native helpers don't survive that on Windows and the resulting pak
+  # install dies inside processx with `Command '' not found` on the next
+  # subprocess spawn. linkOrCopyPackageFiles() must therefore drop those
+  # packages from the copy list so the install machinery installs them
+  # fresh instead.
+
+  # Build a synthetic installed.packages() matrix with Built that satisfies
+  # Require:::correctBuilt() for the current R version (so cantClone()
+  # treats every row as clone-eligible by default).
+  rvDot <- Require:::RversionDot()  # e.g. "4.5."
+  built <- paste0(rvDot, "0; ; ;")
+  pkgs  <- c("data.table", "pak", "callr", "processx", "cli", "rlang")
+  ip <- cbind(
+    Package          = pkgs,
+    Version          = rep("1.0.0", length(pkgs)),
+    NeedsCompilation = rep("no", length(pkgs)),  # all clone-eligible by NeedsCompilation
+    Built            = rep(built, length(pkgs))
+  )
+  rownames(ip) <- pkgs
+
+  passedThrough <- NULL
+  testthat::with_mocked_bindings(
+    linkOrCopyPackageFilesInner = function(Packages, fromLib, toLib) {
+      passedThrough <<- Packages
+      invisible()
+    },
+    .package = "Require",
+    {
+      Require:::linkOrCopyPackageFiles(
+        Packages = pkgs,
+        fromLib  = tempdir(),
+        toLib    = tempdir(),
+        ip       = ip
+      )
+    }
+  )
+
+  expect_false(is.null(passedThrough),
+               info = "linkOrCopyPackageFilesInner mock was never invoked")
+  # pak / callr / processx / cli must NOT be cloned
+  expect_false(any(c("pak", "callr", "processx", "cli") %in% passedThrough),
+               info = paste("got passed through:", paste(passedThrough, collapse = ", ")))
+  # The non-pak rows still go through normally
+  expect_true(all(c("data.table", "rlang") %in% passedThrough))
+})
+
+test_that("ensurePakInProjectLib() is a no-op when Require.usePak is FALSE", {
+  installCalled <- FALSE
+  withr::with_options(
+    list(Require.usePak = FALSE),
+    {
+      testthat::with_mocked_bindings(
+        install.packages = function(...) { installCalled <<- TRUE; invisible() },
+        .package = "utils",
+        {
+          Require:::ensurePakInProjectLib(tempfile("noPak"))
+        }
+      )
+    }
+  )
+  expect_false(installCalled,
+               info = "install.packages should never be called when usePak = FALSE")
+})
+
+test_that("Require.forcePakReinstall = TRUE forces reinstall even when pak is in projLib", {
+  # When the user explicitly opts in via Require.forcePakReinstall (escape
+  # hatch for "pak files in projLib but secretly broken from a file-copy
+  # bootstrap"), ensurePakInProjectLib must call install.packages even if
+  # find.package() reports pak is already there.
+  installCalled <- FALSE
+  installLib    <- NULL
+  withr::with_options(
+    list(Require.usePak = TRUE, Require.forcePakReinstall = TRUE),
+    {
+      testthat::with_mocked_bindings(
+        install.packages = function(pkgs, lib, ...) {
+          installCalled <<- TRUE
+          installLib    <<- lib
+          invisible()
+        },
+        .package = "utils",
+        {
+          testthat::with_mocked_bindings(
+            find.package = function(...) "/fake/projLib/pak",  # pak IS in projLib
+            .package = "base",
+            {
+              suppressMessages(Require:::ensurePakInProjectLib(
+                projLib = "/fake/projLib",
+                repos   = c(CRAN = "https://cloud.r-project.org"),
+                verbose = -1))
+            }
+          )
+        }
+      )
+    }
+  )
+  expect_true(installCalled,
+              info = "forcePakReinstall = TRUE should trigger install.packages even if pak is in projLib")
+  expect_identical(installLib, "/fake/projLib")
+})
+
+test_that("ensurePakInProjectLib() releases pak before install: unload + pakResetSubprocess", {
+  # Case 4: pak is already loaded in the parent session (user ran pak::pak()
+  # directly before Require::Install was called, or some other path triggered
+  # pak loading). On Windows the loaded DLL blocks install.packages from
+  # writing -- so ensurePakInProjectLib must first kill pak's r_session
+  # (pakResetSubprocess) and unloadNamespace("pak") to release the lock.
+
+  resetCalled  <- FALSE
+  unloadCalled <- FALSE
+  installCalled <- FALSE
+
+  testthat::with_mocked_bindings(
+    # Simulate "pak is loaded" -> "pak is unloaded after unloadNamespace"
+    loadedNamespaces = local({
+      seenUnload <- FALSE
+      function() {
+        if (seenUnload) character(0) else "pak"
+      }
+    }),
+    unloadNamespace = function(...) { unloadCalled <<- TRUE; invisible() },
+    .package = "base",
+    {
+      # Replace these *after* the outer mocks so we can capture them
+      testthat::with_mocked_bindings(
+        pakResetSubprocess = function() { resetCalled <<- TRUE },
+        .package = "Require",
+        {
+          testthat::with_mocked_bindings(
+            install.packages = function(...) { installCalled <<- TRUE; invisible() },
+            .package = "utils",
+            {
+              testthat::with_mocked_bindings(
+                find.package = function(...) character(0),  # pak NOT in projLib -> needs install
+                .package = "base",
+                {
+                  # Flip the loadedNamespaces() return to "" after unloadNamespace runs.
+                  # We do this by augmenting the unloadNamespace mock to flip a flag
+                  # the loadedNamespaces() mock reads. Simpler: just call ensurePakInProjectLib
+                  # and assert pakResetSubprocess + unloadNamespace + install.packages all fired.
+                  ok <- tryCatch(
+                    suppressMessages(Require:::ensurePakInProjectLib(
+                      projLib = "/fake/projLib",
+                      repos   = c(CRAN = "https://cloud.r-project.org"),
+                      verbose = -1)),
+                    error = function(e) e
+                  )
+                }
+              )
+            }
+          )
+        }
+      )
+    }
+  )
+
+  expect_true(resetCalled,
+              info = "pakResetSubprocess() must be called when pak is loaded, to kill the r_session that holds the DLL")
+  expect_true(unloadCalled,
+              info = "unloadNamespace('pak') must be called to release the namespace + DLL")
+})
+
+test_that("ensurePakInProjectLib() stops with restart message if pak can't be unloaded", {
+  # If pak is loaded and our two-step release (pakResetSubprocess +
+  # unloadNamespace) fails to actually unload pak, ensurePakInProjectLib
+  # must stop() with an actionable "please RESTART R" message rather than
+  # silently no-op'ing and letting the user hit the same processx_exec
+  # failure mid-install.
+
+  testthat::with_mocked_bindings(
+    loadedNamespaces = function() "pak",      # always reports pak is loaded
+    unloadNamespace  = function(...) invisible(),  # pretends to unload but doesn't
+    .package = "base",
+    {
+      testthat::with_mocked_bindings(
+        pakResetSubprocess = function() invisible(),
+        .package = "Require",
+        {
+          testthat::with_mocked_bindings(
+            find.package = function(...) character(0),  # needs reinstall
+            .package = "base",
+            {
+              expect_error(
+                suppressMessages(Require:::ensurePakInProjectLib(
+                  projLib = "/fake/projLib",
+                  repos   = c(CRAN = "https://cloud.r-project.org"),
+                  verbose = -1)),
+                regexp = "RESTART R"
+              )
+            }
+          )
+        }
+      )
+    }
+  )
+})
+
+test_that(".pakDepsInvalidateLast() removes the stashed key + on-disk cache file", {
+  # Regression: a user upgraded Require to a version that added an
+  # Imports package (e.g. processx) but the pak dep-resolution cache
+  # from before the upgrade still represented the old dep graph. Pak
+  # tried to build a package that needed the new dep, failed with
+  # `missing-build-deps`, and the next Require call served the same
+  # stale plan -- same failure, ad infinitum. .pakDepsInvalidateLast()
+  # wipes the entry pakDepsResolve() most recently used so the next
+  # call re-resolves.
+
+  pe <- Require:::pakEnv()
+  fakeKey <- "pakDepsTest_abc123"
+  fakeEnvKey <- paste0("pakDeps_", fakeKey)
+
+  # Seed the stash + in-memory cache + a real on-disk cache file
+  assign(".lastPakDepsKey", fakeKey, envir = pe)
+  assign(fakeEnvKey, list(package = "fake"), envir = pe)
+  cacheDir  <- Require:::pakDepsCacheDir()
+  dir.create(cacheDir, recursive = TRUE, showWarnings = FALSE)
+  cacheFile <- file.path(cacheDir, paste0(fakeKey, ".rds"))
+  saveRDS(list(package = "fake"), cacheFile)
+  on.exit({
+    rm(list = intersect(c(".lastPakDepsKey", fakeEnvKey), ls(envir = pe)),
+       envir = pe)
+    if (file.exists(cacheFile)) unlink(cacheFile)
+  }, add = TRUE)
+
+  expect_true(exists(fakeEnvKey, envir = pe, inherits = FALSE))
+  expect_true(file.exists(cacheFile))
+
+  invalidated <- Require:::.pakDepsInvalidateLast()
+  expect_true(isTRUE(invalidated),
+              info = "invalidator must report it found and cleared a key")
+  expect_false(exists(fakeEnvKey, envir = pe, inherits = FALSE),
+               info = "in-memory cache entry must be gone after invalidate")
+  expect_false(file.exists(cacheFile),
+               info = "on-disk cache file must be gone after invalidate")
+  expect_false(exists(".lastPakDepsKey", envir = pe, inherits = FALSE),
+               info = ".lastPakDepsKey stash must be cleared to prevent double-invalidation")
+})
+
+test_that(".pakDepsInvalidateLast() is a no-op when no key was stashed", {
+  pe <- Require:::pakEnv()
+  ## Defensive: ensure no stash exists
+  if (exists(".lastPakDepsKey", envir = pe, inherits = FALSE))
+    rm(".lastPakDepsKey", envir = pe)
+  expect_false(Require:::.pakDepsInvalidateLast(),
+               info = "must return FALSE when nothing to invalidate")
+})
+
+test_that(".pinSurvivorToMinimumAfterExactReject() pins survivor when an == was rejected", {
+  # User listed `stringfish (==0.17.0)` AND another package required
+  # `stringfish (>= 0.18.0)`. Old behaviour: drop the ==, keep the >=
+  # as-is, pak fetches CRAN's LATEST (e.g. 0.19.0). New behaviour: when
+  # the rejected constraint was an exact `==X` pin, pin the surviving
+  # `>=Y`/`>Y` row to `==Y` so we install the minimum that satisfies
+  # the floor -- as close to the user's original `==X` as we can get.
+  pkgDT <- data.table::data.table(
+    Package         = "stringfish",
+    packageFullName = "stringfish (>= 0.18.0)",
+    versionSpec     = "0.18.0",
+    inequality      = ">="
+  )
+  rmRows <- data.table::data.table(Package = "stringfish", inequality = "==")
+  out <- Require:::.pinSurvivorToMinimumAfterExactReject(pkgDT, rmRows)
+  expect_identical(out$inequality, "==")
+  expect_identical(out$versionSpec, "0.18.0")
+  expect_identical(out$packageFullName, "stringfish (== 0.18.0)")
+})
+
+test_that(".pinSurvivorToMinimumAfterExactReject() is a no-op when no == was rejected", {
+  # Pure `>=Y` conflict (no exact pin involved) should NOT be pinned --
+  # absent a user-supplied `==` we have no reason to narrow.
+  pkgDT <- data.table::data.table(
+    Package         = "stringfish",
+    packageFullName = "stringfish (>= 0.18.0)",
+    versionSpec     = "0.18.0",
+    inequality      = ">="
+  )
+  rmRows <- data.table::data.table(
+    Package = "stringfish", inequality = ">=") # rejected was also a >=, not ==
+  before <- data.table::copy(pkgDT)
+  Require:::.pinSurvivorToMinimumAfterExactReject(pkgDT, rmRows)
+  expect_identical(pkgDT, before)
+})
+
+test_that(".pinSurvivorToMinimumAfterExactReject() handles empty/malformed inputs", {
+  pkgDT <- data.table::data.table(
+    Package = "stringfish", packageFullName = "stringfish",
+    versionSpec = NA_character_, inequality = NA_character_)
+  expect_silent(Require:::.pinSurvivorToMinimumAfterExactReject(
+    pkgDT, data.table::data.table()))
+  expect_silent(Require:::.pinSurvivorToMinimumAfterExactReject(
+    pkgDT, NULL))
+})
+
+test_that("pak is pinned to source only when the caller actually asked for it", {
+  ## Require()/Install() default `type = getOption("pkgType")`, which is
+  ## "source" on Linux. Keying the pin on the value alone therefore fired on
+  ## every Linux install: pak resolved the whole tree as source, so every
+  ## already-installed *binary* dependency stopped matching and was replanned
+  ## as a source rebuild -- a plan full of `cli 3.6.6 -> 3.6.6 [bld][cmp]`.
+  ## Measured on one ref whose deps were all installed: 23 same-version
+  ## rebuilds and 103.8s forced, versus "kept 20, added 1" and 2.6s not forced.
+  withr::local_options(list(pkg.platforms = NULL))
+
+  ## defaulted type -- must NOT pin, whatever the platform default happens to be
+  expect_null(Require:::forcePakSourceIfRequested("source", typeExplicit = FALSE))
+  expect_null(getOption("pkg.platforms"))
+
+  ## explicitly requested source -- must pin, and hand back the old value so
+  ## the caller's on.exit() can restore it
+  old <- Require:::forcePakSourceIfRequested("source", typeExplicit = TRUE)
+  expect_identical(getOption("pkg.platforms"), "source")
+  expect_true(is.list(old) && "pkg.platforms" %in% names(old))
+  options(old)
+  expect_null(getOption("pkg.platforms"))
+
+  ## an explicit non-source type never pins
+  expect_null(Require:::forcePakSourceIfRequested("binary", typeExplicit = TRUE))
+  expect_null(getOption("pkg.platforms"))
+})
+
+test_that(".pakDropUnchangedFailures re-attempts only when something new is installed", {
+  ## #190: identify-and-defer ran several phases, each deciding independently
+  ## what to attempt, so a ref that cannot build was handed to pak once per
+  ## phase against an identical installed set. Retrying is only useful when a
+  ## dependency has landed since the last attempt.
+  memo <- Require:::.pakFailMemo()
+  refs <- c("any::Deriv", "any::car")
+  inst1 <- c("cli", "rlang")
+
+  ## nothing recorded yet -> everything is attempted
+  expect_identical(
+    Require:::.pakDropUnchangedFailures(memo, refs, inst1, verbose = -2), refs)
+
+  Require:::.pakRecordFailures(memo, refs, inst1)
+
+  ## same installed set -> both dropped
+  expect_identical(
+    Require:::.pakDropUnchangedFailures(memo, refs, inst1, verbose = -2),
+    character(0))
+
+  ## the comparison is set-wise, not order-sensitive
+  expect_identical(
+    Require:::.pakDropUnchangedFailures(memo, refs, rev(inst1), verbose = -2),
+    character(0))
+
+  ## one new package anywhere makes them eligible again
+  expect_identical(
+    Require:::.pakDropUnchangedFailures(memo, refs, c(inst1, "glue"), verbose = -2),
+    refs)
+
+  ## a ref that never failed is never dropped
+  expect_identical(
+    Require:::.pakDropUnchangedFailures(memo, "any::brandNew", inst1, verbose = -2),
+    "any::brandNew")
+
+  ## empty in, empty out
+  expect_identical(
+    Require:::.pakDropUnchangedFailures(memo, character(0), inst1, verbose = -2),
+    character(0))
+})
+
+test_that("a `(HEAD)` CRAN ref does not force a reinstall of what is current", {
+  ## Install() must not reinstall a package it already has -- that is the point
+  ## of the package. `(HEAD)` used to force installedVersionOK = FALSE on every
+  ## row carrying it, so updatePackages() (which tags every installed CRAN
+  ## package `pkg (HEAD)`) asked for the whole library back: 170 same-version
+  ## rebuilds where base::update.packages() correctly found 3.
+  ##
+  ## Nothing downstream corrected it under the default Require.usePak = TRUE:
+  ## the HEAD -> dontInstall comparison lives in doDownloads(), on the legacy
+  ## non-pak path only.
+  mk <- function(pkg, instVer, availVer, repoLoc) {
+    data.table::data.table(
+      Package = pkg, Version = instVer, VersionOnRepos = availVer,
+      packageFullName = paste0(pkg, " (HEAD)"), repoLocation = repoLoc,
+      versionSpec = "HEAD", inequality = "")
+  }
+
+  dt <- data.table::rbindlist(list(
+    mk("current",  "1.2.0", "1.2.0", "CRAN"),          # installed == newest
+    mk("ahead",    "1.3.0", "1.2.0", "CRAN"),          # installed newer than repo
+    mk("stale",    "1.0.0", "1.2.0", "CRAN"),          # repo has something newer
+    mk("unknown",  "1.0.0", NA_character_, "CRAN"),    # cannot settle -> install
+    mk("noSHA",    "1.0.0", "1.0.0", "GitHub")         # no local SHA -> install
+  ))
+
+  out <- Require:::whichToInstall(dt, install = TRUE, verbose = -2)
+  needInstall <- setNames(out$needInstall, out$Package)
+
+  expect_identical(unname(needInstall[["current"]]), Require:::.txtDontInstall)
+  expect_identical(unname(needInstall[["ahead"]]),   Require:::.txtDontInstall)
+  expect_identical(unname(needInstall[["stale"]]),   Require:::.txtInstall)
+  expect_identical(unname(needInstall[["unknown"]]), Require:::.txtInstall)
+  ## a GitHub row with no local SHA cannot be settled -> keep the old answer
+  expect_identical(unname(needInstall[["noSHA"]]),   Require:::.txtInstall)
+})
+
+test_that("a `(HEAD)` GitHub ref is settled by SHA, not reinstalled blindly", {
+  ## HEAD means "the newest available" for both CRAN-alikes and Git; the Git
+  ## half is a SHA comparison. alreadyExistingDESCFile() is the existing
+  ## implementation -- doDownloads() uses it -- but that is the legacy non-pak
+  ## path, so under Require.usePak = TRUE every GitHub HEAD ref reinstalled
+  ## unconditionally. Reuse, not a second implementation.
+  remoteSHA <- strrep("a", 40)
+  lib <- tempfile("headlib"); dir.create(lib)
+  on.exit(unlink(lib, recursive = TRUE), add = TRUE)
+  mkInstalled <- function(pkg, sha) {
+    dir.create(file.path(lib, pkg), recursive = TRUE, showWarnings = FALSE)
+    writeLines(c(paste0("Package: ", pkg), "Version: 1.0.0",
+                 paste0("GithubSHA1: ", sha)),
+               file.path(lib, pkg, "DESCRIPTION"))
+  }
+  mkInstalled("atHead", remoteSHA)
+  mkInstalled("behind", strrep("b", 40))
+
+  mkGH <- function(pkg) data.table::data.table(
+    Package = pkg, Version = "1.0.0", VersionOnRepos = NA_character_,
+    packageFullName = paste0("acct/", pkg, "@main (HEAD)"),
+    repoLocation = "GitHub", versionSpec = "HEAD", inequality = "",
+    Account = "acct", Repo = pkg, Branch = "main")
+  dt <- data.table::rbindlist(list(mkGH("atHead"), mkGH("behind")))
+
+  testthat::with_mocked_bindings(
+    getSHAfromGitHubMemoise = function(...) remoteSHA,
+    {
+      out <- Require:::whichToInstall(dt, install = TRUE, verbose = -2,
+                                      libPaths = lib)
+      needInstall <- setNames(out$needInstall, out$Package)
+      ## local SHA == branch HEAD -> nothing to do
+      expect_identical(unname(needInstall[["atHead"]]), Require:::.txtDontInstall)
+      ## local SHA differs -> install
+      expect_identical(unname(needInstall[["behind"]]), Require:::.txtInstall)
+    },
+    .package = "Require")
+
+  ## an unreachable GitHub must not be read as "up to date"
+  testthat::with_mocked_bindings(
+    getSHAfromGitHubMemoise = function(...) stop("no network"),
+    {
+      out <- Require:::whichToInstall(dt, install = TRUE, verbose = -2,
+                                      libPaths = lib)
+      expect_true(all(out$needInstall == Require:::.txtInstall))
+    },
+    .package = "Require")
+})

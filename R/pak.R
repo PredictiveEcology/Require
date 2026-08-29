@@ -61,7 +61,99 @@ regexEscape <- function(x) {
   FALSE
 }
 
+# Locate pkgcache's bundled `bioc-config.yaml` fixture and its release_version.
+# pak/pkgcache fetch http://bioconductor.org/config.yaml at startup to detect the
+# Bioconductor version; when bioc.org is unreachable (network blip, firewall, bioc
+# downtime) the ENTIRE pak call dies with
+#   `cannot open URL 'http://bioconductor.org/config.yaml'`.
+# Returns list(version=<chr or NA>, path=<chr or "">). pkgcache usually lives inside
+# pak's private library, so the top-level system.file() returns "" -- fall back to
+# pak's library/.
+pakBiocFixture <- function() {
+  fixture <- tryCatch(system.file("fixtures", "bioc-config.yaml", package = "pkgcache"),
+                      error = function(e) "")
+  if (!nzchar(fixture)) {
+    pakDir <- tryCatch(suppressWarnings(find.package("pak")), error = function(e) "")
+    if (length(pakDir) && nzchar(pakDir)) {
+      cand <- file.path(pakDir, "library", "pkgcache", "fixtures", "bioc-config.yaml")
+      if (file.exists(cand)) fixture <- cand
+    }
+  }
+  version <- NA_character_
+  if (nzchar(fixture) && file.exists(fixture)) {
+    relLine <- grep("^release_version:", readLines(fixture, warn = FALSE), value = TRUE)[1L]
+    v <- sub('^release_version:\\s*"?([^"\\s]+)"?\\s*$', "\\1", relLine, perl = TRUE)
+    if (length(v) && nzchar(v) && !is.na(v)) version <- v
+  }
+  list(version = version, path = fixture)
+}
+
+# Point pak/pkgcache at the bundled bioc config so it NEVER reaches
+# bioconductor.org. Sets R_BIOC_VERSION + R_BIOC_CONFIG_URL, but ONLY when they
+# are unset (respecting a user's explicit choice) AND only when the bundled
+# fixture is actually found (so we set the correct version + a working file://
+# URL rather than guessing). Idempotent and cheap -- safe to call on every pak
+# call. Persistent (no on.exit restore): the goal is session-wide resilience to
+# the transient bioc fetch failure.
+setBiocConfigEnvForPak <- function() {
+  haveVer <- nzchar(Sys.getenv("R_BIOC_VERSION"))
+  haveUrl <- nzchar(Sys.getenv("R_BIOC_CONFIG_URL"))
+  if (haveVer && haveUrl) return(invisible(FALSE))
+  bf <- pakBiocFixture()
+  if (is.na(bf$version) || !nzchar(bf$path) || !file.exists(bf$path))
+    return(invisible(FALSE))   # no fixture -> don't guess a (possibly wrong) version
+  if (!haveVer) Sys.setenv(R_BIOC_VERSION = bf$version)
+  if (!haveUrl)
+    Sys.setenv(R_BIOC_CONFIG_URL = paste0("file://", normalizePath(bf$path, winslash = "/")))
+  invisible(TRUE)
+}
+
+# TRUE iff an error (walking its `parent` cause chain) is pak/pkgcache failing to
+# fetch bioconductor.org/config.yaml. pak fetches that at startup to detect the
+# Bioc version and hard-fails the WHOLE call when bioc.org is unreachable, even
+# when no Bioconductor package was requested. Used by pakCall() to trigger the
+# one-shot bundled-config fallback.
+# .conditionChainText: flatten a condition and its `parent` chain to one
+# string. pak wraps the subprocess's real error inside its own
+# "! error in pak subprocess" condition, so the text that identifies a failure
+# is usually not in conditionMessage(e) itself.
+.conditionChainText <- function(e, depth = 10L) {
+  txt <- character(0)
+  cur <- e
+  d <- 0L
+  while (!is.null(cur) && d < depth) {
+    txt <- c(txt, tryCatch(conditionMessage(cur), error = function(x) ""))
+    cur <- cur$parent
+    d <- d + 1L
+  }
+  paste(txt, collapse = "\n")
+}
+
+isBiocConfigFetchError <- function(e) {
+  if (is.null(e)) return(FALSE)
+  txt <- .conditionChainText(e)
+  grepl("bioconductor\\.org/config\\.yaml", txt, ignore.case = TRUE) ||
+    (grepl("config\\.yaml", txt, ignore.case = TRUE) &&
+       grepl("bioconductor", txt, ignore.case = TRUE))
+}
+
+# ---------------------------------------------------------------------------
+# isPakBrokenInstallError: pak's signature for a pak installation whose native
+# helper executables no longer run -- the state a file-by-file copy of a
+# library leaves pak in (see .pakNoCopyPkgs()). Distinct from "pak is not on
+# .libPaths()", which pak reports as .txtPakNoPkgCalledPak and which
+# .txtPakNotOnLibPaths covers.
+# ---------------------------------------------------------------------------
+isPakBrokenInstallError <- function(e) {
+  if (is.null(e)) return(FALSE)
+  grepl(.txtPakProcessxExec, .conditionChainText(e), fixed = TRUE)
+}
+
 pakCall <- function(expr, verbose = getOption("Require.verbose")) {
+  ## Capture the pak call UNEVALUATED so we can re-run it if the first attempt
+  ## dies on the bioconductor.org/config.yaml fetch (see runWithBiocFallback).
+  exprSub <- substitute(expr)
+  pf <- parent.frame()
   ## Inline null-coalesce: `%||%` is base in R 4.4+ but not 4.3, and Require
   ## doesn't import it from rlang. Without this, pakCall errors on R 4.3
   ## (silently, since try() in callers swallows it), turning every pak
@@ -80,19 +172,89 @@ pakCall <- function(expr, verbose = getOption("Require.verbose")) {
     Sys.setenv(PKG_SYSREQS = "false", PKG_SYSREQS_SUDO = "false")
     options(pkg.sysreqs = FALSE, pkg.sysreqs_sudo = FALSE)
   }
+  ## Failure-triggered bioc resilience: run the pak call normally (so when
+  ## bioc.org is reachable, pak uses the real, current Bioconductor config). ONLY
+  ## if it dies on the bioc config fetch, point pkgcache at its bundled config
+  ## (no network) and retry ONCE. We never pre-empt the fetch globally, so we
+  ## don't freeze the Bioc version for users who don't hit the failure.
+  runWithBiocFallback <- function() {
+    tryCatch(
+      eval(exprSub, envir = pf),
+      error = function(e) {
+        if (isBiocConfigFetchError(e) && setBiocConfigEnvForPak()) {
+          messageVerbose(
+            "pak could not reach bioconductor.org/config.yaml; retrying with ",
+            "pkgcache's bundled Bioconductor config (offline, no network).",
+            verbose = verbose, verboseLevel = 1)
+          eval(exprSub, envir = pf)
+        } else {
+          ## Append, rather than replace: keep pak's own condition (classes
+          ## included, so downstream handlers still match) and add the part
+          ## pak cannot know -- that this is a damaged install and how to
+          ## clear it.
+          if (isPakBrokenInstallError(e))
+            e$message <- paste0(conditionMessage(e), .txtPakBrokenInstall)
+          stop(e)
+        }
+      })
+  }
   if (verbose <= -1L) {
     old <- options(pkg.show_progress = FALSE)
     on.exit(options(old), add = TRUE)
     .res <- NULL
-    utils::capture.output(.res <- suppressMessages(force(expr)), type = "output")
+    utils::capture.output(.res <- suppressMessages(runWithBiocFallback()), type = "output")
     .res
   } else if (verbose == 0L) {
     old <- options(pkg.show_progress = FALSE)
     on.exit(options(old), add = TRUE)
-    force(expr)
+    runWithBiocFallback()
   } else {
-    force(expr)
+    runWithBiocFallback()
   }
+}
+
+# When the caller explicitly requested type = "source", force pak to resolve
+# AND install from source only. pak ignores base R's getOption("pkgType"); its
+# source-vs-binary selection is driven by pkgdepends' `platforms` config, which
+# is settable from the main process via options(pkg.platforms=) (read when pak
+# builds the proposal, before the subprocess is spawned). The default is
+# c(<this platform>, "source"); pinning it to "source" stops pak from "keeping"
+# or installing a stale CRAN binary when the source tree is newer -- the
+# binary-lag downgrade where pak resolves reproducible 3.1.0 (source) but only
+# the 3.0.0 binary exists on Windows/Mac, leaving the user silently downgraded.
+# Returns the previous options() list for on.exit(options(old)) restoration, or
+# NULL when no override was applied (caller skips the on.exit in that case).
+# ---------------------------------------------------------------------------
+# forcePakSourceIfRequested: pin pak to source-only builds, but ONLY when the
+# caller actually asked for `type = "source"`.
+#
+# `typeExplicit` is not a nicety. Require()/Install() default
+# `type = getOption("pkgType")`, and on Linux that is "source" -- so testing
+# `identical(type, "source")` alone fired on every Linux install, whether or
+# not anyone asked. pak then resolved the whole tree as source, and every
+# already-installed *binary* dependency (PPM serves __linux__ builds) failed to
+# match that resolution and was replanned as a source rebuild. The symptom was
+# a plan full of same-version "updates":
+#
+#     + cli   3.6.6 -> 3.6.6 [bld][cmp]
+#     + Rcpp  1.1.2 -> 1.1.2 [bld][cmp]
+#
+# Measured, one ref whose dependencies were all installed:
+#     forced   : "Will update 23", 23 same-version rebuilds, 103.8s
+#     not forced: "kept 20, added 1", 0 rebuilds, 2.6s (and a binary was used)
+#
+# Pure-R packages were kept either way, since source and binary are the same
+# thing for them -- which is why only the compiled dependencies churned.
+#
+# The protection itself is still worth having when genuinely requested:
+# without it pak's install step can keep or fetch an older platform binary
+# after the resolve picked a newer source version (the silent binary-lag
+# downgrade). That is why this narrows the trigger rather than removing it.
+# ---------------------------------------------------------------------------
+forcePakSourceIfRequested <- function(type, typeExplicit = FALSE) {
+  if (!isTRUE(typeExplicit)) return(NULL)
+  if (!identical(type, "source")) return(NULL)
+  options(pkg.platforms = "source")
 }
 
 pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.verbose")) {
@@ -178,12 +340,22 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
       versEsc         <- regexEscape(as.character(unlist(vers)))
       patVec <- paste0("^", pkgNoVersionEsc, ".*", versEsc, "|/",
                               pkgNoVersionEsc, ".*", versEsc)
-      whRm <- unlist(unname(lapply(patVec, function(p) {
+      hits <- lapply(patVec, function(p) {
         tryCatch(grep(p, pkg), error = function(e) integer(0))
-      })))
+      })
+      ## whRm: the flattened set of every hit, for the branches that remove a
+      ## set of refs. whRmEach: one index per entry of pkgNoVersion (NA when
+      ## pak named a package that is not in `pkg`, e.g. a transitive dep), for
+      ## the positional `[j]` lookups below. Flattening alone drops the zero-hit
+      ## patterns and shifts every later index, so `whRm[j]` ran off the end
+      ## and put NA into packages[whRm] -- crashing the parser and with it the
+      ## whole retry path.
+      whRm <- unlist(hits)
+      whRmEach <- vapply(hits, function(h) if (length(h)) h[1] else NA_integer_,
+                         integer(1))
 
       if (grp[i] == .txtMissingValueWhereTFNeeded) {
-        packages <- pakGetArchive(pkgNoVersion, packages = packages, whRm = whRm)
+        packages <- pakGetArchive(pkgNoVersion, packages = packages, whRm = whRm, verbose = verbose)
         break
       }
       if (grp[i] == .txtFailedToDLFrom) {
@@ -193,24 +365,26 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
       if (grp[i] == .txtCntInstllDep) {
         whRmAll <- integer()
         for (j in seq_along(pkgNoVersion)) {
+          if (is.na(whRmEach[j])) next # not one of our refs (transitive dep)
           if (isGH(pkgNoVersion[j])) { # "PredictiveEcology/fpCompare (>=2.0.0)"
-            if (is.na(pkg[whRm[j]]) || !length(whRm[j])) next
-            isOK <- pakCheckGHversionOK(pkg[whRm[j]])
+            isOK <- pakCheckGHversionOK(pkg[whRmEach[j]], verbose = verbose)
             # pkgDT <- toPkgDTFull(pkg)
             # dl <- pak::pkg_download(trimVersionNumber(pkg), dest_dir = tempdir2())
             # vers <- extractVersionNumber(filenames = basename(dl$fulltarget))
             # isOK <- compareVersion2(vers, versionSpec = pkgDT$versionSpec, inequality = pkgDT$inequality)
             if (isOK %in% FALSE)
-              whRmAll <- c(whRmAll, whRm[j])
+              whRmAll <- c(whRmAll, whRmEach[j])
               # packages <- packages[-whRm[j]]
             next
           }
-          packages2 <- pakGetArchive(pkgNoVersion[j], packages = packages, whRm = whRm[j])
+          packages2 <- pakGetArchive(pkgNoVersion[j], packages = packages, whRm = whRmEach[j], verbose = verbose)
           if (!identical(length(packages2), length(packages)))
-            whRmAll <- c(whRmAll, whRm[j])
+            whRmAll <- c(whRmAll, whRmEach[j])
 
         }
-        packages <- packages[-whRmAll]
+        ## x[-integer(0)] is empty, not x: only subset when there is something to drop
+        if (length(whRmAll))
+          packages <- packages[-whRmAll]
         break
       }
 
@@ -221,7 +395,7 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
         # likely a repository that has a 4th version number element,
         #  e.g., NetLogoR 1.0.5.9001 on e.g., predictiveecology.r-universe.dev
         repoToUse <- unlist(whIsOfficialCRANrepo(currentRepos = getOption("repos")))
-        packages <- pakGetArchive(pkgNoVersion, packages = packages, whRm = whRm)
+        packages <- pakGetArchive(pkgNoVersion, packages = packages, whRm = whRm, verbose = verbose)
         # options(repos = repoToUse)
         break
       }
@@ -249,8 +423,13 @@ pakErrorHandling <- function(err, pkg, packages, verbose = getOption("Require.ve
               break
             }
             if (grp[i] == .txtPakNoPkgCalledPak) {
-              stop("\nTry running: \npak::meta_clean()")
-              # stop(err)
+              ## Previously this replaced the error with "Try running:
+              ## pak::meta_clean()". That clears pak's *metadata cache*, which
+              ## has nothing to do with the cause: pak's subprocess loads pak
+              ## from the .libPaths() it inherits, so this error means no entry
+              ## on that path has pak. Keep the original error and say so;
+              ## meta_clean() survives as the secondary suggestion.
+              stop(err, .txtPakNotOnLibPaths, call. = FALSE)
             }
             packages <- packages[-whRm]
             break
@@ -353,7 +532,7 @@ pakPkgSetup <- function(pkgs, doDeps, verbose = getOption("Require.verbose")) {
     pkgs[whEquals] <- equalsToAt(pkgs[whEquals])
     # pkgs[whEquals] <- gsub(" {0,3}\\(== {0,4}(.+)\\)", "@\\1", pkgs[whEquals])
   if (length(whLT))
-    pkgs[whLT] <- lessThanToAt(pkgs[whLT])
+    pkgs[whLT] <- lessThanToAt(pkgs[whLT], verbose = verbose)
     # pkgs[whLT] <- gsub(" {0,3}\\(<= {0,4}(.+)\\)", "@\\1", pkgs[whLT])
   if (length(whHEAD))
     pkgs[whHEAD] <- HEADtoNone(pkgs[whHEAD])
@@ -440,7 +619,35 @@ whEquals <- function(pkgs) {
 }
 
 isGH <- function(pkgs) {
-  grepl("^[[:alpha:]]+/.+", pkgs)
+  ## Shared with extractPkgGitHub(); see .ghRefRegex in R/extract.R for why
+  ## these two must not have separate definitions.
+  grepl(.ghRefRegex, pkgs)
+}
+
+# Returns TRUE iff the constraint (`versionSpec` / `inequality`) is satisfied,
+# either by what's on disk (`installedVer`) or by pak's globally-resolved
+# version (`pakResolvedVer`) -- and in the latter case only when pak's
+# resolution matches what's actually on disk.
+#
+# The disk-match guard is the regression fix for the binary-lag scenario:
+# pak's `pkg_deps` resolver may pick the source version (e.g. reproducible
+# 3.1.0) while `pak::pak()` chooses to "keep" the older binary (3.0.0) on
+# platforms whose CRAN binary hasn't caught up. Treating `pakResolvedVer` as
+# authoritative without checking disk reality marks the unsatisfied install
+# as "OK" and the user gets `Installed 1 packages` followed by a still-old
+# `packageVersion(pkg)`.
+pakConstraintSatisfied <- function(installedVer, versionSpec, inequality,
+                                   pakResolvedVer = NA_character_) {
+  satisfies <- isTRUE(compareVersion2(installedVer,
+                                      versionSpec = versionSpec,
+                                      inequality  = inequality))
+  if (!satisfies && !is.na(pakResolvedVer) && nzchar(pakResolvedVer) &&
+      identical(pakResolvedVer, installedVer)) {
+    satisfies <- isTRUE(compareVersion2(pakResolvedVer,
+                                        versionSpec = versionSpec,
+                                        inequality  = inequality))
+  }
+  satisfies
 }
 
 # For each plain CRAN ref in `pkgsForPak` that names a package currently
@@ -521,10 +728,10 @@ pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
       notGH <- isGH %in% FALSE
       if (any(notGH)) {
         pkg[notGH] <- equalsToAt(pkg[notGH])
-        pkg2 <- lessThanToAt(pkg[notGH]) # can remove a pkg if not an option
+        pkg2 <- lessThanToAt(pkg[notGH], verbose = verbose) # can remove a pkg if not an option
       } else {
         pkg <- equalsToAt(pkg)
-        pkg2 <- lessThanToAt(pkg) # can remove a pkg if not an option
+        pkg2 <- lessThanToAt(pkg, verbose = verbose) # can remove a pkg if not an option
       }
       if (length(pkg2) == 0) {
         pkg1 <- pkg2
@@ -713,10 +920,10 @@ DESCRIPTIONfileFromModule <- function(module, md, deps, hasNamespaceFile, NAMESP
   # if (all(!hasSC))
   #   deps <- c("SpaDES.core", deps)
 
-  d$Imports <- Require::extractPkgName(deps)
-  versionNumb <- Require::extractVersionNumber(deps)
-  needRemotes <- which(!is.na(Require::extractPkgGitHub(deps)))
-  d$Remotes <- Require::trimVersionNumber(deps[needRemotes])
+  d$Imports <- extractPkgName(deps)
+  versionNumb <- extractVersionNumber(deps)
+  needRemotes <- which(!is.na(extractPkgGitHub(deps)))
+  d$Remotes <- trimVersionNumber(deps[needRemotes])
 
   hasVersionNumb <- !is.na(versionNumb)
   inequality <- paste0("(", gsub("(.+)\\((.+)\\)", "\\2", deps[hasVersionNumb]), ")")
@@ -799,6 +1006,20 @@ equalsToAt <- function(pkgs) {
   gsub(" {0,3}\\(== {0,4}(.+)\\)", "@\\1", pkgs)
 }
 
+# TRUE for a GitHub ref pinned to an explicit commit SHA (`owner/repo@<sha>`)
+# that the user has NOT already version-constrained or HEAD-flagged. Such a ref
+# means "exactly this commit", so Require treats it as an exact-version pin (see
+# pakDepsToPkgDT step 4b). Branch refs (`owner/repo@development`) are excluded --
+# they track the branch via the HEAD machinery -- as are `(HEAD)`-flagged refs
+# and refs already carrying a `(==/>=/<= ...)` spec. SHA detection: the whole
+# post-`@` token (after stripping any version spec) is 7-40 hex chars.
+isExplicitShaPin <- function(refs) {
+  isGH(refs) &
+    grepl("@[0-9a-fA-F]{7,40}$", trimVersionNumber(refs)) &
+    !grepl("\\(HEAD\\)", refs) &
+    !grepl("\\([[:space:]]*[<>=]", refs)
+}
+
 # Reduce a vector of pak refs to the bare package names that line up with
 # rownames(installed.packages()). Three things to strip:
 #   * "any::"  prefix on plain CRAN refs   (any::cli           -> cli)
@@ -812,7 +1033,43 @@ equalsToAt <- function(pkgs) {
 # checks all misclassify it as still-missing -- even right after a successful
 # install -- because installed.packages() returns "pkg".
 pakRefToBareName <- function(refs) {
+  isUrl <- startsWith(refs, "url::")
+  if (any(isUrl))
+    refs[isUrl] <- extractPkgName(filenames = basename(refs[isUrl]))
   sub("@.*$", "", sub("^any::", "", sub("^[^/]+/", "", extractPkgName(refs))))
+}
+
+# pkgdepends (0.9.x, pkgplan_i_lp_deduplicate) rules out an older source
+# candidate of a package whose dependency list matches the newest one
+# ("choose-latest") -- even when that candidate is an explicit `pkg@version`
+# pin. So BH@1.81.0-1 or bitops@1.0-7 can never be solved as a standard ref.
+# The rule covers only cran/bioc/standard refs, so a pin that is not the
+# current version is handed over as its CRAN Archive tarball instead -- for
+# every exact pin, not only snapshots: Install("bitops (==1.0-7)") is refused
+# the same way, and otherwise only reaches the archive through the slow
+# per-package and archive-fallback passes.
+pakPinnedArchiveRefs <- function(refs, repos = getOption("repos"),
+                                 verbose = getOption("Require.verbose")) {
+  pkgs <- sub("@.*$", "", refs)
+  vers <- sub("^.*@", "", refs)
+  ap <- available.packagesCached(repos, purge = FALSE, verbose = verbose)
+  cur <- ap$Version[match(pkgs, ap$Package)]
+  old <- is.na(cur) | cur != vers
+  if (!any(old)) return(refs)
+  ## Archive tarballs are source: take them from an official CRAN mirror, not
+  ## from a PPM binary path -- pak refuses a source tarball served under
+  ## `__linux__/<codename>` on some R versions (R 4.5.3 here, not 4.4 or 4.6).
+  isCRAN <- unlist(whIsOfficialCRANrepo(repos)) %in% TRUE
+  cranRepos <- unique(c(repos[isCRAN], srcPackageURLOnCRAN))
+  av <- dlArchiveVersionsAvailable(unique(pkgs[old]), repos = cranRepos, verbose = verbose)
+  for (i in which(old)) {
+    d <- av[[pkgs[i]]]
+    if (!NROW(d)) next
+    hit <- which(basename(d$PackageUrl) == paste0(pkgs[i], "_", vers[i], ".tar.gz"))[1]
+    if (!is.na(hit))
+      refs[i] <- paste0("url::", sub("/$", "", d$repo[hit]), "/src/contrib/Archive/", d$PackageUrl[hit])
+  }
+  refs
 }
 
 # Look up `pkg` (bare name) in pak's local download cache and return the path
@@ -929,6 +1186,38 @@ pakCachedTarball <- function(pkg, versionSpec = NA_character_,
        version = cachedVer)
 }
 
+# Deduplicate an install set so a single package never appears as BOTH a plain
+# CRAN ref and a GitHub/url:: ref (and never as several plain-CRAN rows).
+# pak::pak() rejects such a list with a "Conflicts with" error EVEN under
+# `dependencies = FALSE` (it still does conflict detection), which forces the
+# slow per-ref ("one-at-a-time") install fallback and loses pak's parallel
+# batch build. Resolution rules (mirroring what the install paths need):
+#   * if any non-CRAN (GitHub/url::) ref exists for a Package, drop its plain
+#     CRAN rows -- the non-CRAN ref is authoritative;
+#   * among remaining same-Package rows, keep the one with the strictest version
+#     constraint (== > <= > < > >= > > > none) so a user pin isn't lost.
+# Operates on a copy; returns the deduplicated data.table. Used by both the
+# offline (cache) and online install paths so they behave identically.
+dedupInstallRefs <- function(toInstall) {
+  if (!NROW(toInstall) || !anyDuplicated(toInstall$Package)) return(toInstall)
+  toInstall <- data.table::copy(toInstall)
+  pfn <- if ("packageFullName" %in% names(toInstall))
+    toInstall$packageFullName else toInstall$Package
+  set(toInstall, NULL, "isNonCRAN", isGH(pfn) | startsWith(pfn, "url::"))
+  toInstall[, hasNonCRAN := any(isNonCRAN), by = Package]
+  # Remove plain CRAN rows when a non-CRAN ref exists for the same package
+  toInstall <- toInstall[!(hasNonCRAN == TRUE & isNonCRAN == FALSE)]
+  ineq <- if ("inequality" %in% names(toInstall))
+    toInstall$inequality else rep(NA_character_, NROW(toInstall))
+  set(toInstall, NULL, ".versionSpecPrio",
+      match(ineq, c("==", "<=", "<", ">=", ">"), nomatch = 6L))
+  setorderv(toInstall, c("Package", ".versionSpecPrio"))
+  # If duplicates still remain (e.g., two GitHub branches), keep the first
+  toInstall <- unique(toInstall, by = "Package")
+  set(toInstall, NULL, c("isNonCRAN", "hasNonCRAN", ".versionSpecPrio"), NULL)
+  toInstall[]
+}
+
 # Offline install via pak: resolve each user package to a local tarball in
 # pak's cache and install via `local::path` refs (which require no network).
 # Returns the (possibly-modified) pkgDT with `installed`, `Version`,
@@ -939,6 +1228,11 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
   if (!requireNamespace("pak", quietly = TRUE)) stop("Please install pak")
   toInstall <- pkgDT[needInstall == .txtInstall]
   if (!NROW(toInstall)) return(pkgDT)
+  # Drop CRAN-vs-GitHub (and duplicate-CRAN) collisions BEFORE the batch
+  # pak::pak() so the single parallel install succeeds instead of degrading to
+  # the slow per-ref fallback. (The online path, pakInstallFiltered, does the
+  # same via dedupInstallRefs().)
+  toInstall <- dedupInstallRefs(toInstall)
 
   ## We used to call `pakResetSubprocess()` here, hoping that a wedged
   ## subprocess after a failed `pakInstallFiltered` plan would otherwise
@@ -970,6 +1264,7 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
   notInCache <- character(0)
   refsToInstall <- character(0)
   pkgsToInstall <- character(0)
+  cachedPathsToInstall <- character(0)  # per ref: the cached tarball path, for local:: fallback
   hasVS <- "versionSpec" %in% names(toInstall)
   hasIN <- "inequality"  %in% names(toInstall)
   for (i in seq_len(NROW(toInstall))) {
@@ -1041,10 +1336,13 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
       }
       refsToInstall <- c(refsToInstall, ref)
       pkgsToInstall <- c(pkgsToInstall, pkg)
+      cachedPathsToInstall <- c(cachedPathsToInstall, cached$path)
     }
   }
 
   installFailedPkgs <- character(0)
+
+
   triedPkgs <- pkgsToInstall
 
   if (length(refsToInstall)) {
@@ -1053,26 +1351,12 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
                    paste(pkgsToInstall, collapse = ", "),
                    verbose = verbose, verboseLevel = 1)
 
-    ## Locate pkgcache's bioc-config.yaml fixture. pkgcache lives inside
-    ## pak's private library on most installs, so the top-level
-    ## system.file() lookup returns "" -- fall back to pak's library/.
-    biocFixture <- tryCatch(
-      system.file("fixtures", "bioc-config.yaml", package = "pkgcache"),
-      error = function(e) "")
-    if (!nzchar(biocFixture)) {
-      pakDir <- tryCatch(find.package("pak"), error = function(e) "")
-      if (length(pakDir) && nzchar(pakDir)) {
-        cand <- file.path(pakDir, "library", "pkgcache", "fixtures",
-                          "bioc-config.yaml")
-        if (file.exists(cand)) biocFixture <- cand
-      }
-    }
-    biocVer <- if (nzchar(biocFixture) && file.exists(biocFixture)) {
-      relLine <- grep("^release_version:", readLines(biocFixture, warn = FALSE),
-                      value = TRUE)[1L]
-      v <- sub('^release_version:\\s*"?([^"\\s]+)"?\\s*$', "\\1", relLine, perl = TRUE)
-      if (length(v) && nzchar(v) && !is.na(v)) v else "3.22"
-    } else "3.22"
+    ## Locate pkgcache's bioc-config.yaml fixture (shared helper). Fall back to
+    ## "3.22" only here (the offline path needs *some* version even if pak's
+    ## fixture can't be found, since it must avoid the network entirely).
+    .bf <- pakBiocFixture()
+    biocFixture <- .bf$path
+    biocVer <- if (!is.na(.bf$version)) .bf$version else "3.22"
     envNms <- c("R_BIOC_VERSION", "R_BIOC_CONFIG_URL",
                 "PKG_METADATA_UPDATE_AFTER")
     oldEnv <- Sys.getenv(envNms, names = TRUE, unset = NA)
@@ -1098,14 +1382,112 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
       pak::pak(refsToInstall, lib = libPaths[1], ask = FALSE,
                dependencies = FALSE, upgrade = FALSE),
       verbose), silent = TRUE)
+
+    ## Batch-failure recovery: switch to per-ref install on ANY pak batch
+    ## error. Per-ref isolation lets us recover at least the refs pak can
+    ## install; it also bypasses several known pak resolver bugs that only
+    ## fire when multiple refs are in one solver context (e.g. self-
+    ## conflicts on exact-pins, `version_satisfies(... atleast = NA)`
+    ## errors on archived-CRAN deps). Each per-ref attempt has its own
+    ## fallback chain (tiers A -> B -> C below).
     if (is(err, "try-error")) {
-      ## Surface the underlying pak error at default verbose so silent-pak
-      ## failures are debuggable. The generic "offline install failed"
-      ## warning below loses the diagnostic.
-      messageVerbose("pak install reported error; deferring to ",
-                     "installed.packages() ground-truth check: ",
-                     as.character(err),
-                     verbose = verbose, verboseLevel = 1)
+      errStr <- as.character(err)
+      isConflict <- grepl("Conflicts with", errStr, fixed = TRUE)
+      messageVerbose(
+        if (isConflict)
+          "pakOfflineInstall: batch resolver reported 'Conflicts with' (likely a pak self-conflict on an exact-pin ref); "
+        else
+          "pakOfflineInstall: batch install failed; ",
+        "retrying each ref one-at-a-time so the other refs aren't blocked.",
+        verbose = verbose, verboseLevel = 1)
+      pakResetSubprocess()
+      for (i in seq_along(refsToInstall)) {
+        ## Tier A: try the ref as it was originally constructed (typically
+        ## a `pkg@version` exact-pin against the cache).
+        perRefErr <- try(pakCall(
+          pak::pak(refsToInstall[i], lib = libPaths[1], ask = FALSE,
+                   dependencies = FALSE, upgrade = FALSE),
+          verbose), silent = TRUE)
+        ## Tier B used to drop the version pin and retry with a bare
+        ## `pkg` ref on "Conflicts with". That was wrong: when pak's
+        ## CRAN sees one version and pak's cache holds a different one
+        ## (e.g. a PE-fork like `fpCompare@0.2.6.9000` in cache vs CRAN
+        ## `0.2.6`), pak picks CRAN's mainline and silently installs the
+        ## wrong version. Caught end-to-end on test-12: tier-B installed
+        ## fpCompare 0.2.6 instead of the cached 0.2.6.9000 and pak
+        ## emitted a warning the test's expect_length(warns2, 0L) caught.
+        ## Tier C below (whole-batch retry with this ref swapped to
+        ## local::<cached_path>) is the correct recovery path -- it
+        ## guarantees the cached version is installed regardless of what
+        ## CRAN's mainline has. So tier B is now a no-op; tier C handles
+        ## both "Conflicts with" and any other batch failure.
+        ## Tier C: on ANY remaining error, swap THIS ref to
+        ## `local::<cached_path>` and retry the WHOLE BATCH (with
+        ## `dependencies = FALSE` so every other ref's user-supplied
+        ## pin stays visible to pak).
+        ##
+        ## Why local::: bypasses pak's resolver for the failing ref
+        ## (pak reads the tarball's DESCRIPTION directly) -- the
+        ## recovery path for resolver bugs like the
+        ## `version_satisfies(... atleast = NA)` error pak emits on
+        ## archived-CRAN packages whose metadata has nullable fields
+        ## (observed end-to-end on user trying to install qs@0.27.3).
+        ##
+        ## Why pass the WHOLE batch: a previous version of tier C
+        ## called `pak::pak(localRef)` standalone. pak then resolved
+        ## qs's `LinkingTo: stringfish` against CRAN's LATEST
+        ## stringfish (0.19.0) instead of the user's pinned 0.17.0 --
+        ## installed 0.19.0, qs build then failed because qs 0.27.3
+        ## is binary-incompatible with stringfish 0.19.0. Solution:
+        ## pass the entire batch with this ref swapped, with
+        ## `dependencies = FALSE` so pak honours every pin and won't
+        ## reach for network upgrades. Pak orders the builds: each
+        ## `pkg@version` installs from cache first, then the local::
+        ## source build runs against the correctly-pinned deps.
+        if (is(perRefErr, "try-error") &&
+            length(cachedPathsToInstall) >= i &&
+            !is.na(cachedPathsToInstall[i]) &&
+            nzchar(cachedPathsToInstall[i]) &&
+            file.exists(cachedPathsToInstall[i])) {
+          localRef <- paste0("local::", cachedPathsToInstall[i])
+          if (localRef != refsToInstall[i]) {
+            batchWithLocalSwap <- refsToInstall
+            batchWithLocalSwap[i] <- localRef
+            messageVerbose(
+              "pakOfflineInstall: per-ref retry for ", refsToInstall[i],
+              " still failing; swapping that ref to `", localRef, "` and ",
+              "retrying the WHOLE batch (so the other refs' pins stay ",
+              "visible to pak).",
+              verbose = verbose, verboseLevel = 1)
+            pakResetSubprocess()
+            perRefErr <- try(pakCall(
+              pak::pak(batchWithLocalSwap, lib = libPaths[1], ask = FALSE,
+                       dependencies = FALSE, upgrade = FALSE),
+              verbose), silent = TRUE)
+            ## If the whole-batch retry succeeded, every ref in the
+            ## batch is now installed -- break out of the per-ref loop
+            ## so we don't redo work pak just completed.
+            if (!is(perRefErr, "try-error")) {
+              messageVerbose(
+                "pakOfflineInstall: whole-batch retry with `", localRef,
+                "` succeeded; skipping remaining per-ref retries.",
+                verbose = verbose, verboseLevel = 1)
+              break
+            }
+          }
+        }
+        if (is(perRefErr, "try-error")) {
+          messageVerbose(
+            "pakOfflineInstall: per-ref retry failed for ",
+            refsToInstall[i], ": ", as.character(perRefErr),
+            verbose = verbose, verboseLevel = 2)
+          pakResetSubprocess()
+        }
+      }
+      ## Don't propagate the original batch error to the warning path
+      ## below -- ground-truth installed.packages() check decides
+      ## whether each ref actually landed.
+      err <- NULL
     }
   }
 
@@ -1159,7 +1541,7 @@ pakOfflineInstall <- function(pkgDT, libPaths, verbose = getOption("Require.verb
   pkgDT
 }
 
-lessThanToAt <- function(pkgs) {
+lessThanToAt <- function(pkgs, verbose = getOption("Require.verbose")) {
   hasLT <- grepl("<", pkgs) # only < not <=
   if (any(hasLT %in% TRUE)) {
     #trulyLT <- grepl("<[^=]", pkgs) # only < not <=
@@ -1171,7 +1553,7 @@ lessThanToAt <- function(pkgs) {
 
       isGH <- isGH(pkg)
       if (any(isGH)) {
-        isOK <- pakCheckGHversionOK(pkg)
+        isOK <- pakCheckGHversionOK(pkg, verbose = verbose)
         notOK <- isOK %in% FALSE
         if (any(notOK)) {
           pkg2 <- pkg[!notOK]
@@ -1183,8 +1565,8 @@ lessThanToAt <- function(pkgs) {
 
       # vers <- Map(pkg = pkgs[whTrulyLT], function(pkg) {
       pkgNoVersion <- trimVersionNumber(pkg)
-      his <- try(pak::pkg_history(pkgNoVersion))
-      if (is(his, "try-error")) return(character())
+      his <- pkgHistoryVersions(pkgNoVersion, verbose = verbose)
+      if (is.null(his)) return(character())
       whOK <- compareVersion2(his$Version, pkgDT$versionSpec, pkgDT$inequality)
       if (all(whOK %in% FALSE)) {
         warning(msgPleaseChangeRqdVersion(pkgNoVersion, ineq = ">=", newVersion = tail(his$Version, 1)))
@@ -1193,18 +1575,27 @@ lessThanToAt <- function(pkgs) {
     })
     noneAvail <- lengths(vers) == 0
     if (any(noneAvail)) {
+      ## `hasLT` indexes `pkgs`; `noneAvail` indexes the `hasLT` *subset*.
+      ## Subsetting one by the other (the previous `hasLT <- hasLT[!noneAvail]`)
+      ## mismatches both length and position, so with a mix of resolvable and
+      ## unresolvable refs the resolved versions were written onto the wrong
+      ## packages. Switch off the unresolvable positions instead.
+      hasLT[which(hasLT)[noneAvail]] <- FALSE
       pkgDT <- pkgDT[!noneAvail]
       vers <- vers[!noneAvail]
-      hasLT <- hasLT[!noneAvail]
     }
-    if (any(noneAvail %in% FALSE)) {
+    if (NROW(pkgDT)) {
       set(pkgDT, NULL, "Version", vers)
       # set(pkgDT, whTrulyLT, "Version", vers)
       set(pkgDT, NULL, "packageFullName", paste0(pkgDT$Package, "@", pkgDT$Version))
       pkgs[hasLT] <- pkgDT$packageFullName
-    } else {
-      pkgs <- pkgDT$packageFullName
     }
+    ## When nothing was resolvable, leave `pkgs` as it came in. The previous
+    ## `else pkgs <- pkgDT$packageFullName` assigned an *emptied* pkgDT, so the
+    ## function returned character(0) and callers doing
+    ## `pkgs[whUnpinned] <- lessThanToAt(pkgs[whUnpinned])` died with
+    ## "replacement has length zero". The user has already been warned by
+    ## msgPleaseChangeRqdVersion(); the refs keep their original form.
     # val[trulyLT] <- pkgDT$packageFullName
     # }
     # LTorET <- trulyLT %in% FALSE
@@ -1215,13 +1606,22 @@ lessThanToAt <- function(pkgs) {
   pkgs
 }
 
+## Seam around pak::pkg_history(): kept as its own function so the
+## "no version history available" path is testable without a network call.
+## Returns NULL rather than a try-error.
+pkgHistoryVersions <- function(pkgNoVersion, verbose = getOption("Require.verbose")) {
+  his <- try(pakCall(pak::pkg_history(pkgNoVersion), verbose), silent = TRUE)
+  if (is(his, "try-error")) NULL else his
+}
+
 HEADtoNone <- function(pkgs) {
   gsub(" {0,3}\\(HEAD\\)", "", pkgs)
 }
 
 isGT <- function(pkgs) grepl(">", pkgs)
 
-pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
+pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages),
+                          verbose = getOption("Require.verbose")) {
   # Guard against being called with no package to look up. pakErrorHandling
   # parses pak's error output and can pass through an empty `pkgNoVersion`
   # when the parse yields no packages (e.g. a pak-internal error like
@@ -1239,7 +1639,7 @@ pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
   hasVer <- pkgNoVer != packages[whRm]
 
   isCRAN <- unlist(whIsOfficialCRANrepo(getOption("repos"), srcPackageURLOnCRAN))
-  hisAll <- try(pak::pkg_history(pkgNoVer), silent = TRUE)
+  hisAll <- try(pakCall(pak::pkg_history(pkgNoVer), verbose), silent = TRUE)
   ## Was previously `tail(..., 1)` (the LATEST archive entry). That broke
   ## snapshot installs that pin a specific older version: a snapshot ref
   ## like "BH@1.81.0-1" produced an Archive URL for the latest BH version
@@ -1335,9 +1735,9 @@ pakGetArchive <- function(pkg2, packages = pkg2, whRm = seq_along(packages)) {
 
 .txtDummyPackage <- "dummy"
 
-pakCheckGHversionOK <- function(pkg) {
+pakCheckGHversionOK <- function(pkg, verbose = getOption("Require.verbose")) {
   pkgDT <- toPkgDTFull(pkg)
-  dl <- try(pak::pkg_download(trimVersionNumber(pkg), dest_dir = tempdir2()))
+  dl <- try(pakCall(pak::pkg_download(trimVersionNumber(pkg), dest_dir = tempdir2()), verbose))
   if (is(dl, "try-error")) return(FALSE)
   vers <- extractVersionNumber(filenames = basename(dl$fulltarget))
   isOK <- compareVersion2(vers, versionSpec = pkgDT$versionSpec, inequality = pkgDT$inequality)
@@ -1587,14 +1987,22 @@ pakWhoNeeds <- function(pkg, pak_result = NULL) {
 # ---------------------------------------------------------------------------
 .pakDepsCacheTTL <- 24 * 3600   # 24 hours default
 
-pakDepsCacheKey <- function(pkgsForPak, wh, repos, userPkgs = NULL) {
+pakDepsCacheKey <- function(pkgsForPak, wh, repos, userPkgs = NULL,
+                            type = getOption("pkgType")) {
   tmp <- tempfile()
   on.exit(unlink(tmp), add = TRUE)
   # coerce to character vectors: options(repos = list(...)) is a supported
   # pattern, and sort() errors on list input with 'x must be atomic'
   payload <- list(pkgs  = sort(as.character(unlist(pkgsForPak, use.names = FALSE))),
                   wh    = sort(as.character(unlist(wh))),
-                  repos = sort(as.character(unlist(repos, use.names = FALSE))))
+                  repos = sort(as.character(unlist(repos, use.names = FALSE))),
+                  # Source-only resolution is a different dep-tree problem than
+                  # binary/both: pak picks the source version (e.g. reproducible
+                  # 3.1.0) where the binary path would "keep" the older binary
+                  # (3.0.0). Without this, a type="source" call reuses a
+                  # binary-era cached pak_result and the source intent is
+                  # silently lost -- the exact binary-lag downgrade symptom.
+                  srcOnly = isTRUE(identical(type, "source")))
   # `userPkgs` (when supplied) carries the user's original version-bearing
   # refs, e.g. c("stringfish (<= 0.15.8)", "qs (== 0.27.3)"). pak::pkg_deps()
   # only sees `pkgsForPak` -- the version-stripped form -- so without folding
@@ -1618,15 +2026,87 @@ pakDepsCacheDir <- function() {
   file.path(cacheDir(), "pak", "pkg_deps")
 }
 
-pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NULL) {
+## Per-package (single-ref) variant of the resolver disk cache. Kept in its own
+## subdir so single-ref entries don't intermingle with the whole-set entries.
+pakDepsCacheDirOne <- function() {
+  file.path(cacheDir(), "pak", "pkg_deps_one")
+}
+
+# ---------------------------------------------------------------------------
+# pakPkgDepsCached() -- per-package cached wrapper around pak::pkg_deps().
+#
+# The whole-set resolver cache in pakDepsResolve() is all-or-nothing: changing
+# ONE ref in the requested set changes the key and forces a full re-resolution.
+# The per-package fallback below resolves each ref independently, so cache each
+# ref's pak_result independently too. A repeat call where only a few refs
+# changed then re-resolves online only the changed refs; the unchanged refs are
+# served from memory (this session) or disk (across restarts) -- restoring the
+# pre-pak behaviour where pkgDep() was memoised per package.
+#
+# Key = md5(query, wh, repos, srcOnly) via pakDepsCacheKey(). The query already
+# carries the installed-version pin (pinInstalledForPak) and any == -> @version
+# conversion, so the key is self-invalidating when that ref's installed version
+# changes. TTL + offline semantics mirror pakDepsResolve().
+# ---------------------------------------------------------------------------
+pakPkgDepsCached <- function(query, wh, repos, verbose, purge,
+                             type = getOption("pkgType")) {
+  key       <- pakDepsCacheKey(query, wh, repos, type = type)
+  envKey    <- paste0("pakDeps1_", key)
+  cacheDir  <- pakDepsCacheDirOne()
+  cacheFile <- file.path(cacheDir, paste0(key, ".rds"))
+  ttl       <- getOption("Require.pak.depCacheTTL", .pakDepsCacheTTL)
+  offline   <- isTRUE(getOption("Require.offlineMode"))
+
+  if (!isTRUE(purge)) {
+    cached <- get0(envKey, envir = pakEnv(), inherits = FALSE)
+    if (!is.null(cached)) {
+      assign(".pakPkgDepsHits", get0(".pakPkgDepsHits", envir = pakEnv(),
+             ifnotfound = 0L, inherits = FALSE) + 1L, envir = pakEnv())
+      return(cached)
+    }
+    if (file.exists(cacheFile)) {
+      age <- as.numeric(difftime(Sys.time(), file.mtime(cacheFile), units = "secs"))
+      if (offline || age < ttl) {
+        cached <- tryCatch(readRDS(cacheFile), error = function(e) NULL)
+        if (!is.null(cached)) {
+          assign(envKey, cached, envir = pakEnv())   # promote to memory tier
+          assign(".pakPkgDepsHits", get0(".pakPkgDepsHits", envir = pakEnv(),
+                 ifnotfound = 0L, inherits = FALSE) + 1L, envir = pakEnv())
+          return(cached)
+        }
+      }
+    }
+  }
+
+  result <- tryCatch(pakCall(pak::pkg_deps(query, dependencies = wh), verbose),
+                     error = function(e) NULL)
+  if (!is.null(result)) {
+    assign(envKey, result, envir = pakEnv())
+    tryCatch({
+      dir.create(cacheDir, recursive = TRUE, showWarnings = FALSE)
+      saveRDS(result, cacheFile)
+    }, error = function(e) NULL)   # non-fatal if disk write fails
+  }
+  result
+}
+
+pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NULL,
+                           type = getOption("pkgType")) {
 
   # --- 1. Compute cache key ---
-  key      <- pakDepsCacheKey(pkgsForPak, wh, repos, userPkgs = userPkgs)
+  key      <- pakDepsCacheKey(pkgsForPak, wh, repos, userPkgs = userPkgs,
+                              type = type)
   envKey   <- paste0("pakDeps_", key)
   cacheDir <- pakDepsCacheDir()
   cacheFile <- file.path(cacheDir, paste0(key, ".rds"))
   ttl      <- getOption("Require.pak.depCacheTTL", .pakDepsCacheTTL)
   offline  <- isTRUE(getOption("Require.offlineMode"))
+
+  ## Stash the cache key so the install machinery can invalidate the
+  ## specific entry it just consumed -- without needing to recompute the
+  ## key from the original `pkgsForPak` / `wh` / `repos` / `userPkgs` /
+  ## `type` arguments downstream. See `.pakDepsInvalidateLast()`.
+  assign(".lastPakDepsKey", key, envir = pakEnv())
 
   # --- 2. In-memory cache hit ---
   if (!isTRUE(purge)) {
@@ -1657,6 +2137,18 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NUL
 
   # --- 4. Cache miss: run the full retry + fallback resolution ---
   pak_result <- NULL
+
+  # The batch retry loop below MUTATES `pkgsForPak`, dropping refs that pak
+  # reports as conflicting so the *batch* solver can converge. Those drops are
+  # only valid for the batch: the per-package fallback resolves each ref in
+  # ISOLATION, where cross-package conflicts cannot occur, so it must see the
+  # complete original ref set. Keep an untouched copy for that fallback.
+  # Without this, a CRAN ref pak flagged only as a cascade casualty of an
+  # unrelated unsolvable conflict (e.g. `googledrive: dependency conflict`
+  # triggered by a `quickPlot@development` Remotes clash) is dropped here, then
+  # still installed via `user_pkgFN` in pakDepsToPkgDT() -- but WITHOUT its own
+  # transitive deps (e.g. `gargle`), giving a half-installed, broken namespace.
+  pkgsForPakOrig <- pkgsForPak
 
   for (.pakDepsAttempt in 1:5) {
     pak_result_or_err <- tryCatch(
@@ -1821,18 +2313,34 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NUL
     messageVerbose("Require Note: pak's batch dependency resolution failed; ",
                    "switching to per-package resolution.",
                    verbose = verbose, verboseLevel = 1)
-    archiveRefs <- grep("^url::", pkgsForPak, value = TRUE)
-    nonArchivePkgs <- pkgsForPak[!grepl("^url::", pkgsForPak)]
+    # Resolve the ORIGINAL ref set (not the conflict-stripped `pkgsForPak`): in
+    # isolation there are no cross-package conflicts, so every ref the user
+    # asked for -- including cascade casualties stripped during the batch retry
+    # -- gets its own dependency subtree resolved. `url::` archive refs that the
+    # retry loop *discovered* (and added to `pkgsForPak`) are still useful as
+    # supplements for archived transitive deps, so carry those forward too.
+    archiveRefs <- unique(c(grep("^url::", pkgsForPak,     value = TRUE),
+                            grep("^url::", pkgsForPakOrig, value = TRUE)))
+    nonArchivePkgs <- pkgsForPakOrig[!grepl("^url::", pkgsForPakOrig)]
+    # Reset the per-package cache-hit counter so the summary below reports only
+    # this loop's hits. pakPkgDepsCached() caches each ref independently, so a
+    # repeat call with only a few changed refs re-resolves online just those.
+    assign(".pakPkgDepsHits", 0L, envir = pakEnv())
     per_pkg_results <- lapply(nonArchivePkgs, function(pkg) {
       # First try with archive refs (for packages with archived transitive deps).
       # If that fails (e.g., archive refs introduce new CRAN/GitHub conflicts), retry
       # without archive refs -- it's better to get a partial dep tree than nothing.
       query <- if (length(archiveRefs)) unique(c(pkg, archiveRefs)) else pkg
-      result <- tryCatch(pakCall(pak::pkg_deps(query, dependencies = wh), verbose), error = function(e) NULL)
+      result <- pakPkgDepsCached(query, wh, repos, verbose, purge, type = type)
       if (is.null(result) && length(archiveRefs))
-        result <- tryCatch(pakCall(pak::pkg_deps(pkg, dependencies = wh), verbose), error = function(e) NULL)
+        result <- pakPkgDepsCached(pkg, wh, repos, verbose, purge, type = type)
       result
     })
+    nHits <- get0(".pakPkgDepsHits", envir = pakEnv(), ifnotfound = 0L, inherits = FALSE)
+    if (nHits > 0L)
+      messageVerbose("Require/pak per-package resolution: ", nHits, " of ",
+                     length(nonArchivePkgs), " refs served from cache",
+                     verbose = verbose, verboseLevel = 1)
     per_pkg_results <- per_pkg_results[!sapply(per_pkg_results, is.null)]
     if (length(per_pkg_results)) {
       pak_result <- tryCatch(
@@ -1860,8 +2368,10 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NUL
 # (installed state changed; cache key stays the same but should be revalidated
 # sooner than the normal TTL would allow).
 # ---------------------------------------------------------------------------
-pakDepsCacheInvalidate <- function(pkgsForPak, wh, repos, userPkgs = NULL) {
-  key      <- tryCatch(pakDepsCacheKey(pkgsForPak, wh, repos, userPkgs = userPkgs),
+pakDepsCacheInvalidate <- function(pkgsForPak, wh, repos, userPkgs = NULL,
+                                   type = getOption("pkgType")) {
+  key      <- tryCatch(pakDepsCacheKey(pkgsForPak, wh, repos, userPkgs = userPkgs,
+                                       type = type),
                        error = function(e) NULL)
   if (is.null(key)) return(invisible(NULL))
   envKey   <- paste0("pakDeps_", key)
@@ -1871,17 +2381,68 @@ pakDepsCacheInvalidate <- function(pkgsForPak, wh, repos, userPkgs = NULL) {
   invisible(NULL)
 }
 
+# ---------------------------------------------------------------------------
+# .pakDepsInvalidateLast: invalidate the cache entry most recently returned
+# (or just written) by `pakDepsResolve()`. Uses the key that
+# `pakDepsResolve` stashed in `pakEnv()` so callers don't need to
+# recompute it from the original resolution args.
+#
+# Primary use: install-time recovery when pak reports
+# "missing-build-deps" -- the cached plan is provably incomplete for
+# this Require version (e.g. user upgraded Require to a release that
+# imports `processx` after the cache was built without processx in the
+# graph). Wiping that one entry forces a fresh resolution on the next
+# call, which picks up Require's current Imports.
+#
+# Returns TRUE if a key was found and invalidated, FALSE otherwise.
+# ---------------------------------------------------------------------------
+.pakDepsInvalidateLast <- function() {
+  key <- get0(".lastPakDepsKey", envir = pakEnv(), inherits = FALSE)
+  if (is.null(key) || !nzchar(key)) return(invisible(FALSE))
+  envKey   <- paste0("pakDeps_", key)
+  cacheFile <- file.path(pakDepsCacheDir(), paste0(key, ".rds"))
+  rm(list = intersect(envKey, ls(envir = pakEnv())), envir = pakEnv())
+  if (file.exists(cacheFile)) try(unlink(cacheFile), silent = TRUE)
+  ## Also drop the .lastPakDepsKey stash so we don't try to invalidate the
+  ## same already-gone entry twice.
+  if (exists(".lastPakDepsKey", envir = pakEnv(), inherits = FALSE))
+    try(rm(".lastPakDepsKey", envir = pakEnv()), silent = TRUE)
+  invisible(TRUE)
+}
+
 # Resolve package dependencies using pak, returning a Require-format pkgDT.
 # This replaces the pkgDep() + parsePackageFullname() + ... pipeline when usePak = TRUE.
 pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
                           purge = getOption("Require.purge", FALSE),
-                          install = TRUE) {
+                          install = TRUE, type = getOption("pkgType"),
+                          typeExplicit = FALSE) {
   pakLoad <- tryCatch(loadNamespace("pak"),
                       error = function(e) e)
   if (inherits(pakLoad, "error")) {
     stop("Please install pak (loadNamespace('pak') failed: ",
          conditionMessage(pakLoad), ")", call. = FALSE)
   }
+
+  # Defense-in-depth for Require.noRemotes: ensure NO GitHub ref reaches pak's
+  # resolver. pak follows a package's `Remotes:` field ONLY when it resolves that
+  # package from a GitHub/source ref (pkgdepends' resolve_from_description scans
+  # the DESCRIPTION and resolve_ref_deps UNCONDITIONALLY rewrites a dependency's
+  # ref to the matching Remotes entry, e.g. `LandR` -> `PredictiveEcology/LandR`).
+  # A bare repo ref is immune -- r-universe's PACKAGES carries no `Remotes`
+  # column, so a bare `LandR.CS` resolves `LandR` as a `standard` repo ref. There
+  # is no pkgdepends toggle to disable Remotes-following, so the only guarantee
+  # that noRemotes means "resolve from repos, follow no Remotes" is to ensure no
+  # `account/repo[@ref]` ref reaches this resolver. The top-level strip in
+  # Require() (stripGitHubToRepos) normally does this; re-apply it here so it
+  # holds for ANY caller/path into pakDepsToPkgDT. No-op (and silent) once the
+  # refs are already bare.
+  if (isTRUE(getOption("Require.noRemotes", FALSE)))
+    packages <- stripGitHubToRepos(packages, verbose = verbose)
+
+  # Honour an explicit type = "source": pin pak to source-only resolution for
+  # the duration of this call (covers the nested pakDepsResolve/pak::pkg_deps).
+  oldPlatforms <- forcePakSourceIfRequested(type, typeExplicit = typeExplicit)
+  if (!is.null(oldPlatforms)) on.exit(options(oldPlatforms), add = TRUE)
 
   # pak spawns a subprocess that inherits .libPaths(). Set .libPaths() to match
   # Require's standAlone semantics before calling pak, then restore on exit.
@@ -1890,7 +2451,14 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   # standAlone = FALSE -> c(libPaths[1], existing .libPaths())  (shared)
   #
   # In both cases, pak's own library must be present so the subprocess can load pak.
-  pakLib    <- tryCatch(dirname(find.package("pak")), error = function(e) NULL)
+  ## suppressWarnings, not just tryCatch: find.package() warns once for every
+  ## .libPaths() entry that has a pak/ directory whose DESCRIPTION it cannot
+  ## read -- a stale entry left by a deleted library, which says nothing about
+  ## the pak we are looking for. tryCatch(error=) does not catch a warning, so
+  ## these leaked into callers' capture_warnings(). Only reachable once pak is
+  ## found late on the path; when pak sits in libPaths[1] the scan stops first.
+  pakLib    <- tryCatch(suppressWarnings(dirname(find.package("pak"))),
+                        error = function(e) NULL)
   basePkgLib <- tail(.libPaths(), 1L)   # always the base R packages path
   origPaths  <- .libPaths()
   if (isTRUE(standAlone)) {
@@ -1927,24 +2495,23 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   # Strip version specs and HEAD flags for the pak query; pak resolves from the ref alone
   pkgsForPak <- resolvedPkgs
   pkgsForPak <- HEADtoNone(pkgsForPak)
-  pkgsForPak <- trimVersionNumber(pkgsForPak)
+  ## Exact pins become pak's `pkg@version` BEFORE the other specs are trimmed:
+  ## trimVersionNumber() strips every "(op version)", so running equalsToAt()
+  ## after it (as this did) left the solve with no pins at all -- every pinned
+  ## package resolved to the current version, which was installed and then
+  ## overwritten by the pin (abind 1.4-8 -> 1.4-5).
+  notGH <- !isGH(pkgsForPak)
+  pkgsForPak[notGH] <- equalsToAt(pkgsForPak[notGH])
+  ## trimVersionNumber() also strips a bare `pkg@version`, so keep the pins out
+  ## of its way and trim only the inequality specs.
+  isPin <- notGH & grepl("@", pkgsForPak, fixed = TRUE)
+  pkgsForPak[!isPin] <- trimVersionNumber(pkgsForPak[!isPin])
+  if (any(isPin))
+    pkgsForPak[isPin] <- pakPinnedArchiveRefs(pkgsForPak[isPin], verbose = verbose)
   pkgsForPak <- pkgsForPak[!pkgsForPak %in% .basePkgs]
-  # For any remaining duplicated package names (both have no version spec), prefer GH ref
-  pkgNms <- extractPkgName(pkgsForPak)
-  dupNms <- unique(pkgNms[duplicated(pkgNms)])
-  if (length(dupNms)) {
-    toRemove <- integer(0)
-    for (pn in dupNms) {
-      idx <- which(pkgNms == pn)
-      ghIdx <- idx[isGH(pkgsForPak[idx])]
-      if (length(ghIdx) > 0) toRemove <- c(toRemove, setdiff(idx, ghIdx[1L]))
-      else                    toRemove <- c(toRemove, idx[-1L])
-    }
-    if (length(toRemove)) pkgsForPak <- pkgsForPak[-toRemove]
-  }
+  pkgsForPak <- .preferGHrefDedup(pkgsForPak)
   pkgsForPak <- unique(pkgsForPak)
   # Convert == version specs to pak @version format for the dep query
-  pkgsForPak <- equalsToAt(pkgsForPak)
 
   # Pin already-installed user packages to their installed version before
   # pak resolves transitive deps. Without this, pak picks the LATEST CRAN
@@ -1982,12 +2549,46 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
                                repos    = getOption("repos"),
                                verbose  = verbose,
                                purge    = purge,
-                               userPkgs = resolvedPkgs)
+                               userPkgs = resolvedPkgs,
+                               type     = type)
 
   if (is.null(pak_result)) {
     messageVerbose("pak::pkg_deps: all strategies failed; using direct package list only.",
                    verbose = verbose, verboseLevel = 2)
     return(toPkgDTFull(packages))
+  }
+
+  # 1b. Closure guard for user-requested CRAN packages.
+  # Every package the user asked for must appear in the resolved tree, otherwise
+  # its transitive deps never enter the install plan while the package itself is
+  # still installed via `user_pkgFN` (step 4) -- the "googledrive installed
+  # without gargle" failure mode. A user package can be absent from `pak_result`
+  # when batch resolution dropped it as a cascade casualty of an *unrelated*
+  # unsolvable conflict (pak marks many innocent CRAN packages "dependency
+  # conflict" when a few GitHub Remotes refs clash; pakDepsResolve strips them to
+  # coax the batch solver). Resolve any missing user CRAN package individually --
+  # in isolation there are no cross-package conflicts -- and merge its subtree so
+  # its dependencies (e.g. gargle) become part of the plan. Scoped to plain CRAN
+  # refs: GitHub/url:: refs are never stripped by that handler.
+  userCRANrefs <- packages[!isGH(packages) & !grepl("::", packages) &
+                           !extractPkgName(packages) %in% .basePkgs]
+  if (length(userCRANrefs)) {
+    missingUser <- setdiff(unique(extractPkgName(userCRANrefs)), pak_result$package)
+    if (length(missingUser)) {
+      messageVerbose("Require/pak: ", length(missingUser), " user-requested package(s) ",
+                     "absent from batch resolution (cascade casualties of an unrelated ",
+                     "conflict); resolving their dependency subtrees individually: ",
+                     paste(missingUser, collapse = ", "),
+                     verbose = verbose, verboseLevel = 1)
+      missingRefs <- trimVersionNumber(
+        userCRANrefs[match(missingUser, extractPkgName(userCRANrefs))])
+      extra <- lapply(missingRefs, function(q)
+        tryCatch(pakPkgDepsCached(q, wh, getOption("repos"), verbose, purge, type = type),
+                 error = function(e) NULL))
+      extra <- extra[!vapply(extra, is.null, logical(1))]
+      if (length(extra))
+        pak_result <- rbindlist(c(list(pak_result), extra), fill = TRUE, use.names = TRUE)
+    }
   }
 
   # 2. Flatten all deps sub-tables to get the raw version requirements.
@@ -2113,6 +2714,16 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   # 4. Include the user's originally stated packages (with their version specs).
   # These may have stricter requirements than what DESCRIPTION files state.
   user_pkgFN <- packages[!extractPkgName(packages) %in% .basePkgs]
+  # Apply the same GH-vs-CRAN dedup we apply to pkgsForPak above. Without
+  # this, a user list with multiple ref forms for the same package
+  # (e.g. c("PredictiveEcology/reproducible@development",
+  #         "PredictiveEcology/reproducible",
+  #         "reproducible")) leaves all three in user_pkgFN -- and they
+  # then flow through toPkgDTFull() + trimRedundancies() (which can't
+  # dedup them because none has a versionSpec) into pakOfflineInstall,
+  # whose batch pak::pak() call then dies with
+  #   reproducible@<v>: Conflicts with reproducible@<v>.
+  user_pkgFN <- .preferGHrefDedup(user_pkgFN)
 
   # 4a. Sync url:: archive refs from pkgsForPak back into user_pkgFN.
   # The retry loop may have replaced plain package names (e.g. "fastdigest") with
@@ -2128,6 +2739,28 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
       matchIdx <- which(extractPkgName(user_pkgFN) == archivePkgNamesFromPak[.i])
       if (length(matchIdx))
         user_pkgFN[matchIdx] <- archiveRefsInPkgsForPak[.i]
+    }
+  }
+
+  # 4b. Treat a pinned GitHub commit (@<sha>) as an exact-version pin.
+  # The pak path is version-driven: whichToInstall only forces an install when a
+  # version constraint is violated, so a *bare* `owner/repo@<sha>` ref is a no-op
+  # whenever any version is already installed -- even though the user asked for
+  # that exact commit. Attach `(== <version pak resolved for that commit>)` so the
+  # commit's version drives the decision: install when the installed version
+  # differs, treat an equal installed version as satisfied (a same-version,
+  # different-commit case is not distinguished -- dev versions bump per commit).
+  # Only explicit commit SHAs qualify; branch refs (which track the branch via
+  # HEAD), `(HEAD)`-flagged refs, and refs the user already version-constrained
+  # are left untouched. Combined with the @sha + (== X) install-path fix, the
+  # implicit `(== X)` resolves and installs cleanly (no malformed @sha@X ref).
+  if (NROW(pak_result) && !is.null(pak_result$version) && !is.null(pak_result$package)) {
+    verMapSha <- setNames(as.character(pak_result$version), pak_result$package)
+    isShaPinned <- isExplicitShaPin(user_pkgFN)
+    for (.j in which(isShaPinned)) {
+      v <- verMapSha[extractPkgName(user_pkgFN[.j])]
+      if (!is.na(v) && nzchar(v))
+        user_pkgFN[.j] <- paste0(user_pkgFN[.j], " (== ", v, ")")
     }
   }
 
@@ -2177,8 +2810,57 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
     assign("pakResolvedVersionMap",
            setNames(as.character(pak_result$version), pak_result$package),
            envir = pakEnv())
+    assign("pakDepGraph", pakHardDepGraph(pak_result), envir = pakEnv())
+    if (isTRUE(get0("pakPinnedInstall", envir = pakEnv(), inherits = FALSE)))
+      pkgDT <- pakPinnedResolve(pkgDT, pak_result, extractPkgName(packages), verbose)
   }
 
+  pkgDT
+}
+
+# The hard-dep graph (Depends/Imports/LinkingTo) among the packages the global
+# solve returned. pakInstallFiltered() turns it into install levels: pak only
+# orders builds when it resolves deps itself (dependencies = NA), so a batch
+# handed over with dependencies = FALSE -- every GitHub batch -- would otherwise
+# start building a package before a sibling it Imports has landed, fail in
+# under a second, abort the whole batch, and rebuild everything next pass.
+pakHardDepGraph <- function(pak_result) {
+  hard <- c("depends", "imports", "linkingto")
+  all <- pak_result$package
+  graph <- lapply(pak_result$deps, function(deps) {
+    if (is.null(deps) || !NROW(deps)) return(character())
+    intersect(unique(deps$package[tolower(deps$type) %in% hard]), all)
+  })
+  names(graph) <- all
+  graph
+}
+
+# Install levels: refs whose hard deps (within the set) are all in earlier
+# levels. Falls back to a single level when no graph was kept.
+pakInstallLevels <- function(pkgs, pkgNames) {
+  graph <- get0("pakDepGraph", envir = pakEnv(), inherits = FALSE)
+  if (is.null(graph)) return(list(pkgs))
+  g <- lapply(pkgNames, function(nm) if (is.null(graph[[nm]])) character() else graph[[nm]])
+  names(g) <- pkgNames
+  ord <- pkgDepTopoSort(pkgNames, deps = g)
+  grp <- unlist(attr(ord, "installSafeGroups"))
+  lapply(split(names(ord), grp), function(nm) pkgs[match(nm, pkgNames)])
+}
+
+# A pinned install (a snapshot; see Require2.R) is a closed set: every hard dep
+# of every package is itself pinned in the set, so the global solve is the whole
+# resolution stage. Any package the solve added that is not in the pinned set
+# is a gap in the snapshot: it is reported and dropped rather than installed at
+# whatever version CRAN has today, so a non-closed snapshot fails loudly on the
+# packages that need the missing pin instead of quietly drifting.
+pakPinnedResolve <- function(pkgDT, pak_result, pinned, verbose) {
+  extra <- setdiff(pak_result$package, c(pinned, .basePkgs))
+  if (length(extra)) {
+    warning("pinned install: ", length(extra), " package(s) are needed but not pinned ",
+            "in the snapshot, so they will not be installed: ",
+            paste(extra, collapse = ", "), call. = FALSE)
+    pkgDT <- pkgDT[!Package %in% extra]
+  }
   pkgDT
 }
 
@@ -2205,6 +2887,43 @@ extractBuildFailures <- function(output) {
                            clean, perl = TRUE))[[1]]
   if (!length(m)) return(character(0))
   unique(sub("Failed to build\\s+", "", m, perl = TRUE))
+}
+
+# Reorder `refs` so that, for every "dependency 'X' is not available for package
+# 'Y'" build-error parseable from `msgs` whose BOTH ends are in `refs`, the
+# dependency X installs before the dependent Y. Used to order the deferred-culprit
+# serial install: when both a dependency (e.g. LandR) and its dependent (LandR.CS)
+# get deferred, the serial pass must not build LandR.CS first. Best-effort and
+# stable -- refs with no parseable edge keep their position; an unresolvable
+# cycle bails out keeping the remaining order (never drops a ref). Index-based so
+# duplicate bare names can't drop/duplicate a ref.
+orderRefsByMissingDepEdges <- function(refs, msgs) {
+  if (length(refs) < 2L || !length(msgs) || !any(nzchar(msgs))) return(refs)
+  clean <- gsub("\033\\[[0-9;]*m", "", paste(msgs, collapse = "\n"))
+  pat <- paste0("dependency [\u2018'\"]?([A-Za-z0-9._]+)[\u2019'\"]? is not available ",
+                "for package [\u2018'\"]?([A-Za-z0-9._]+)")
+  m <- regmatches(clean, gregexpr(pat, clean, perl = TRUE))[[1]]
+  if (!length(m)) return(refs)
+  dep <- sub(paste0(".*", pat, ".*"), "\\1", m, perl = TRUE)   # X (dependency)
+  pkg <- sub(paste0(".*", pat, ".*"), "\\2", m, perl = TRUE)   # Y (dependent)
+  nms <- extractPkgName(refs)
+  edges <- unique(data.frame(dep = dep, pkg = pkg, stringsAsFactors = FALSE))
+  edges <- edges[edges$dep %in% nms & edges$pkg %in% nms & edges$dep != edges$pkg, ,
+                 drop = FALSE]
+  if (!nrow(edges)) return(refs)
+  idx <- seq_along(refs)
+  ordered <- integer(0)
+  guard <- 0L
+  while (length(idx) && guard <= length(refs)) {
+    guard <- guard + 1L
+    remNms <- nms[idx]
+    ready <- !vapply(remNms, function(n) any(edges$dep[edges$pkg == n] %in% remNms),
+                     logical(1))
+    if (!any(ready)) { ordered <- c(ordered, idx); break }   # cycle -> keep rest as-is
+    ordered <- c(ordered, idx[ready])
+    idx <- idx[!ready]
+  }
+  refs[ordered]
 }
 
 # ---------------------------------------------------------------------------
@@ -2465,6 +3184,255 @@ reportInstallFailures <- function(failures, missingPkgNames = character(0),
 }
 
 # ---------------------------------------------------------------------------
+# Packages that must NEVER be installed by file-level copy/symlink across
+# libs (i.e. excluded from clonePackages / linkOrCopyPackageFiles).
+#
+# pak ships native binaries + an embedded library of helper packages
+# (callr, processx, cli, ...) with platform-specific executables that do
+# NOT survive a file-by-file copy on Windows. The symptom is pak's
+# subprocess dying with
+#   `Native call to processx_exec failed: Command '' not found`
+# the next time anything tries to spawn a nested subprocess (i.e. every
+# real install attempt). Same risk for standalone callr / processx / cli
+# if they're ever cloned across libs -- their compiled bits are tied to
+# the install location at link time.
+# ---------------------------------------------------------------------------
+.pakNoCopyPkgs <- function() c("pak", "callr", "processx", "cli")
+
+# ---------------------------------------------------------------------------
+# .pakNeedsReinstall: pure decision function for ensurePakInProjectLib().
+#
+# Given the result of find.package("pak", lib.loc = .libPaths()), return:
+#   - ""              if pak is reachable on .libPaths() (no install needed)
+#   - <reason string> if pak must be installed fresh into projLib
+#
+# The question is deliberately "reachable anywhere on .libPaths()", not
+# "present in projLib". pak does its real work in a callr subprocess that
+# runs its own loadNamespace("pak") against the inherited .libPaths(), so
+# which entry holds pak is irrelevant -- only that some entry does. A pak
+# loaded in the parent session is NOT sufficient; the subprocess dies with
+#   `error in pak subprocess` / `there is no package called 'pak'`.
+# One shared pak install therefore serves any number of project libs,
+# including standAlone = TRUE ones, via
+#   setLibPaths(c(projLib, pakLib), standAlone = TRUE)
+#
+# Note: we deliberately do NOT use pak_sitrep()'s "(local install?)" tag
+# as a corruption signal. That tag fires for every install where
+# `pak_sitrep_data$github-repository == "-"`, which includes CRAN
+# binaries -- so using it would put CRAN-pak users in an infinite
+# reinstall loop (each fresh install also tags as (local install?)).
+# The "pak in projLib but broken from a file-copy bootstrap" case is
+# handled via the `Require.forcePakReinstall = TRUE` opt-in.
+# ---------------------------------------------------------------------------
+.pakNeedsReinstall <- function(pakPath, forceReinstall = FALSE) {
+  if (isTRUE(forceReinstall))
+    return("Require.forcePakReinstall = TRUE (explicit opt-in)")
+  if (!length(pakPath) || !nzchar(pakPath[1]))
+    return("pak not available on .libPaths()")
+  ""
+}
+
+# ---------------------------------------------------------------------------
+# .preferGHrefDedup: for a character vector of refs, when the same package
+# appears multiple times keep ONE -- preferring a GitHub-style ref
+# (`account/repo[@branch_or_sha]`) over a CRAN-form ref (`pkg` or
+# `pkg@version`). If multiple GitHub refs exist for the same package,
+# keep the first one (user-input order; the @specific form is typically
+# listed before the @HEAD/bare form). If no GitHub ref exists for a
+# duplicate, keep the first occurrence.
+#
+# Why this exists: trimRedundancies()'s logic for collapsing duplicate
+# package rows relies on `versionSpec` (e.g. `(>= 1.0)`) being set on at
+# least one row. The user-input case
+#   c("PredictiveEcology/reproducible@development",
+#     "PredictiveEcology/reproducible",
+#     "reproducible")
+# has no versionSpec on any of the three forms, so trimRedundancies()
+# leaves all three -- which then survives into pakOfflineInstall and
+# poisons pak's batch with
+#   reproducible@<v>: Conflicts with reproducible@<v>
+# This helper applies the "prefer GH ref" tiebreaker that trimRedundancies
+# can't.
+# ---------------------------------------------------------------------------
+.preferGHrefDedup <- function(refs) {
+  if (length(refs) <= 1) return(refs)
+  pkgNms <- extractPkgName(refs)
+  dupNms <- unique(pkgNms[duplicated(pkgNms)])
+  if (!length(dupNms)) return(refs)
+  toRemove <- integer(0)
+  for (pn in dupNms) {
+    idx <- which(pkgNms == pn)
+    ghIdx <- idx[isGH(refs[idx])]
+    if (length(ghIdx) > 0) toRemove <- c(toRemove, setdiff(idx, ghIdx[1L]))
+    else                    toRemove <- c(toRemove, idx[-1L])
+  }
+  if (length(toRemove)) refs[-toRemove] else refs
+}
+
+# ---------------------------------------------------------------------------
+# .isSessionLibPath: is `path` part of the session-wide .libPaths()?
+# Used to distinguish a real project lib (where ensurePakInProjectLib is
+# appropriate) from an ephemeral install-target tempdir passed only as
+# `Require::Install(pkg, libPaths = ..., standAlone = TRUE)` (where it
+# isn't). normalizePath the comparison so trailing-slash / 8.3-shortname
+# differences on Windows don't cause false negatives.
+# ---------------------------------------------------------------------------
+.isSessionLibPath <- function(path) {
+  if (!length(path) || !nzchar(path[1])) return(FALSE)
+  np <- tryCatch(normalizePath(path[1], winslash = "/", mustWork = FALSE),
+                 error = function(e) path[1])
+  nl <- tryCatch(normalizePath(.libPaths(), winslash = "/", mustWork = FALSE),
+                 error = function(e) .libPaths())
+  np %in% nl
+}
+
+# ---------------------------------------------------------------------------
+# ensurePakInProjectLib: make sure pak is installed in libPaths[1] (the
+# project lib), reinstalling fresh via base install.packages() if it's
+# absent OR if pak_sitrep() reports the "(local install?)" tag that
+# indicates a non-standard install (e.g. file-copied across libs).
+#
+# Why this exists: SpaDES.project::setupPackages (and other
+# project-bootstrap workflows) historically populated the project lib by
+# file-copying packages from the system lib. That works for pure-R
+# packages, but pak's embedded native helpers do NOT survive the copy on
+# Windows -- the next pak call dies inside processx with
+#   `Native call to processx_exec failed: Command '' not found`.
+# The robust fix is to install pak fresh into the project lib using base
+# install.packages() (NOT pak::pak -- chicken-and-egg if pak is broken).
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# .pakLinkSource: a real, complete pak installation to symlink from, or NULL.
+#
+# Resolves symlinks, so linking never chains through another project lib's
+# link and cannot end up pointing at a directory that has since been removed.
+# ---------------------------------------------------------------------------
+.pakLinkSource <- function() {
+  ## lib.loc = NULL deliberately, and FIRST: with NULL, find.package() consults
+  ## loaded namespaces before .libPaths(), so it still finds pak when its
+  ## library is not on the path. That is precisely the situation here -- by the
+  ## time ensurePakInProjectLib() runs, .libPaths() has usually been narrowed to
+  ## the project lib, and searching only that finds nothing and falls through to
+  ## a full install. (Elsewhere this same NULL behaviour is a trap and is
+  ## avoided; here it is the point.)
+  cands <- suppressWarnings(tryCatch(
+    find.package("pak", quiet = TRUE), error = function(e) character(0)))
+  if (!length(cands))
+    cands <- suppressWarnings(tryCatch(
+      find.package("pak", lib.loc = unique(c(.libPaths(),
+                                             Sys.getenv("R_LIBS_USER"))),
+                   quiet = TRUE),
+      error = function(e) character(0)))
+  if (!length(cands) && "pak" %in% loadedNamespaces())
+    cands <- tryCatch(getNamespaceInfo("pak", "path"), error = function(e) character(0))
+  cands <- cands[nzchar(cands)]
+  for (cand in cands) {
+    p <- tryCatch(normalizePath(cand, mustWork = FALSE), error = function(e) cand)
+    if (dir.exists(p) && file.exists(file.path(p, "DESCRIPTION"))) return(p)
+  }
+  NULL
+}
+
+ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
+                                  verbose = getOption("Require.verbose")) {
+  if (!isTRUE(getOption("Require.usePak", TRUE))) return(invisible(TRUE))
+  if (missing(projLib) || !length(projLib) || !nzchar(projLib[1]))
+    return(invisible(FALSE))
+
+  ## lib.loc = .libPaths() deliberately, and never lib.loc = NULL: with NULL,
+  ## find.package() consults loaded namespaces first and so reports pak as
+  ## found even when its library is off .libPaths() -- precisely the case
+  ## where pak's subprocess cannot load it.
+  pakPath <- suppressWarnings(tryCatch(
+    find.package("pak", lib.loc = projLib, quiet = TRUE),
+    error = function(e) character(0)))
+
+  forceReinstall <- isTRUE(getOption("Require.forcePakReinstall", FALSE))
+  reason <- .pakNeedsReinstall(pakPath, forceReinstall = forceReinstall)
+  if (!nzchar(reason)) return(invisible(TRUE))
+
+  ## Deliberately says only what is being addressed, not how: the "how" is
+  ## decided below and reported there. Claiming a fresh install here printed
+  ## that line even on runs where pak was symlinked in milliseconds.
+  messageVerbose(
+    "Require: ", reason, ".\n",
+    "  Making pak available in the project lib: ", projLib,
+    if (isWindows())
+      paste0("\n  Copying pak from another lib does not work on Windows -- pak's\n",
+             "  embedded callr/processx helper executables do not survive a copy.\n",
+             "  (Symptom otherwise: 'Native call to processx_exec failed: ",
+             "Command' '' 'not found'.)")
+    else "",
+    verbose = verbose, verboseLevel = 1)
+
+  ## Case 4 -- pak loaded by the user (or by an earlier load) before we
+  ## got here. On Windows the loaded DLL holds a filesystem-level
+  ## sharing lock that blocks install.packages from writing.  Two-step
+  ## release: kill pak's background r_session (which holds an indirect
+  ## DLL reference via its embedded subprocess), then unload the
+  ## namespace.  Only after BOTH does install.packages stand a chance.
+  if ("pak" %in% loadedNamespaces()) {
+    pakResetSubprocess()
+    try(suppressWarnings(unloadNamespace("pak")), silent = TRUE)
+    if ("pak" %in% loadedNamespaces()) {
+      stop(
+        "Require: pak in this R session is loaded and its namespace ",
+        "could not be unloaded (the DLL is locked -- something is still ",
+        "holding a reference, e.g. another package, an R6 callback, or ",
+        "a stuck subprocess).\n",
+        "Please RESTART R and rerun your Require::Install(...) call.",
+        call. = FALSE)
+    }
+  }
+
+  ## Symlink rather than download+install where the platform allows it.
+  ##
+  ## pak has to end up in projLib -- that is what re-binds pak's namespace to a
+  ## live directory each time a caller moves to a new project library, and it is
+  ## why the suite stays healthy while tests create and discard libraries. But
+  ## it does not have to be a fresh 12 MB install: measured at ~5.6s a time, and
+  ## the test suite does it once per project lib.
+  ##
+  ## A symlink is not the file-by-file copy .pakNoCopyPkgs() forbids. That
+  ## exclusion exists because pak's embedded callr/processx helper executables
+  ## do not survive being copied on Windows; a symlink leaves every one of those
+  ## files at its original path. Windows is excluded anyway, since symlinks
+  ## there need privileges R cannot assume.
+  linked <- FALSE
+  if (!isWindows()) {
+    src <- .pakLinkSource()
+    projLibNorm <- tryCatch(normalizePath(projLib, mustWork = FALSE),
+                            error = function(e) projLib)
+    if (!is.null(src) && !identical(dirname(src), projLibNorm)) {
+      dest <- file.path(projLib, "pak")
+      unlink(dest, recursive = TRUE, force = TRUE)
+      linked <- isTRUE(tryCatch(file.symlink(src, dest), error = function(e) FALSE))
+      if (linked)
+        messageVerbose("  Linked pak from ", src, " (no reinstall needed)",
+                       verbose = verbose, verboseLevel = 1)
+    }
+  }
+
+  if (!isTRUE(linked))
+    messageVerbose("  Installing pak fresh (no linkable copy found)",
+                   verbose = verbose, verboseLevel = 1)
+  ok <- if (isTRUE(linked)) {
+    length(find.package("pak", lib.loc = projLib, quiet = TRUE)) > 0
+  } else tryCatch({
+    utils::install.packages("pak", lib = projLib, repos = repos, quiet = TRUE)
+    length(find.package("pak", lib.loc = projLib, quiet = TRUE)) > 0
+  }, error = function(e) {
+    messageVerbose("ensurePakInProjectLib: install.packages('pak') failed: ",
+                   conditionMessage(e), verbose = verbose, verboseLevel = 1)
+    FALSE
+  })
+  ## No reload step needed: pak is now unloaded, and the next requireNamespace("pak")
+  ## by downstream code will load the freshly-installed copy from projLib (or .libPaths
+  ## generally) -- not the previously-cached one (we already unloaded that).
+  invisible(ok)
+}
+
+# ---------------------------------------------------------------------------
 # pakResetSubprocess: force pak to spawn a fresh background R session on the
 # next pak::pak() call. pak holds a persistent callr r_session in
 # pak:::pkg_data$remote and reuses it across calls; if the previous call
@@ -2477,14 +3445,26 @@ reportInstallFailures <- function(failures, missingPkgNames = character(0),
 # ---------------------------------------------------------------------------
 pakResetSubprocess <- function() {
   if (!requireNamespace("pak", quietly = TRUE)) return(invisible())
-  rs <- tryCatch(
-    get("pkg_data", envir = asNamespace("pak"))$remote,
-    error = function(e) NULL)
+  pkgData <- tryCatch(get("pkg_data", envir = asNamespace("pak")),
+                      error = function(e) NULL)
+  if (is.null(pkgData)) return(invisible())
+  rs <- tryCatch(pkgData$remote, error = function(e) NULL)
   if (inherits(rs, "r_session")) {
     try(rs$interrupt(), silent = TRUE)
     try(rs$wait(100), silent = TRUE)
     try(rs$kill(), silent = TRUE)
   }
+  ## Remove the slot entirely. Leaving a dead r_session in
+  ## `pak:::pkg_data$remote` was not enough on Windows -- pak's
+  ## restart_remote_if_needed() checks whether the slot exists, not
+  ## whether the process is alive, so per-ref `pak::pak()` calls after a
+  ## batch failure short-circuited with a generic error before any
+  ## install work happened (symptom: a wall of
+  ## `pakSerialInstall: could not be installed: any::X` lines with NO
+  ## reason and NO pak progress output). Removing the slot forces pak
+  ## to allocate a fresh r_session on the next call.
+  if (is.environment(pkgData) && exists("remote", envir = pkgData, inherits = FALSE))
+    try(rm("remote", envir = pkgData), silent = TRUE)
   invisible()
 }
 
@@ -2499,8 +3479,58 @@ pakResetSubprocess <- function() {
 # upgrade = FALSE for CRAN, TRUE for GitHub -- same per-ref policy as the
 # parallel version. Failures are warned but don't abort the loop.
 # ---------------------------------------------------------------------------
-pakSerialInstall <- function(pkgs, lib, repos, verbose) {
+# ---------------------------------------------------------------------------
+# .pakFailMemo / .pakDropUnchangedFailures: stop re-attempting a ref that
+# already failed while nothing it could depend on has changed.
+#
+# identify-and-defer runs several phases -- the iteration loop, the
+# no-parseable-culprits serial fallback, the deferred-culprit serial pass, and
+# up to three retries after it. Each phase decided independently what to
+# attempt, so a ref that cannot build (e.g. Deriv failing to compile) was
+# handed to pak once per phase, five times in all, every time against an
+# identical set of installed packages. See #190.
+#
+# Retrying is only useful when a dependency has been installed since the last
+# attempt, so the memo keys each failed ref on the installed set at the moment
+# it failed. A ref is dropped only if that set is unchanged; any new package
+# anywhere makes it eligible again, which is deliberately conservative -- we
+# would rather retry once too often than refuse to install something that has
+# just been unblocked.
+# ---------------------------------------------------------------------------
+.pakFailMemo <- function() new.env(parent = emptyenv())
+
+.pakRecordFailures <- function(memo, refs, installedNow) {
+  for (r in refs) assign(r, installedNow, envir = memo)
+  invisible(memo)
+}
+
+.pakDropUnchangedFailures <- function(memo, refs, installedNow, verbose = 0L) {
+  if (!length(refs)) return(refs)
+  keep <- vapply(refs, function(r) {
+    prev <- if (exists(r, envir = memo, inherits = FALSE)) get(r, envir = memo) else NULL
+    is.null(prev) || !identical(sort(prev), sort(installedNow))
+  }, logical(1))
+  if (any(!keep))
+    messageVerbose(
+      "identify-and-defer: skipping ", sum(!keep), " ref(s) that already failed ",
+      "with no change in what is installed since: ",
+      paste(utils::head(refs[!keep], 5L), collapse = ", "),
+      if (sum(!keep) > 5L) ", ..." else "",
+      verbose = verbose, verboseLevel = 1)
+  refs[keep]
+}
+
+pakSerialInstall <- function(pkgs, lib, repos, verbose, cranDeps = NA) {
   if (!length(pkgs)) return(invisible(NULL))
+  ## Pin already-installed refs to their installed version so pak keeps them
+  ## rather than replanning a rebuild. pinInstalledForPak() was only ever
+  ## applied to the FIRST batch, so every later phase handed pak unpinned refs
+  ## and its plans came back full of same-version "updates" of packages the
+  ## previous phase had just installed (#190). Passing `pkgs` as resolvedPkgs
+  ## keeps any ref carrying a `( ... )` version spec unpinned, so a user's
+  ## upgrade or downgrade request is never masked by what happens to be
+  ## installed.
+  pkgs <- pinInstalledForPak(pkgs, libPaths = lib, resolvedPkgs = pkgs)
   opts <- options(repos = repos)
   on.exit(options(opts), add = TRUE)
   failed <- character(0)
@@ -2521,7 +3551,7 @@ pakSerialInstall <- function(pkgs, lib, repos, verbose) {
     #                    not yet be in lib, e.g. when the cascade-casualty
     #                    fallback installs refs whose deps were also
     #                    casualties.)
-    deps <- if (isGH_) FALSE else NA
+    deps <- if (isGH_) FALSE else cranDeps
     up   <- isGH_
     # Capture pak's subprocess messages for this single ref so the warning
     # below can surface the actual root cause (e.g. "namespace 'X' is
@@ -2568,6 +3598,19 @@ pakSerialInstall <- function(pkgs, lib, repos, verbose) {
       messageVerbose("pakSerialInstall: ", .txtCouldNotBeInstalled, ": ", pkg,
                      if (nzchar(reason)) paste0("; ", reason) else "",
                      verbose = verbose, verboseLevel = 2)
+      ## At verboseLevel >= 3, also dump the raw pak error text. When
+      ## reason is empty (pakBuildFailReason couldn't extract anything),
+      ## this is often the only way to tell why pak failed -- e.g.
+      ## "Error : ! error in pak subprocess" with no further context
+      ## indicates a wedged r_session that didn't even start the install.
+      if (verbose >= 3) {
+        rawErr <- as.character(err)
+        if (length(pkgMsgs)) rawErr <- paste(c(rawErr, "--- pkgMsgs ---", pkgMsgs),
+                                             collapse = "\n")
+        if (nchar(rawErr) > 4000L) rawErr <- paste0(substr(rawErr, 1L, 4000L), "\n...[truncated]")
+        messageVerbose("pakSerialInstall raw error for ", pkg, ":\n", rawErr,
+                       verbose = verbose, verboseLevel = 3)
+      }
       ## A failed pak::pak() can leave pak's persistent r_session in a
       ## wedged state where every subsequent call returns instantly with
       ## an error -- without this reset, a single early failure cascades
@@ -2583,12 +3626,26 @@ pakSerialInstall <- function(pkgs, lib, repos, verbose) {
 # Install only the packages Require has determined need installing (needInstall == .txtInstall).
 # pak is called with exact version pins or any:: to avoid re-resolving deps.
 pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
-                                forceUpgrade = FALSE) {
+                                forceUpgrade = FALSE, type = getOption("pkgType"),
+                                typeExplicit = FALSE) {
   if (!requireNamespace("pak", quietly = TRUE)) stop("Please install pak")
+
+  # Honour an explicit type = "source": without this, pak's install step can
+  # "keep" or fetch the older platform binary even after the resolve picked the
+  # newer source version, producing the silent binary-lag downgrade.
+  oldPlatforms <- forcePakSourceIfRequested(type, typeExplicit = typeExplicit)
+  if (!is.null(oldPlatforms)) on.exit(options(oldPlatforms), add = TRUE)
 
   # Mirror the same .libPaths() logic as pakDepsToPkgDT so the install subprocess
   # sees the same library set that was used for dependency resolution.
-  pakLib    <- tryCatch(dirname(find.package("pak")), error = function(e) NULL)
+  ## suppressWarnings, not just tryCatch: find.package() warns once for every
+  ## .libPaths() entry that has a pak/ directory whose DESCRIPTION it cannot
+  ## read -- a stale entry left by a deleted library, which says nothing about
+  ## the pak we are looking for. tryCatch(error=) does not catch a warning, so
+  ## these leaked into callers' capture_warnings(). Only reachable once pak is
+  ## found late on the path; when pak sits in libPaths[1] the scan stops first.
+  pakLib    <- tryCatch(suppressWarnings(dirname(find.package("pak"))),
+                        error = function(e) NULL)
   basePkgLib <- tail(.libPaths(), 1L)
   origPaths  <- .libPaths()
   if (isTRUE(standAlone)) {
@@ -2604,39 +3661,13 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   toInstall <- pkgDT[needInstall == .txtInstall]
   if (!NROW(toInstall)) return(pkgDT)
 
-  # Deduplicate: if the same Package appears as both a CRAN ref and a GitHub/url:: ref,
-  # keep only the non-CRAN ref. pak::pak() would reject the list with a "Conflicts with"
-  # error if both "any::SpaDES.tools" (CRAN) and "owner/SpaDES.tools@branch" (GitHub)
-  # appear together, because dependencies = FALSE still does conflict detection.
-  if (anyDuplicated(toInstall$Package)) {
-    toInstall[, isNonCRAN := isGH(packageFullName) | startsWith(packageFullName, "url::")]
-    toInstall[, hasNonCRAN := any(isNonCRAN), by = Package]
-    # Remove plain CRAN rows when a non-CRAN ref exists for the same package
-    toInstall <- toInstall[!(hasNonCRAN == TRUE & isNonCRAN == FALSE)]
-    # Among multiple plain-CRAN rows for the same Package (e.g. one row carries
-    # the user's "(<= 0.15.8)" upper-bound and a separate row carries a
-    # transitive dep's "(>= 0.15.1)" lower-bound -- trimRedundancies keeps both
-    # because they are complementary, not redundant), pick the row with the
-    # strictest constraint before unique(by = "Package") collapses them.
-    # Without this sort, unique() arbitrarily keeps whichever row sorted first
-    # in pkgDT -- typically the transitive ">=" row, since dep tree rows are
-    # appended after user rows. The user's "<=" pin is then dropped, the
-    # downstream gsub("\\(>=...\\)", "") strips the row to a bare name, the
-    # any:: prefix turns it into "any::stringfish", and pak silently installs
-    # the latest (constraint-violating) version -- symptom seen in the field
-    # as `Install("stringfish (<= 0.15.8)")` producing stringfish 0.19.0.
-    # Strictness order:  ==  >  <=  >  <  >  >=  >  >  >  none.
-    # equalsToAt() and lessThanToAt() (called below) translate ==/<=/< into
-    # exact "@version" pins; >= and > get stripped to bare names so any::pkg
-    # ends up resolving to latest.  Keeping the strictest row therefore
-    # ensures the install is correctly pinned where the user asked for one.
-    toInstall[, .versionSpecPrio := match(
-      inequality, c("==", "<=", "<", ">=", ">"), nomatch = 6L)]
-    setorderv(toInstall, c("Package", ".versionSpecPrio"))
-    # If duplicates still remain (e.g., two GitHub branches), keep first
-    toInstall <- unique(toInstall, by = "Package")
-    toInstall[, c("isNonCRAN", "hasNonCRAN", ".versionSpecPrio") := NULL]
-  }
+  # Deduplicate CRAN-vs-GitHub/url:: (and duplicate-CRAN) collisions for the same
+  # Package: pak::pak() rejects e.g. both "any::SpaDES.tools" (CRAN) and
+  # "owner/SpaDES.tools@branch" (GitHub) with a "Conflicts with" error even under
+  # dependencies = FALSE. The strictest version constraint is kept among plain-CRAN
+  # duplicates so a user pin (e.g. "stringfish (<= 0.15.8)") isn't dropped. See
+  # dedupInstallRefs() (shared with the offline path, pakOfflineInstall).
+  toInstall <- dedupInstallRefs(toInstall)
 
   # Pre-install integrity check: abort the install for any toInstall package
   # whose installed DESCRIPTION names a hard dep that is neither currently
@@ -2694,14 +3725,47 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   # Strip HEAD flags (Require already decided to install HEAD packages)
   pkgs <- HEADtoNone(pkgs)
 
-  # == version -> @version (exact pin for pak)
-  pkgs <- equalsToAt(pkgs)
-
+  # Translate == / <= constraints to pak's @version exact-pin form -- but skip
+  # refs that ALREADY carry an `@` pin (i.e. a GitHub `owner/repo@sha`/`@branch`
+  # ref). For those, appending @<version> here produces a malformed
+  # `owner/repo@sha@version` ref that pak cannot install: it silently keeps the
+  # installed version (a no-op), and Require then warns "pak resolved X but only
+  # Y is available as a binary". The version parenthetical on an already-pinned
+  # GitHub ref is a package-version constraint (not a git ref); it is stripped by
+  # trimVersionNumber() below, and Require's post-install check verifies the
+  # installed version. (A GitHub ref WITHOUT an `@` still goes through
+  # equalsToAt, preserving the existing `owner/repo (== X)` -> `owner/repo@X`
+  # behaviour.)
+  whUnpinned <- !grepl("@", pkgs)
+  pkgs[whUnpinned] <- equalsToAt(pkgs[whUnpinned])    # == version -> @version (exact pin)
   # <= version -> find highest satisfying version via pak::pkg_history() -> @version
-  pkgs <- lessThanToAt(pkgs)
+  pkgs[whUnpinned] <- lessThanToAt(pkgs[whUnpinned], verbose = verbose)
 
-  # >= version: strip the constraint. Since Require already checked that the installed
-  # version does NOT satisfy >=, installing the latest will always satisfy it.
+  # >= / > version: pak has no native lower-bound ref form. The old approach
+  # stripped the constraint to a bare name and let `any::` + the install run
+  # below pick "the latest". But pak treats a directly-requested `any::pkg` ref
+  # with upgrade = FALSE as ALREADY SATISFIED by whatever version is installed
+  # -- so an installed-but-insufficient version is KEPT, not upgraded (e.g.
+  # `Install("reproducible (>= 3.1.1.9054)")` kept the installed 3.1.1 even
+  # though 3.1.1.9054 was available). Pin instead to the version pak resolved
+  # for this package (pakResolvedVersionMap, set by pakDepsToPkgDT): an exact
+  # `pkg@<version>` ref forces pak to install that version regardless of the
+  # upgrade flag, which is what `pak::pak("pkg")` does. The `@` also keeps the
+  # `any::` prefix off below (isCRANlike excludes `@`). Falls through to the
+  # plain strip when no resolved version is known (e.g. per-package fallback).
+  pakResolvedVerMap <- get0("pakResolvedVersionMap", envir = pakEnv(), inherits = FALSE)
+  if (!is.null(pakResolvedVerMap)) {
+    whGE <- grepl("\\([[:space:]]*>=?[[:space:]]*[^)]+\\)", pkgs) &
+            !grepl("@", pkgs) & !isGH(pkgs)
+    for (.k in which(whGE)) {
+      .nm <- extractPkgName(pkgs[.k])
+      .v  <- unname(pakResolvedVerMap[.nm])
+      if (!is.na(.v) && nzchar(.v)) pkgs[.k] <- paste0(.nm, "@", .v)
+    }
+  }
+
+  # >= version: strip any remaining (unresolved) constraint. Since Require already
+  # checked the installed version does NOT satisfy >=, installing the latest satisfies it.
   pkgs <- gsub("[[:space:]]*\\(>=[[:space:]]*[^)]+\\)", "", pkgs)
 
   # > version: same logic as >=
@@ -2753,9 +3817,31 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   # Collect names of packages that pakRetryLoop explicitly warned about so
   # that the post-install update loop can skip them (avoid double-warning).
   warnedDropped <- character(0)
-  lastPakErr    <- ""   # last raw pak error string; used by silentlyFailed warning below
+  lastPakErr    <- ""
+  # A pinned install (snapshot; see pakPinnedResolve) carries every hard dep
+  # in the set, so nothing is left for pak to resolve: dependencies = FALSE.
+  pinned   <- isTRUE(get0("pakPinnedInstall", envir = pakEnv(), inherits = FALSE))
+  cranDeps <- if (pinned) FALSE else NA   # last raw pak error string; used by silentlyFailed warning below
+
+  # GitHub/url refs go to pak with dependencies = FALSE (so their pins are not
+  # re-resolved), under which pak does not order builds: install them one
+  # dependency level at a time. upgrade = TRUE so a branch ref fetches HEAD.
+  ghDone <- FALSE  # reset by each pakRetryLoop call; set once its GitHub levels succeed
+  pakGhByLevel <- function(refs) {
+    if (isTRUE(ghDone)) return(NULL)  # already installed earlier in this pakRetryLoop call
+    for (lvl in pakInstallLevels(refs, pakRefToBareName(refs))) {
+      e <- try(pakCall(
+        pak::pak(lvl, lib = libPaths[1], ask = FALSE,
+                 dependencies = FALSE, upgrade = TRUE),
+        verbose), silent = TRUE)
+      if (is(e, "try-error")) return(e)
+    }
+    ghDone <<- TRUE
+    e
+  }
 
   pakRetryLoop <- function(packages, repos, verbose) {
+    ghDone <<- FALSE
     for (i in seq_len(15)) {
       pkgsIn <- packages
       # Snapshot the captured-messages buffer so we can slice out exactly the
@@ -2795,24 +3881,23 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
       cranUp <- isTRUE(forceUpgrade)
       err <- if (any(ghOrUrl) && any(!ghOrUrl)) {
         # Two separate calls when both types are present
-        e1 <- try(pakCall(
-          pak::pak(packages[ghOrUrl],  lib = libPaths[1], ask = FALSE,
-                   dependencies = FALSE, upgrade = TRUE),
-          verbose), silent = TRUE)
+        e1 <- pakGhByLevel(packages[ghOrUrl])
         e2 <- try(pakCall(
           pak::pak(packages[!ghOrUrl], lib = libPaths[1], ask = FALSE,
-                   dependencies = NA, upgrade = cranUp),
+                   dependencies = cranDeps, upgrade = cranUp),
           verbose), silent = TRUE)
         # Combine errors: prefer the first error if both fail; if only one
         # fails return that one; if neither fails return non-try-error.
         if (is(e1, "try-error")) e1 else if (is(e2, "try-error")) e2 else e2
       } else {
-        up <- any(ghOrUrl) || cranUp  # TRUE -> upgrade=TRUE
-        deps <- if (any(ghOrUrl)) FALSE else NA  # GH-only: FALSE; CRAN-only: NA
-        try(pakCall(
-          pak::pak(packages, lib = libPaths[1], ask = FALSE,
-                   dependencies = deps, upgrade = up),
-          verbose), silent = TRUE)
+        if (any(ghOrUrl)) {
+          pakGhByLevel(packages)
+        } else {
+          try(pakCall(
+            pak::pak(packages, lib = libPaths[1], ask = FALSE,
+                     dependencies = cranDeps, upgrade = cranUp),
+            verbose), silent = TRUE)
+        }
       }
       options(opts)
       options(opts)
@@ -2884,7 +3969,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
       # the authoritative source of user-visible failure warnings, even
       # for packages that pakErrorHandling dropped earlier.
       if (!alreadyWarned) {
-        droppedPkgNames <- setdiff(extractPkgName(pkgsIn), extractPkgName(packages))
+        droppedPkgNames <- setdiff(pakRefToBareName(pkgsIn), pakRefToBareName(packages))
         if (length(droppedPkgNames)) {
           reason <- pakBuildFailReason(as.character(err), attemptMsgs)
           msg <- paste0("pakRetryLoop: ", .txtCouldNotBeInstalled, ": ",
@@ -2898,7 +3983,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
           # packages. Mark all remaining packages as failed for this loop;
           # the outer iter will fall through to serial / archive fallback.
           reason <- pakBuildFailReason(as.character(err), attemptMsgs)
-          failedNames <- extractPkgName(packages)
+          failedNames <- pakRefToBareName(packages)
           msg <- paste0("pakRetryLoop: ", .txtCouldNotBeInstalled, ": ",
                         paste(failedNames, collapse = ", "),
                         if (nzchar(reason)) paste0("; ", reason) else "")
@@ -3011,133 +4096,210 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   # every version-pinned ref ("qs@0.27.3") is misclassified as missing
   # because installed.packages() returns the bare name ("qs").
   pkgNamesAll <- pakRefToBareName(pkgs)
-  if (identical(strategy, "original")) {
-    capturePak(pakRetryLoop(pkgs, repos, verbose))
-  } else {
-    # Iterative identify-and-defer.
-    passList <- pkgs
-    deferred <- character(0)  # culprit refs (named with their full pak ref)
-    maxIter  <- 8L
-    for (iter in seq_len(maxIter)) {
-      # Force a fresh pak subprocess for every iteration after the first.
-      # pak holds a persistent r_session that, after a large failed install
-      # plan, can wedge into a state where every subsequent call emits
-      # "Error : ! error in pak subprocess" without naming a build culprit
-      # (so identify-and-defer has nothing parseable to defer and stalls).
-      # Restarting the subprocess gives the next iteration clean state.
-      if (iter > 1L) pakResetSubprocess()
-      iterMsgsStart <- length(allCapturedMsgs) + 1L
-      capturePak(pakRetryLoop(passList, repos, verbose))
-      capturedMsgs <- allCapturedMsgs[iterMsgsStart:length(allCapturedMsgs)]
-
-      ## Terminate early if pak reports missing system packages. Retrying
-      ## won't help: pak's dep resolver re-includes the failing pkg in
-      ## every plan that contains any of its dependents, so the loop just
-      ## ping-pongs on the same culprit. Emit a clear actionable error
-      ## (with sysreq -> pkg mapping) instead of spinning forever.
-      sysreqMissing <- extractMissingSysreqs(capturedMsgs)
-      if (length(sysreqMissing)) {
-        affectedPkgs <- unique(names(sysreqMissing))
-        # Group sysreqs by package for a readable summary
-        byPkg <- split(unname(sysreqMissing), names(sysreqMissing))
-        summary <- vapply(names(byPkg), function(p) {
-          paste0(p, " needs: ", paste(unique(byPkg[[p]]), collapse = ", "))
-        }, character(1))
-        warning(.txtCouldNotBeInstalled, ": ",
-                paste(affectedPkgs, collapse = ", "),
-                "; missing system packages -- install them and re-run.\n  ",
-                paste(summary, collapse = "\n  "),
-                call. = FALSE)
-        break
-      }
-
-      # noCache = TRUE: pak just installed these packages in a subprocess; the
-      # parent R session's installed.packages() cache is still pre-install.
-      # Without this, even successfully-installed packages look "still missing"
-      # and the loop falls into the no-parseable-culprits serial fallback for
-      # no reason, doubling install time.
-      instNow <- tryCatch(rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
-                          error = function(e) character(0))
-      # Same bare-name reduction as pkgNamesAll above. Without stripping
-      # "any::" / "owner/" / "@version", instNow's bare names ("cli", "qs")
-      # never match passNames' decorated form ("any::cli", "qs@0.27.3") and
-      # every iteration's "still missing" check returns the full pass-list --
-      # which then falls into the no-parseable-culprits serial fallback,
-      # doubling install time and emitting bogus "still missing after iter 1"
-      # messages for packages that pak in fact already installed.
-      passNames <- pakRefToBareName(passList)
-      missingNamesIter <- passNames[!passNames %in% instNow]
-      if (!length(missingNamesIter)) {
-        if (iter > 1L) {
-          messageVerbose(
-            "identify-and-defer: cascade casualties resolved after ",
-            iter - 1L, " deferral pass(es); ", length(deferred),
-            " culprit(s) pending serial install",
-            verbose = verbose, verboseLevel = 1)
+  failMemo <- .pakFailMemo()
+  # Levels only where pak cannot order builds itself: a pinned install runs
+  # every batch with dependencies = FALSE, so the whole set goes one level at a
+  # time; otherwise the CRAN batch (dependencies = NA, ordered by pak) is one
+  # call and only the GitHub/url batch is levelled, inside pakRetryLoop. Each
+  # pak call costs a few seconds of subprocess and metadata work, so levelling
+  # an ordinary CRAN batch was pure overhead. The graph is this install's: do
+  # not let it leak into a later one that resolved differently, or not at all.
+  on.exit(if (exists("pakDepGraph", envir = pakEnv(), inherits = FALSE))
+            rm("pakDepGraph", envir = pakEnv()), add = TRUE)
+  levels <- if (pinned) pakInstallLevels(pkgs, pkgNamesAll) else list(pkgs)
+  installLevel <- function(pkgs) {
+    if (identical(strategy, "original")) {
+      capturePak(pakRetryLoop(pkgs, repos, verbose))
+    } else {
+      # Iterative identify-and-defer.
+      # Cross-phase record of refs that failed against a given installed set, so
+      # no later phase re-attempts one whose situation has not changed (#190).
+      passList <- pkgs
+      deferred <- character(0)  # culprit refs (named with their full pak ref)
+      maxIter  <- 8L
+      for (iter in seq_len(maxIter)) {
+        # Force a fresh pak subprocess for every iteration after the first.
+        # pak holds a persistent r_session that, after a large failed install
+        # plan, can wedge into a state where every subsequent call emits
+        # "Error : ! error in pak subprocess" without naming a build culprit
+        # (so identify-and-defer has nothing parseable to defer and stalls).
+        # Restarting the subprocess gives the next iteration clean state.
+        if (iter > 1L) pakResetSubprocess()
+        iterMsgsStart <- length(allCapturedMsgs) + 1L
+        if (iter == 1L) {
+          capturePak(pakRetryLoop(passList, repos, verbose))
+        } else {
+          ## A batch that already failed once restarts one dependency level at
+          ## a time, so the next culprit aborts only its level rather than the
+          ## whole batch again. The first attempt stays a single call: on an
+          ## install that simply succeeds, levels are only extra pak calls.
+          for (lvl in pakInstallLevels(passList, pakRefToBareName(passList)))
+            capturePak(pakRetryLoop(lvl, repos, verbose))
         }
-        break
+        capturedMsgs <- allCapturedMsgs[iterMsgsStart:length(allCapturedMsgs)]
+
+        ## Terminate early if pak reports missing system packages. Retrying
+        ## won't help: pak's dep resolver re-includes the failing pkg in
+        ## every plan that contains any of its dependents, so the loop just
+        ## ping-pongs on the same culprit. Emit a clear actionable error
+        ## (with sysreq -> pkg mapping) instead of spinning forever.
+        sysreqMissing <- extractMissingSysreqs(capturedMsgs)
+        if (length(sysreqMissing)) {
+          affectedPkgs <- unique(names(sysreqMissing))
+          # Group sysreqs by package for a readable summary
+          byPkg <- split(unname(sysreqMissing), names(sysreqMissing))
+          summary <- vapply(names(byPkg), function(p) {
+            paste0(p, " needs: ", paste(unique(byPkg[[p]]), collapse = ", "))
+          }, character(1))
+          warning(.txtCouldNotBeInstalled, ": ",
+                  paste(affectedPkgs, collapse = ", "),
+                  "; missing system packages -- install them and re-run.\n  ",
+                  paste(summary, collapse = "\n  "),
+                  call. = FALSE)
+          break
+        }
+
+        # noCache = TRUE: pak just installed these packages in a subprocess; the
+        # parent R session's installed.packages() cache is still pre-install.
+        # Without this, even successfully-installed packages look "still missing"
+        # and the loop falls into the no-parseable-culprits serial fallback for
+        # no reason, doubling install time.
+        instNow <- tryCatch(rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
+                            error = function(e) character(0))
+        # Same bare-name reduction as pkgNamesAll above. Without stripping
+        # "any::" / "owner/" / "@version", instNow's bare names ("cli", "qs")
+        # never match passNames' decorated form ("any::cli", "qs@0.27.3") and
+        # every iteration's "still missing" check returns the full pass-list --
+        # which then falls into the no-parseable-culprits serial fallback,
+        # doubling install time and emitting bogus "still missing after iter 1"
+        # messages for packages that pak in fact already installed.
+        passNames <- pakRefToBareName(passList)
+        missingNamesIter <- passNames[!passNames %in% instNow]
+        if (!length(missingNamesIter)) {
+          if (iter > 1L) {
+            messageVerbose(
+              "identify-and-defer: cascade casualties resolved after ",
+              iter - 1L, " deferral pass(es); ", length(deferred),
+              " culprit(s) pending serial install",
+              verbose = verbose, verboseLevel = 1)
+          }
+          break
+        }
+
+        culpritsIter <- intersect(extractBuildFailures(capturedMsgs),
+                                  missingNamesIter)
+        if (!length(culpritsIter)) {
+          # No new culprits parseable from pak output. Common cause: pak's
+          # subprocess crashes during dep resolution on large cascade-casualty
+          # batches (no per-package "Failed to build X" line, just a generic
+          # "Error : ! error in pak subprocess"). Fall back to serial install:
+          # each pak::pak(single_ref) call has a tiny dep graph that resolves
+          # fine, and a failure on one ref no longer abort the rest.
+          pkgsMissingFallback <- passList[match(missingNamesIter, passNames)]
+          pkgsMissingFallback <- pkgsMissingFallback[!is.na(pkgsMissingFallback)]
+          pkgsMissingFallback <- .pakDropUnchangedFailures(
+            failMemo, pkgsMissingFallback, instNow, verbose)
+          .pakRecordFailures(failMemo, pkgsMissingFallback, instNow)
+          messageVerbose(
+            "identify-and-defer: ", length(missingNamesIter),
+            " ref(s) still missing after iter ", iter,
+            ", no parseable culprits; falling back to serial install",
+            verbose = verbose, verboseLevel = 1)
+          pakResetSubprocess()
+          capturePak(pakSerialInstall(pkgsMissingFallback, libPaths[1], repos, verbose, cranDeps = cranDeps))
+          break
+        }
+
+        pkgsCulpritIter <- passList[match(culpritsIter, passNames)]
+        pkgsCulpritIter <- pkgsCulpritIter[!is.na(pkgsCulpritIter)]
+        deferred <- c(deferred, pkgsCulpritIter)
+
+        # Next iteration: previously-missing minus the culprits.
+        pkgsMissingIter <- passList[match(missingNamesIter, passNames)]
+        pkgsMissingIter <- pkgsMissingIter[!is.na(pkgsMissingIter)]
+        newPassList <- pkgsMissingIter[!pakRefToBareName(pkgsMissingIter) %in% culpritsIter]
+
+        messageVerbose(
+          "identify-and-defer iter ", iter, ": ", length(culpritsIter),
+          " culprit(s) deferred (",
+          paste(utils::head(culpritsIter, 5L), collapse = ", "),
+          if (length(culpritsIter) > 5L) ", ..." else "",
+          "); ", length(newPassList),
+          " cascade casualt", if (length(newPassList) == 1L) "y" else "ies",
+          " queued for next pass",
+          verbose = verbose, verboseLevel = 1)
+
+        if (!length(newPassList) || identical(sort(newPassList), sort(passList))) {
+          # No-progress guard.
+          break
+        }
+        passList <- newPassList
       }
 
-      culpritsIter <- intersect(extractBuildFailures(capturedMsgs),
-                                missingNamesIter)
-      if (!length(culpritsIter)) {
-        # No new culprits parseable from pak output. Common cause: pak's
-        # subprocess crashes during dep resolution on large cascade-casualty
-        # batches (no per-package "Failed to build X" line, just a generic
-        # "Error : ! error in pak subprocess"). Fall back to serial install:
-        # each pak::pak(single_ref) call has a tiny dep graph that resolves
-        # fine, and a failure on one ref no longer abort the rest.
-        pkgsMissingFallback <- passList[match(missingNamesIter, passNames)]
-        pkgsMissingFallback <- pkgsMissingFallback[!is.na(pkgsMissingFallback)]
+      # Final phase: install the accumulated culprits serially. Reset pak's
+      # subprocess first -- the iteration loop may have left it in a wedged
+      # state from the failed plan(s), and each serial install benefits from
+      # a clean subprocess (see pakResetSubprocess() comment).
+      if (length(deferred)) {
+        # Order so a deferred dependency installs before a deferred dependent
+        # (e.g. LandR before LandR.CS). Without this, the serial pass could build a
+        # dependent before its dependency and hit a spurious
+        # "dependency 'X' is not available for package 'Y'" build-error.
+        deferred <- orderRefsByMissingDepEdges(deferred, allCapturedMsgs)
+        instBeforeDeferred <- tryCatch(
+          rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
+          error = function(e) character(0))
+        deferred <- .pakDropUnchangedFailures(failMemo, deferred,
+                                              instBeforeDeferred, verbose)
+      }
+      ## Re-test: .pakDropUnchangedFailures() above can empty `deferred`, and the
+      ## serial pass and its retries below must then be skipped. This was a
+      ## `break`, which R CMD check rightly flagged -- "break used in wrong
+      ## context: no loop is visible" -- because the enclosing block is an `if`,
+      ## not a loop. That WARNING failed every R-CMD-check job while the tests
+      ## themselves passed.
+      if (length(deferred)) {
+        .pakRecordFailures(failMemo, deferred, instBeforeDeferred)
         messageVerbose(
-          "identify-and-defer: ", length(missingNamesIter),
-          " ref(s) still missing after iter ", iter,
-          ", no parseable culprits; falling back to serial install",
+          "identify-and-defer: installing ", length(deferred),
+          " deferred culprit(s) one at a time",
           verbose = verbose, verboseLevel = 1)
         pakResetSubprocess()
-        capturePak(pakSerialInstall(pkgsMissingFallback, libPaths[1], repos, verbose))
-        break
+        capturePak(pakSerialInstall(deferred, libPaths[1], repos, verbose, cranDeps = cranDeps))
+
+        # Retry pass: a culprit can still fail only because a dependency that is
+        # ALSO a deferred culprit had not yet been installed when it was attempted
+        # (an ordering we couldn't infer, or a dependency installed later in the
+        # same pass). Re-attempt the ones still missing while progress is being
+        # made -- each newly-installed dependency can unblock another dependent.
+        for (retry in seq_len(3L)) {
+          instNow <- tryCatch(
+            rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
+            error = function(e) character(0))
+          stillMissing <- deferred[!pakRefToBareName(deferred) %in% instNow]
+          stillMissing <- .pakDropUnchangedFailures(failMemo, stillMissing,
+                                                    instNow, verbose)
+          if (!length(stillMissing)) break
+          .pakRecordFailures(failMemo, stillMissing, instNow)
+          messageVerbose(
+            "identify-and-defer: retry ", retry, " -- re-attempting ",
+            length(stillMissing), " still-missing culprit(s) now that their ",
+            "dependencies may be installed",
+            verbose = verbose, verboseLevel = 1)
+          pakResetSubprocess()
+          capturePak(pakSerialInstall(stillMissing, libPaths[1], repos, verbose, cranDeps = cranDeps))
+          instAfter <- tryCatch(
+            rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
+            error = function(e) character(0))
+          # No progress this pass (none of the still-missing got installed) -> stop.
+          if (sum(!pakRefToBareName(stillMissing) %in% instAfter) >= length(stillMissing))
+            break
+        }
       }
-
-      pkgsCulpritIter <- passList[match(culpritsIter, passNames)]
-      pkgsCulpritIter <- pkgsCulpritIter[!is.na(pkgsCulpritIter)]
-      deferred <- c(deferred, pkgsCulpritIter)
-
-      # Next iteration: previously-missing minus the culprits.
-      pkgsMissingIter <- passList[match(missingNamesIter, passNames)]
-      pkgsMissingIter <- pkgsMissingIter[!is.na(pkgsMissingIter)]
-      newPassList <- pkgsMissingIter[!extractPkgName(pkgsMissingIter) %in% culpritsIter]
-
-      messageVerbose(
-        "identify-and-defer iter ", iter, ": ", length(culpritsIter),
-        " culprit(s) deferred (",
-        paste(utils::head(culpritsIter, 5L), collapse = ", "),
-        if (length(culpritsIter) > 5L) ", ..." else "",
-        "); ", length(newPassList),
-        " cascade casualt", if (length(newPassList) == 1L) "y" else "ies",
-        " queued for next pass",
-        verbose = verbose, verboseLevel = 1)
-
-      if (!length(newPassList) || identical(sort(newPassList), sort(passList))) {
-        # No-progress guard.
-        break
-      }
-      passList <- newPassList
     }
 
-    # Final phase: install the accumulated culprits serially. Reset pak's
-    # subprocess first -- the iteration loop may have left it in a wedged
-    # state from the failed plan(s), and each serial install benefits from
-    # a clean subprocess (see pakResetSubprocess() comment).
-    if (length(deferred)) {
-      messageVerbose(
-        "identify-and-defer: installing ", length(deferred),
-        " deferred culprit(s) one at a time",
-        verbose = verbose, verboseLevel = 1)
-      pakResetSubprocess()
-      capturePak(pakSerialInstall(deferred, libPaths[1], repos, verbose))
-    }
   }
+  for (levelPkgs in levels) installLevel(levelPkgs)
 
   installTimings$end     <- Sys.time()
   installTimings$elapsed <- as.numeric(difftime(installTimings$end,
@@ -3258,7 +4420,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
             "archive fallback: batch call failed; retrying serially",
             verbose = verbose, verboseLevel = 1)
           pakResetSubprocess()
-          capturePak(pakSerialInstall(archiveRefs, libPaths[1], repos, verbose))
+          capturePak(pakSerialInstall(archiveRefs, libPaths[1], repos, verbose, cranDeps = cranDeps))
         }
       }
       # Recompute final-missing after the archive pass.
@@ -3286,6 +4448,27 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   installFailures <- reportInstallFailures(installFailures, finalMissing,
                                            verbose = verbose)
   assign(".lastInstallFailures", installFailures, envir = pakEnv())
+
+  ## Auto-invalidate the dep-resolution cache when pak reports
+  ## "missing-build-deps". The cached plan was built without that build
+  ## dep in the graph (most commonly: user just upgraded Require to a
+  ## release that added an `Imports` package -- e.g. processx in
+  ## 2.0.0.9013 -- but the per-call dep cache still represents the old
+  ## graph). Serving the stale plan on the next call would hit the same
+  ## missing-build-deps failure ad infinitum. Wiping the entry forces a
+  ## fresh resolution on retry. Cheap no-op when no key was stashed.
+  if (NROW(installFailures) &&
+      "reason_type" %in% names(installFailures) &&
+      any(installFailures$reason_type == "missing-build-deps")) {
+    invalidated <- .pakDepsInvalidateLast()
+    if (isTRUE(invalidated))
+      messageVerbose(
+        "pak install failed with missing-build-deps; invalidated the ",
+        "dep-resolution cache for this plan so the next Require call ",
+        "will re-resolve (typical cause: a Require version bump added ",
+        "an Imports package that wasn't in the cached graph).",
+        verbose = verbose, verboseLevel = 1)
+  }
 
   # Update pkgDT with installation results.
   # Use wh[1L] for scalar reads (versionSpec/inequality) but the full wh vector
@@ -3327,11 +4510,9 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
           pakVerMap <- get0("pakResolvedVersionMap", envir = pakEnv(), inherits = FALSE)
           if (!is.null(pakVerMap)) {
             cand <- pakVerMap[pkg]
-            if (!is.na(cand) && nzchar(cand)) {
-              pakRes <- unname(cand)
-              satisfies <- isTRUE(compareVersion2(pakRes, versionSpec = vSpec, inequality = ineq))
-            }
+            if (!is.na(cand) && nzchar(cand)) pakRes <- unname(cand)
           }
+          satisfies <- pakConstraintSatisfied(installedVer, vSpec, ineq, pakRes)
         }
         if (!isTRUE(satisfies)) {
           # We are inside `if (NROW(nowRow))`, i.e. pak HAS something installed
@@ -3350,7 +4531,18 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
           # on disk) and warrants the "please change required version" guidance
           # even when preVer == installedVer (e.g. on a re-Require() call).
           pakChoseInstalled <- !is.na(pakRes) && identical(pakRes, installedVer)
-          if (versionChanged || firstTimeInsufficient || pakChoseInstalled)
+          # pak resolved to a newer version than what's actually on disk
+          # (typical Mac/Win case: source > binary). Warn the user that the
+          # install was effectively a no-op even though pak reported success.
+          pakResolvedNewer <- !is.na(pakRes) && !identical(pakRes, installedVer) &&
+                              isTRUE(compareVersion2(pakRes, versionSpec = vSpec, inequality = ineq))
+          if (pakResolvedNewer) {
+            warning(.txtCouldNotBeInstalled, ": ", pkg, " ", ineq, " ", vSpec,
+                    "; pak resolved ", pakRes, " but only ", installedVer,
+                    " is available as a binary on this platform -- ",
+                    "install from source or wait for the binary to be built.",
+                    call. = FALSE)
+          } else if (versionChanged || firstTimeInsufficient || pakChoseInstalled)
             warning(msgPleaseChangeRqdVersion(pkg, ineq = ">=", newVersion = installedVer), call. = FALSE)
           # Always add to warnedDropped: either we already warned above (versionChanged),
           # or pak ran and chose not to update this package, meaning Require's over-strict

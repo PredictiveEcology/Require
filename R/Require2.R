@@ -164,6 +164,12 @@ utils::globalVariables(c(
 #'   attribute: `attr(.., "Require")` which has lots of information about the
 #'   processes of the installs.
 #' @param type See `utils::install.packages`
+#' @param typeExplicit Logical. Whether `type` was supplied by the caller
+#'   rather than defaulted from `getOption("pkgType")`. Defaults to
+#'   `!missing(type)` and should not normally be set by hand. It exists because
+#'   `getOption("pkgType")` is `"source"` on Linux, so the value of `type`
+#'   alone cannot say whether source-only builds were actually asked for; only
+#'   an explicit request pins pak to source.
 #' @param upgrade When `FALSE`, the default, will only upgrade a package when the
 #'   version on in the local library is not adequate for the version requirements
 #'   of the `packages`. Note: for convenience, `update`
@@ -179,8 +185,7 @@ utils::globalVariables(c(
 #' @importFrom utils available.packages capture.output compareVersion
 #' @importFrom utils install.packages packageVersion
 #'
-#' @examples
-#' \donttest{
+#' @examplesIf Require:::.runLongExamples()
 #' opts <- Require:::.setupExample()
 #'
 #' library(Require)
@@ -191,53 +196,50 @@ utils::globalVariables(c(
 #' # unquoted version
 #' Require(c(tools, utils))
 #'
-#' if (Require:::.runLongExamples()) {
-#'   # Install in a new local library (libPaths)
-#'   tempPkgFolder <- file.path(tempdir(), "Require/Packages")
-#'   # use standAlone, means it will put it in libPaths, even if it already exists
-#'   #   in another local library (e.g., personal library)
-#'   Install("crayon", libPaths = tempPkgFolder, standAlone = TRUE)
+#' # Install in a new local library (libPaths)
+#' tempPkgFolder <- file.path(tempdir(), "Require/Packages")
+#' # use standAlone, means it will put it in libPaths, even if it already exists
+#' #   in another local library (e.g., personal library)
+#' Install("crayon", libPaths = tempPkgFolder, standAlone = TRUE)
 #'
-#'   # Mutual dependencies, only installs once -- e.g., cli
-#'   tempPkgFolder <- file.path(tempdir(), "Require/Packages")
-#'   Install(c("cli", "R6"), libPaths = tempPkgFolder, standAlone = TRUE)
+#' # Mutual dependencies, only installs once -- e.g., cli
+#' tempPkgFolder <- file.path(tempdir(), "Require/Packages")
+#' Install(c("cli", "R6"), libPaths = tempPkgFolder, standAlone = TRUE)
 #'
-#'   # Mutual dependencies, only installs once -- e.g., rlang
-#'   tempPkgFolder <- file.path(tempdir(), "Require/Packages")
-#'   Install(c("rlang", "ellipsis"), libPaths = tempPkgFolder, standAlone = TRUE)
+#' # Mutual dependencies, only installs once -- e.g., rlang
+#' tempPkgFolder <- file.path(tempdir(), "Require/Packages")
+#' Install(c("rlang", "ellipsis"), libPaths = tempPkgFolder, standAlone = TRUE)
 #'
-#'   #####################################################################################
-#'   # Isolated projects -- Use a project folder and pass to libPaths or set .libPaths() #
-#'   #####################################################################################
-#'   # GitHub packages
-#'   if (requireNamespace("gitcreds", quietly = TRUE)) {
-#'     # if (is(try(gitcreds::gitcreds_get(), silent = TRUE), "gitcreds")) {
-#'     ProjectPackageFolder <- file.path(tempdir(), "Require/ProjectA")
-#'     if (requireNamespace("curl")) {
-#'       Require("PredictiveEcology/fpCompare@development",
-#'         libPaths = ProjectPackageFolder,
-#'       )
-#'     }
-#'
-#'     # No install because it is there already
-#'     Install("PredictiveEcology/fpCompare@development",
+#' #####################################################################################
+#' # Isolated projects -- Use a project folder and pass to libPaths or set .libPaths() #
+#' #####################################################################################
+#' # GitHub packages
+#' if (requireNamespace("gitcreds", quietly = TRUE)) {
+#'   # if (is(try(gitcreds::gitcreds_get(), silent = TRUE), "gitcreds")) {
+#'   ProjectPackageFolder <- file.path(tempdir(), "Require/ProjectA")
+#'   if (requireNamespace("curl")) {
+#'     Require("PredictiveEcology/fpCompare@development",
 #'       libPaths = ProjectPackageFolder,
-#'     ) # the latest version on GitHub
-#'
-#'     ############################################################################
-#'     # Mixing and matching GitHub, CRAN, with and without version numbering
-#'     ############################################################################
-#'     pkgs <- c(
-#'       "remotes (<=2.4.1)", # old version
-#'       "digest (>= 0.6.28)", # recent version
-#'       "PredictiveEcology/fpCompare@a0260b8476b06628bba0ae73af3430cce9620ca0" # exact version
 #'     )
-#'     Require::Require(pkgs, libPaths = ProjectPackageFolder)
-#'     # }
 #'   }
-#'   Require:::.cleanup(opts)
+#'
+#'   # No install because it is there already
+#'   Install("PredictiveEcology/fpCompare@development",
+#'     libPaths = ProjectPackageFolder,
+#'   ) # the latest version on GitHub
+#'
+#'   ############################################################################
+#'   # Mixing and matching GitHub, CRAN, with and without version numbering
+#'   ############################################################################
+#'   pkgs <- c(
+#'     "remotes (<=2.4.1)", # old version
+#'     "digest (>= 0.6.28)", # recent version
+#'     "PredictiveEcology/fpCompare@a0260b8476b06628bba0ae73af3430cce9620ca0" # exact version
+#'   )
+#'   Require::Require(pkgs, libPaths = ProjectPackageFolder)
+#'   # }
 #' }
-#' }
+#' Require:::.cleanup(opts)
 #'
 Require <- function(packages,
                     packageVersionFile,
@@ -251,6 +253,7 @@ Require <- function(packages,
                     purge = getOption("Require.purge", FALSE),
                     verbose = getOption("Require.verbose", FALSE),
                     type = getOption("pkgType"),
+                    typeExplicit = !missing(type),
                     upgrade = FALSE,
                     returnDetails = FALSE,
                     ...) {
@@ -295,6 +298,25 @@ Require <- function(packages,
   libPaths <- doLibPaths(libPaths, standAlone = standAlone)
   libPaths <- checkLibPaths(libPaths = libPaths, exact = TRUE, ...)
 
+  # Make sure pak is reachable on .libPaths() BEFORE any downstream code path
+  # calls pak; if it is not, install it fresh into the project lib. pak runs
+  # its work in a callr subprocess that does its own loadNamespace("pak")
+  # against the inherited .libPaths(), so any entry will serve -- but a pak
+  # loaded only in this session will not. Never file-copy pak into place:
+  # its embedded callr/processx helper executables do not survive a
+  # file-by-file copy on Windows and the next pak call dies with
+  #   `Native call to processx_exec failed: Command '' not found`.
+  #
+  # Gate on libPaths[1] being part of the session-wide .libPaths() so this
+  # only fires for *real* project libs. Ephemeral install-target tempdirs
+  # passed via Require::Install(pkg, libPaths = some_tempdir, standAlone =
+  # TRUE) -- common in tests and one-off installs -- are NOT project libs;
+  # treating them as such (a) wastes install time per call and (b) triggers
+  # an unloadNamespace("pak") cascade that interacts badly with packages
+  # the caller is in the middle of installing/unloading.
+  if (.isSessionLibPath(libPaths[1]))
+    ensurePakInProjectLib(libPaths[1], repos = repos, verbose = verbose)
+
   doDeps <- if (!is.null(list(...)$dependencies)) list(...)$dependencies else NA
   which <- whichToDILES(doDeps)
 
@@ -320,6 +342,14 @@ Require <- function(packages,
   hasInitSlash <- grepl("^\\\"", packages)
   if (any(hasInitSlash))
     packages[hasInitSlash] <- gsub("\\\"", "", packages[hasInitSlash])
+
+  # noRemotes: rewrite GitHub specs (account/repo@branch) to bare names so they
+  # resolve from `repos` (e.g., r-universe binaries) rather than being cloned
+  # and built from GitHub source. Avoids git auth + Rtools for end users (e.g.,
+  # workshops). Version constraints are preserved, so `repos` must carry a
+  # version satisfying them. See ?RequireOptions.
+  if (isTRUE(getOption("Require.noRemotes", FALSE)))
+    packages <- stripGitHubToRepos(packages, verbose = verbose)
 
   # Proceed to evaluate install and load need if there are any packages
   packagesOrig <- packages
@@ -362,13 +392,15 @@ Require <- function(packages,
          withCallingHandlers(
            pkgDT <- pakDepsToPkgDT(packages, which = which, libPaths = libPaths,
                                     standAlone = standAlone, verbose = verbose,
-                                    purge = purge, install = install),
+                                    purge = purge, install = install, type = type,
+                                    typeExplicit = typeExplicit),
            message = function(m) invokeRestart("muffleMessage")
          )
        } else {
          pkgDT <- pakDepsToPkgDT(packages, which = which, libPaths = libPaths,
                                   standAlone = standAlone, verbose = verbose,
-                                  purge = purge, install = install)
+                                  purge = purge, install = install, type = type,
+                                  typeExplicit = typeExplicit)
        }
     } else if (!skipDepResolution) {
       if (length(which)) {
@@ -426,7 +458,7 @@ Require <- function(packages,
         }
       }
       pkgDT <- dealWithStandAlone(pkgDT, libPaths, standAlone)
-      pkgDT <- whichToInstall(pkgDT, install, verbose)
+      pkgDT <- whichToInstall(pkgDT, install, verbose, libPaths = libPaths)
 
       # If a candidate is already loaded in this session with a version that
       # satisfies the constraint, skip reinstall -- both to avoid pak's
@@ -466,9 +498,20 @@ Require <- function(packages,
           ## installed packages. Skip the shortcut when the user
           ## explicitly asked for `install = "force"` or set
           ## `purge = TRUE`; those signal "ignore the cache".
-          forceOnline <- identical(install, "force") || isTRUE(purge)
-          useCacheShortcut <- isTRUE(getOption("Require.offlineMode")) ||
-            (!forceOnline && allInPakCache(pkgDT))
+          # Use the bespoke offline cache-install shortcut (pakOfflineInstall) ONLY
+          # in genuine offline mode. It used to ALSO fire whenever every package was
+          # already in pak's download cache (allInPakCache) -- a "skip the metadata
+          # refresh" optimization -- but that routes a perfectly ONLINE install into
+          # the bespoke exact-pin batch, which hands pak every dep-tree node as a
+          # `pkg@version` ref and self-conflicts in pak's resolver
+          # ("openssl@2.4.2: Conflicts with openssl@2.4.2"), collapsing to the slow
+          # per-ref one-at-a-time fallback. When online, prefer pak's own
+          # resolve+install (pakInstallFiltered): it uses pak's download cache
+          # anyway, orders builds natively, and carries the retry/error-handling
+          # catches (pakRetryLoop, pakErrorHandling). pakOfflineInstall remains for
+          # true offlineMode, and pakInstallFiltered's recovery block below still
+          # falls back to it if the network turns out to be down.
+          useCacheShortcut <- isTRUE(getOption("Require.offlineMode"))
           if (useCacheShortcut) {
             if (!isTRUE(getOption("Require.offlineMode"))) {
               messageVerbose("All requested packages are in the pak ",
@@ -480,12 +523,14 @@ Require <- function(packages,
           } else {
             pkgDT <- pakInstallFiltered(pkgDT, libPaths = libPaths, repos = repos,
                                         standAlone = standAlone, verbose = verbose,
-                                        forceUpgrade = identical(install, "force"))
+                                        forceUpgrade = identical(install, "force"),
+                                        type = type, typeExplicit = typeExplicit)
             # Invalidate the dep-tree cache: installed state changed, so the next
             # call should re-resolve rather than use a stale cached result.
             pakDepsCacheInvalidate(pkgsForPak = trimVersionNumber(HEADtoNone(pkgDT$packageFullName)),
                                    wh   = whichToDILES(doDeps),
-                                   repos = repos)
+                                   repos = repos,
+                                   type = type)
             ## Recovery: if pakInstallFiltered left any rows flagged
             ## .txtCouldNotBeInstalled, probe internet once. If missing,
             ## switch to offlineMode and retry those rows via the pak
@@ -530,6 +575,7 @@ Require <- function(packages,
     }
 
     pkgDT <- needToRestartR(pkgDT)
+    pkgDT <- flagRestartForLoadedInsufficient(pkgDT)
     whRestartNeeded <- which(grepl("restart", pkgDT$installResult))
     if  (length(whRestartNeeded)) {
       warning(.txtPleaseRestart, "; ", paste(pkgDT[whRestartNeeded]$Package, collapse = ", "),
@@ -1061,7 +1107,7 @@ archivedOn <- function(possiblyArchivedPkg, pkgRelPath, verbose, repos, numGroup
   )
 }
 
-whichToInstall <- function(pkgDT, install, verbose) {
+whichToInstall <- function(pkgDT, install, verbose, libPaths = .libPaths()) {
   set(pkgDT, NULL, "isPkgInstalled", !is.na(pkgDT[["Version"]]))
   set(pkgDT, NULL, "installedVersionOK", !is.na(pkgDT[["Version"]])) # default: if it is installed,  say "OK"
   if (!is.null(pkgDT[[hasHEADtxt]])) {
@@ -1081,7 +1127,66 @@ whichToInstall <- function(pkgDT, install, verbose) {
 
   pkgDT <- checkHEAD(pkgDT)
   if (any(pkgDT[[hasHEADtxt]])) {
-    set(pkgDT, which(pkgDT[[hasHEADtxt]]), "installedVersionOK", FALSE)
+    ## A `(HEAD)` ref used to force installedVersionOK = FALSE on every row
+    ## carrying it -- "always install", whatever is on disk.
+    ##
+    ## For a GitHub ref that is right: a branch HEAD moves without the
+    ## DESCRIPTION version changing, so only a SHA comparison can settle it.
+    ## For a CRAN-form ref, "HEAD" just means "the newest the repositories
+    ## have", which we can settle here from metadata already in hand. Nothing
+    ## downstream did it: the HEAD -> dontInstall comparison lives in
+    ## doDownloads(), reachable only from doInstalls(), which is the `else`
+    ## branch of `if (getOption("Require.usePak"))`. Under the default
+    ## usePak = TRUE it never ran.
+    ##
+    ## That mattered because updatePackages() tags every installed CRAN
+    ## package `pkg (HEAD)`, so Install() was being asked to reinstall the
+    ## whole library -- 170 same-version rebuilds where update.packages()
+    ## correctly found 3. Install() not reinstalling what you already have is
+    ## the point of the package, so the fix belongs here, not in the caller.
+    whHEAD <- which(pkgDT[[hasHEADtxt]] %in% TRUE)
+    isGHrow <- if (is.null(pkgDT[["repoLocation"]])) rep(TRUE, length(whHEAD))
+               else pkgDT[["repoLocation"]][whHEAD] %in% .txtGitHub
+    ok <- rep(FALSE, length(whHEAD))
+
+    ## CRAN-alike half: newest the repositories offer, by version.
+    vor <- pkgDT[["VersionOnRepos"]]
+    if (!is.null(vor)) {
+      instV <- pkgDT[["Version"]][whHEAD]
+      availV <- vor[whHEAD]
+      cmp <- which(!isGHrow & !is.na(instV) & !is.na(availV))
+      for (k in cmp) ok[k] <- utils::compareVersion(instV[k], availV[k]) >= 0
+    }
+
+    ## GitHub half: newest the branch points at, by SHA. Reuses
+    ## alreadyExistingDESCFile(), which is the existing implementation of this
+    ## question -- it reads GithubSHA1 out of the installed DESCRIPTION and
+    ## compares it with getSHAfromGitHubMemoise(). doDownloads() calls the same
+    ## machinery, but it sits on the legacy non-pak path, so under the default
+    ## Require.usePak = TRUE nothing compared SHAs and every GitHub HEAD ref
+    ## reinstalled unconditionally. Reading the SHA from disk means this does
+    ## not depend on pkgDT carrying a local-SHA column.
+    haveGHcols <- all(c("Account", "Repo", "Branch") %in% colnames(pkgDT))
+    if (any(isGHrow) && haveGHcols) {
+      acct <- pkgDT[["Account"]][whHEAD]
+      repo <- pkgDT[["Repo"]][whHEAD]
+      br <- pkgDT[["Branch"]][whHEAD]
+      gh <- which(isGHrow & !is.na(acct) & !is.na(repo) & !is.na(br))
+      for (k in gh) {
+        ## Anything unresolvable -- no local DESCRIPTION, unreachable GitHub --
+        ## leaves ok = FALSE, i.e. the old "install" answer. A network failure
+        ## must never read as "you are up to date".
+        res <- tryCatch(
+          alreadyExistingDESCFile(libPaths = libPaths, Repo = repo[k],
+                                  Account = acct[k], Branch = br[k],
+                                  installResult = NA_character_,
+                                  verbose = verbose),
+          error = function(e) NULL)
+        if (!is.null(res))
+          ok[k] <- identical(res[[3]], .txtShaUnchangedNoInstall)
+      }
+    }
+    set(pkgDT, whHEAD, "installedVersionOK", ok)
   }
 
   set(pkgDT, NULL, "needInstall", c(.txtDontInstall, .txtInstall)[pkgDT$installedVersionOK %in% FALSE + 1])
@@ -1172,13 +1277,15 @@ doLoads <- function(require, pkgDT, libPaths, verbose = getOption("Require.verbo
       # by <other-pkgs>" failure: R prints that text directly (not as a
       # condition), then require() returns FALSE -- but the namespace IS still
       # loaded (unload failed, so it stayed). Detect via loadedNamespaces()
-      # and force-attach via require() without lib.loc, so unqualified calls
-      # to functions from this package (e.g., `prepInputs()` from
-      # reproducible inside a SpaDES module's `init` event) succeed.
+      # and attach the live namespace directly via attachNamespace(); using
+      # require() again re-triggers R's version check + unload attempt, which
+      # fails the same way. attachNamespace() bypasses that and just puts the
+      # in-memory namespace on the search path.
       if (!isTRUE(res) && x %in% loadedNamespaces()) {
-        res <- suppressWarnings(suppressMessages(
-          base::require(x, character.only = TRUE, quietly = TRUE)
-        ))
+        if (!paste0("package:", x) %in% search()) {
+          tryCatch(attachNamespace(x), error = function(e) {})
+        }
+        res <- paste0("package:", x) %in% search()
         if (isTRUE(res)) warn_msgs <- character(0L)
       }
       if (!isTRUE(res)) {
@@ -1729,11 +1836,20 @@ doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
     if (packages[1, "Package"] == "R") {
       Rversion <- packages[["Version"]][1] |> versionMajorMinor()
       if (!compareVersion2(versionMajorMinor(), Rversion, inequality = "=="))
-        messageVerbose("The package snapshot was made using R ", Rversion,
-                       ". Current session is running R ", getRversion(),
-                       "\nThere may be difficulties installing packages. ",
-                       "If there are please restart session using the appropriate R version",
-                       verbose = verbose)
+        ## warning(), not messageVerbose(): a snapshot pinned under a different
+        ## R routinely fails to build -- packages pinned under an older R can
+        ## use headers or functions the current one has removed (e.g. Calloc /
+        ## Free before STRICT_R_HEADERS, is.R() now defunct) -- and the symptom
+        ## is hundreds of lines of compiler output with no statement of the
+        ## cause. A message at a verbosity level is suppressed by default in
+        ## quiet sessions and swallowed entirely under testthat, so the one
+        ## piece of information that explains the failure was the piece most
+        ## likely to be lost.
+        warning("The package snapshot was made using R ", Rversion,
+                ". Current session is running R ", getRversion(),
+                ". There may be difficulties installing packages; ",
+                "if there are, please restart the session using R ", Rversion,
+                call. = FALSE)
       packages <- packages[-1, ]
     }
 
@@ -1789,6 +1905,14 @@ doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
     if (any(funnyNames)) {
       names(need)[funnyNames] <- packages[["Package"]][funnyNames]
     }
+    ## A snapshot is a closed, fully pinned set: tell the pak path so it
+    ## resolves the whole set once, installs it in dependency order with
+    ## dependencies = FALSE, and never lets a lone ref pull its deps at
+    ## unpinned versions (see pakPinnedInstall in pak.R).
+    assign("pakPinnedInstall", TRUE, envir = pakEnv())
+    on.exit(rm(list = intersect(c("pakPinnedInstall", "pakDepGraph"),
+                                ls(pakEnv(), all.names = TRUE)),
+               envir = pakEnv()), add = TRUE)
     out <- Require(need,
                    verbose = verbose, purge = purge, libPaths = libPaths, repos = repos,
                    install_githubArgs = install_githubArgs,
@@ -1912,6 +2036,7 @@ availableVersionOK <- function(pkgDT) {
 #' @param inequality The inequality to use, i.e., `>=`.
 #' @return a logical vector of the length of the longest of the 3 arguments.
 #'
+#' @family version specifications
 #' @export
 compareVersion2 <- function(version, versionSpec, inequality) {
   if (isTRUE(any(is(version, "numeric_version"))))
@@ -2470,6 +2595,12 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
         rm <- pkgDT[which(!keepCols2)]
         pkgDT <- pkgDT[which(keepCols2)]
         pkgDT[Package %in% rm[["Package"]], installResult := msgPackageViolation]
+        ## When we rejected an exact `==X` pin in favour of a `>=Y` / `>Y`,
+        ## narrow the surviving constraint to `==Y` (the minimum that
+        ## satisfies the surviving inequality) instead of latest. Honours
+        ## the user intent that motivated the `==` pin: "as close to X as
+        ## we can get while still satisfying everyone else's lower bound."
+        .pinSurvivorToMinimumAfterExactReject(pkgDT, rm)
       }
     }
 
@@ -2494,7 +2625,12 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
       }, by = "Package"][, ..cols3]
       messageDF(verbose = verbose, verboseLevel = 1, violationsDF)
       if (grepl("remove|rm", ifViolation[1])) {
+        ## Capture the rejected `==` rows BEFORE filtering so we can pin
+        ## survivors to the minimum that satisfies the surviving
+        ## inequality. Symmetric with the violation block above.
+        rm <- pkgDT[!(violation2 %in% TRUE & !inequality %in% "==" | violation2 %in% FALSE)]
         pkgDT <- pkgDT[violation2 %in% TRUE & !inequality %in% "==" | violation2 %in% FALSE]
+        .pinSurvivorToMinimumAfterExactReject(pkgDT, rm)
       }
     }
 
@@ -2533,6 +2669,40 @@ confirmEqualsDontViolateInequalitiesThenTrim <- function(pkgDT,
 
   }
   pkgDT
+}
+
+# ---------------------------------------------------------------------------
+# .pinSurvivorToMinimumAfterExactReject: called from
+# confirmEqualsDontViolateInequalitiesThenTrim after we've dropped a
+# `==X` row because some other constraint (typically `>=Y` with Y > X)
+# can't be reconciled. For each Package whose `==X` got rejected this
+# way, rewrite the surviving `>=Y`/`>Y` row(s) as `==Y` (mutates
+# `pkgDT` in place, including `packageFullName` so downstream pak ref
+# construction picks up the pin).
+#
+# Why: the rejected `==X` represented user intent ("as old as
+# possible"). Latching the surviving floor to its minimum keeps as
+# close to that intent as the surviving constraint allows, instead
+# of letting pak fetch CRAN's latest. End-to-end driver: user listed
+# `c("stringfish (==0.17.0)", ...)` while another package required
+# `stringfish (>= 0.18.0)`; previous behaviour kept `>= 0.18.0` and
+# pak installed `0.19.0`. Now we pin to `== 0.18.0`.
+# ---------------------------------------------------------------------------
+.pinSurvivorToMinimumAfterExactReject <- function(pkgDT, rm) {
+  if (!is.data.table(rm) || !NROW(rm)) return(invisible(pkgDT))
+  if (!all(c("Package", "inequality") %in% names(rm))) return(invisible(pkgDT))
+  rejectedExactPkgs <- rm[inequality %in% "==", unique(Package)]
+  if (!length(rejectedExactPkgs)) return(invisible(pkgDT))
+  toPin <- pkgDT$Package %in% rejectedExactPkgs &
+           pkgDT$inequality %in% c(">=", ">") &
+           !is.na(pkgDT$versionSpec) &
+           nzchar(pkgDT$versionSpec)
+  if (!any(toPin)) return(invisible(pkgDT))
+  pkgDT[which(toPin), `:=`(
+    inequality = "==",
+    packageFullName = paste0(Package, " (== ", versionSpec, ")")
+  )]
+  invisible(pkgDT)
 }
 
 detectDoubleInequalsViolations <- function(inequality, versionSpec, N) {
@@ -2587,8 +2757,34 @@ keepOnlyGitHubAtLines <- function(pkgDT, verbose = getOption("Require.verbose"))
   pkgDT
 }
 
+#' Collapse redundant package specifications
+#'
+#' Given package specifications that may name the same package more than once --
+#' e.g. `"pkg"`, `"pkg (>= 1.0)"` and `"user/pkg@branch"` -- reduce them to one
+#' entry per package, keeping the most specific requirement. This is the
+#' reduction `Require()` applies to a dependency set before installing, exposed
+#' because packages that assemble their own `reqdPkgs`-style lists need the same
+#' rule to agree with what `Require()` will actually do.
+#'
+#' @param pkgInstall Package specifications: a character vector, or a
+#'   `data.table` as produced internally by `Require`.
+#' @param repos,purge,libPaths Unused; retained so existing positional calls
+#'   keep working.
+#' @param verbose Numeric or logical, controlling messaging verbosity.
+#' @param type Package type, as in [utils::install.packages()].
+#'
+#' @return A `data.table` with one row per package, with redundant entries
+#'   removed. Callers wanting the specifications back as text take the
+#'   `packageFullName` column.
+#'
+#' @family version specifications
+#' @export
+#' @examples
+#' trimRedundancies(c("data.table", "data.table (>= 1.14.0)"))
+#'
 #' @importFrom data.table rleid
-trimRedundancies <- function(pkgInstall, repos, purge, libPaths, verbose = getOption("Require.verbose"),
+trimRedundancies <- function(pkgInstall, repos = NULL, purge = NULL, libPaths = NULL,
+                             verbose = getOption("Require.verbose"),
                              type = getOption("pkgType")) {
   if (!is.data.table(pkgInstall)) {
     pkgInstall <- toPkgDT(pkgInstall)
@@ -3305,6 +3501,7 @@ Install <- function(packages, packageVersionFile,
                     purge = getOption("Require.purge", FALSE),
                     verbose = getOption("Require.verbose", FALSE),
                     type = getOption("pkgType"),
+                    typeExplicit = !missing(type),
                     upgrade = FALSE,
                     ...) {
 
@@ -3325,6 +3522,10 @@ Install <- function(packages, packageVersionFile,
           purge,
           verbose,
           type,
+          ## named, deliberately: `type` above is positional, so missing(type)
+          ## inside Require() would always be FALSE when called from here and
+          ## every Install() would look like an explicit type request
+          typeExplicit = typeExplicit,
           upgrade,
           ...
   )
@@ -3521,6 +3722,11 @@ clonePackages <- function(rcf, ipa, libPaths, verbose = getOption("Require.verbo
   alreadyInstalledCanClone <- intersect(rownames(ipCanTryNeedsNoCompilAndGoodRVer), ipa$pkgs)
   alreadyInstalledCanClone <- ipCanTryNeedsNoCompilAndGoodRVer[, "Version"][alreadyInstalledCanClone]
   alreadyInstalledCanClone <- alreadyInstalledCanClone[!names(alreadyInstalledCanClone) %in% sourcePkgs()]
+  # Never clone pak / callr / processx / cli -- they bundle native binaries
+  # and helper executables that don't survive a file-by-file copy on Windows
+  # (see .pakNoCopyPkgs() in R/pak.R for why). Keeping them in the install
+  # plan (cantClone) forces a fresh install via the normal install machinery.
+  alreadyInstalledCanClone <- alreadyInstalledCanClone[!names(alreadyInstalledCanClone) %in% .pakNoCopyPkgs()]
 
   if (length(grep("Error in readRDS", mess))) {
     # This means that the packages in rcf are broken
@@ -3560,7 +3766,10 @@ linkOrCopyPackageFiles <- function(Packages, fromLib, toLib, ip) {
     clearErrorReadRDSFile(mess, fromLib)
   }
   cant <- cantClone(ip)
-  cant <- unique(c(sourcePkgs(), cant[, "Package"]))
+  # Defense-in-depth: even if a caller bypasses clonePackages() and reaches
+  # this helper directly, pak/callr/processx/cli must never be file-copied
+  # across libs (their embedded native binaries don't survive on Windows).
+  cant <- unique(c(sourcePkgs(), cant[, "Package"], .pakNoCopyPkgs()))
   Packages <- setdiff(Packages, cant)
   linkOrCopyPackageFilesInner(Packages, fromLib, toLib)
   return(invisible())
@@ -4285,7 +4494,7 @@ buildCmdLine <- function(tmpdir, fn, doLine, downAndBuildLocal, outfile, libPath
     notInstalled <- setdiff(.RequireDependenciesNoBase, installed)
     if (length(notInstalled)) {
       # warning is about restart R; not relevant here
-      suppressWarnings(Require::Install(notInstalled, verbose = -2, libPaths = libPaths[1]))
+      suppressWarnings(Install(notInstalled, verbose = -2, libPaths = libPaths[1]))
     }
     ar <- c(paste0(".libPaths('", libPaths[1], "')"), ar)
   }
@@ -4423,6 +4632,44 @@ clearErrorReadRDSFile <- function(mess, libPath = .libPaths()[1]) {
   }
 }
 
+
+# A package can end up installed at a version that satisfies the request while an
+# OLDER, insufficient version is still LOADED in the session -- e.g. a dependency
+# (reproducible) pulled in via another package's `Imports` from a different
+# library before the satisfying version was installed. R cannot hot-swap a loaded
+# namespace, so the session keeps using the stale version (and `find.package()`
+# returns its path) until R is restarted. Flag those rows with an installResult
+# containing "restart" so the existing "Please restart R" warning fires -- without
+# this, Require silently installs the new version and the user keeps running the
+# old one. Fires whenever the LOADED version fails the constraint but the on-disk
+# (installed) version meets it, regardless of whether the install happened this
+# call (covers a satisfying version already on disk from a prior run too).
+flagRestartForLoadedInsufficient <- function(pkgDT) {
+  if (!NROW(pkgDT) ||
+      !all(c("Package", "versionSpec", "inequality", "Version") %in% names(pkgDT)))
+    return(pkgDT)
+  loaded <- setdiff(loadedNamespaces(), .basePkgs)
+  if (!length(loaded)) return(pkgDT)
+  for (i in seq_len(NROW(pkgDT))) {
+    pkg <- pkgDT[["Package"]][i]
+    if (!pkg %in% loaded) next
+    vSpec <- pkgDT[["versionSpec"]][i]
+    ineq  <- pkgDT[["inequality"]][i]
+    if (is.na(vSpec) || !nzchar(vSpec) || is.na(ineq) || !nzchar(ineq)) next
+    loadedVer <- tryCatch(as.character(getNamespaceVersion(pkg)),
+                          error = function(e) NA_character_)
+    if (is.na(loadedVer) || !nzchar(loadedVer)) next
+    if (isTRUE(compareVersion2(loadedVer, vSpec, ineq))) next     # loaded already OK
+    instVer <- pkgDT[["Version"]][i]
+    if (!is.na(instVer) && nzchar(instVer) && !identical(loadedVer, instVer) &&
+        isTRUE(compareVersion2(instVer, vSpec, ineq))) {
+      set(pkgDT, i, "installResult",
+          paste0("Need to restart R (loaded ", loadedVer, " < required ",
+                 ineq, " ", vSpec, "; ", instVer, " installed)"))
+    }
+  }
+  pkgDT
+}
 
 needToRestartR <- function(pkgDT) {
   whNeedInstall <- pkgDT[["needInstall"]] %in% .txtInstall

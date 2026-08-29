@@ -41,6 +41,10 @@ then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOT
 \code{Require} function, when \code{verbose >= 2}, also returns details as if
 \code{returnDetails = TRUE} (for backwards compatibility).}
 }
+\value{
+Called for their side effect of deleting cached package files; return \code{NULL}
+invisibly.
+}
 \description{
 Removes downloaded package archives from the cache that \code{\link[=cachePkgDir]{cachePkgDir()}}
 returns. With \code{usePak = TRUE} (the default) this delegates to

@@ -211,6 +211,16 @@ test_that("a pak-backed Require install never invokes sudo (with in-test negativ
     ## .onLoad set it in the child.
     e["PKG_SYSREQS"] <- NA_character_
     e["PKG_SYSREQS_SUDO"] <- NA_character_
+    ## tests/testthat/setup.R narrows .libPaths() to head(lp,1) + tail(lp,1)
+    ## so duplicate package copies from site libs don't confuse tests. Under
+    ## devtools::test() that narrowed pair is the devtools instrumented lib
+    ## + .Library -- and `pkgload` typically lives in a middle entry that
+    ## got dropped. Probe explicit paths for pkgload + pak and include them
+    ## in the subprocess's libpath so `pkgload::load_all()` resolves.
+    extraLibs <- unique(c(
+      tryCatch(dirname(find.package("pkgload")), error = function(e) NULL),
+      tryCatch(dirname(find.package("pak")),     error = function(e) NULL)))
+    extraLibs <- extraLibs[nzchar(extraLibs)]
     callr::r(
       function(pkgRoot, fixture, loadRequire) {
         if (loadRequire)
@@ -224,6 +234,7 @@ test_that("a pak-backed Require install never invokes sudo (with in-test negativ
       },
       args = list(pkgRoot = pkgRoot, fixture = fixture,
                   loadRequire = loadRequire),
+      libpath = unique(c(extraLibs, .libPaths())),
       env = e, show = FALSE
     )
   }

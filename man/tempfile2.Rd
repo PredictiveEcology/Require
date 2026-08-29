@@ -20,6 +20,9 @@ temporary dir should be placed. Defaults to \code{.RequireTempPath()}}
 
 \item{...}{passed to \code{tempfile}, e.g., \code{fileext}}
 }
+\value{
+The normalized path to a temporary file inside \code{tempdir2(sub)}; the file is not created.
+}
 \description{
 Make a temporary subfile in a temporary (sub-)directory
 }

@@ -41,16 +41,12 @@ utils::globalVariables(
 #' A possibly ordered, named (with packages as names) list where list elements
 #' are either full reverse depends.
 #'
-#' @examples
-#' \donttest{
-#' if (Require:::.runLongExamples()) {
-#'   opts <- Require:::.setupExample()
+#' @examplesIf Require:::.runLongExamples()
+#' opts <- Require:::.setupExample()
 #'
-#'   pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
+#' pkgDepTopoSort(c("Require", "data.table"), reverse = TRUE)
 #'
-#'   Require:::.cleanup(opts)
-#' }
-#' }
+#' Require:::.cleanup(opts)
 #'
 pkgDepTopoSort <- function(packages,
                            deps,
@@ -70,10 +66,7 @@ pkgDepTopoSort <- function(packages,
 
   if (isTRUE(useAllInSearch)) {
     if (missing(deps)) {
-      a <- search()
-      a <- setdiff(a, .defaultPackages)
-      a <- gsub("package:", "", a)
-      packages <- unique(c(packages, a))
+      packages <- unique(c(packages, pkgsInSearch()))
     } else {
       messageVerbose(
         "deps is provided; useAllInSearch will be set to FALSE",
@@ -166,68 +159,39 @@ pkgDepTopoSort <- function(packages,
 
 
   if (length(aa) > 1) {
-    lengths <- lengths(aa)
-    aa <- aa[order(lengths)]
-    cc <- cc[order(lengths)]
-    dd <- lapply(cc, function(x) {
-      0
-    })
-
-    ddIndex <- 0
-    priorsBeingInstalled <- priorsAlreadyInstalled <- character()
-
     if (isTRUE(topoSort)) {
-      notInOrder <- TRUE
-      isCorrectOrder <- logical(length(aa))
-      i <- 1
-      newOrd <- numeric(0)
-      for (i in seq_along(aa)) {
-        dif <- setdiff(seq_along(aa), newOrd)
-        pkgNameNames <- extractPkgName(names(aa))
-        for (j in dif) {
-          pkgName <- extractPkgName(aa[[j]])
-          overlapFull <- pkgName %in% pkgNameNames[-i]
-          overlap <- pkgName %in% pkgNameNames[dif]
-          overlapPkgs <- pkgName[overlapFull]
-          isCorrectOrder <- !any(overlap)
-          if (isCorrectOrder) {
-            cc[j] <- list(overlapPkgs)
-            priorsBeingInstalled <-
-              vapply(dd, function(x) {
-                if (is.numeric(x)) {
-                  x == ddIndex
-                } else {
-                  FALSE
-                }
-              }, logical(1))
-            priorsBeingInstalled <-
-              extractPkgName(names(priorsBeingInstalled)[priorsBeingInstalled])
-            overlapPkgsAdditional <-
-              intersect(overlapPkgs, priorsBeingInstalled)
-            if (length(overlapPkgsAdditional)) {
-              ddIndex <- ddIndex + 1
-              priorsAlreadyInstalled <-
-                vapply(dd, function(x) {
-                  if (is.numeric(x)) {
-                    x < ddIndex
-                  } else {
-                    FALSE
-                  }
-                }, logical(1))
-              priorsAlreadyInstalled <-
-                extractPkgName(names(priorsAlreadyInstalled)[priorsAlreadyInstalled])
-            }
-            dd[j] <- list(ddIndex)
-
-            newOrd <- c(newOrd, j)
-            # i <- i + 1
-            break
-          }
+      ## Adapted from utils:::.find_install_order (base R, GPL), which is what
+      ## install.packages() uses: peel off every package whose in-set
+      ## dependencies are already done, repeat. Each pass is one install
+      ## level -- everything in a level can be installed in parallel once the
+      ## earlier levels are in. Dependencies outside the set do not count.
+      nms <- names(aa)
+      inSet <- lapply(aa, function(x) intersect(extractPkgName(x), nms))
+      lvl <- setNames(rep(NA_integer_, length(aa)), nms)
+      DL <- inSet[lengths(inSet) > 0L]
+      lvl[lengths(inSet) == 0L] <- 0L
+      pass <- 0L
+      while (length(DL)) {
+        pass <- pass + 1L
+        OK <- vapply(DL, function(x) all(x %in% names(lvl)[!is.na(lvl)]), NA)
+        if (!any(OK)) {
+          warning("packages ", paste(names(DL), collapse = ", "),
+                  " are mutually dependent", call. = FALSE)
+          lvl[names(DL)] <- pass
+          break
         }
+        lvl[names(DL)[OK]] <- pass
+        DL <- DL[!OK]
       }
-      aa <- aa[newOrd]
-      cc <- cc[newOrd]
-      dd <- dd[newOrd]
+      ord <- order(lvl, lengths(aa))
+      aa <- aa[ord]
+      cc <- inSet[ord]
+      dd <- as.list(lvl[ord])
+    } else {
+      ord <- order(lengths(aa))
+      aa <- aa[ord]
+      cc <- cc[ord]
+      dd <- lapply(cc, function(x) 0)
     }
   }
 
@@ -239,6 +203,15 @@ pkgDepTopoSort <- function(packages,
   attr(out, "installSafeGroups") <- dd
 
   return(out)
+}
+
+## Packages attached on the search path. Only attached packages are
+## "package:<name>"; anything else there -- pkgload's devtools_shims, or any
+## environment from attach(), such as a helper attached in a user's .Rprofile --
+## is not a package and must not be passed to the resolver, which hangs on it.
+pkgsInSearch <- function() {
+  a <- setdiff(search(), .defaultPackages)
+  gsub("^package:", "", grep("^package:", a, value = TRUE))
 }
 
 .defaultPackages <-
@@ -639,16 +612,12 @@ DESCRIPTIONFileDepsV <-
 #' listed in this final list, then it means that it is also a recursive
 #' dependency elsewhere, so its removal has no effect.
 #' @inheritParams Require
-#' @examples
-#' \donttest{
-#' if (Require:::.runLongExamples()) {
-#'   opts <- Require:::.setupExample()
+#' @examplesIf Require:::.runLongExamples()
+#' opts <- Require:::.setupExample()
 #'
-#'   pkgDepIfDepRemoved("reproducible", "data.table")
+#' pkgDepIfDepRemoved("reproducible", "data.table")
 #'
-#'   Require:::.cleanup(opts)
-#' }
-#' }
+#' Require:::.cleanup(opts)
 #'
 pkgDepIfDepRemoved <-
   function(pkg = character(),
@@ -840,7 +809,7 @@ defaultCacheAgeForPurge <- 3600
 cachePurge <- function(packages = FALSE,
                        repos = getOption("repos")) {
   if (isTRUE(packages))
-    Require::cacheClearPackages(ask = FALSE)
+    cacheClearPackages(ask = FALSE)
   dealWithCache(TRUE, repos = repos)
 }
 
@@ -1065,13 +1034,9 @@ hasHave <- function(l, v) {
 }
 
 singularPlural <- function(singPlur, l, v) {
-  if (!missing(l)) {
-    out <- singPlur[(length(l) > 1) + 1]
-  }
-  if (!missing(v)) {
-    out <- singPlur[(v > 1) + 1]
-  }
-  out
+  ## `v` is a count, `l` an object whose length is the count. When both are
+  ## supplied `v` wins, as it always has -- its assignment came second.
+  singPlur[(if (!missing(v)) v > 1 else length(l) > 1) + 1]
 }
 
 
@@ -1147,6 +1112,8 @@ getAvailablePackagesIfNeeded <-
 #'   `options(Require.useCranCache = TRUE)`.
 #' @export
 #' @inheritParams Require
+#' @return Called for their side effect of deleting cached package files; return `NULL`
+#'   invisibly.
 #' @rdname clearRequire
 cacheClearPackages <- function(packages,
                                      ask = interactive(),
@@ -1602,18 +1569,14 @@ getVersionOptionPkgEnv <- function(psnNoVersion, verNum, inequ) {
 #' i.e., the first order dependencies, and runs the `pkgDep` on those.
 #' @rdname pkgDep
 #' @export
-#' @examples
-#' \donttest{
-#' if (Require:::.runLongExamples()) {
-#'   opts <- Require:::.setupExample()
+#' @examplesIf Require:::.runLongExamples()
+#' opts <- Require:::.setupExample()
 #'
-#'   pkgDep2("reproducible")
-#'   # much bigger one
-#'   pkgDep2("tidyverse")
+#' pkgDep2("reproducible")
+#' # much bigger one
+#' pkgDep2("tidyverse")
 #'
-#'   Require:::.cleanup(opts)
-#' }
-#' }
+#' Require:::.cleanup(opts)
 pkgDep2 <- function(...) {
   dots <- list(...)
   dots$recursive <- FALSE
