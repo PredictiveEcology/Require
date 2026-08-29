@@ -34,7 +34,7 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="2.1.0" id="require-210">Require 2.1.0<a class="anchor" aria-label="anchor" href="#require-210"></a></h2>
+<h2 class="pkg-version" data-toc-text="2.1.0" id="require-210">Require 2.1.0<a class="anchor" aria-label="anchor" href="#require-210"></a></h2><p class="text-muted">CRAN release: 2026-08-29</p>
 <div class="section level3">
 <h3 id="new-features-2-1-0">New features<a class="anchor" aria-label="anchor" href="#new-features-2-1-0"></a></h3>
 <ul><li><p>New option <code>Require.noRemotes</code> (default <code>FALSE</code>). When <code>TRUE</code>, GitHub-style specs (<code>account/repo@branch</code>) are rewritten to their bare package name – version constraints preserved – and resolved from <code>repos</code> (e.g. prebuilt binaries on an r-universe) instead of being cloned and built from GitHub source. This removes the need for git authentication and a source-build toolchain such as Rtools, which makes workshops and binary-only setups far easier. <code>repos</code> must carry a version satisfying any constraint. See <code><a href="../reference/RequireOptions.html">?RequireOptions</a></code>.</p></li>

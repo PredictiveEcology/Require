@@ -2,6 +2,8 @@
 
 ## Require 2.1.0
 
+CRAN release: 2026-08-29
+
 ### New features
 
 - New option `Require.noRemotes` (default `FALSE`). When `TRUE`,
