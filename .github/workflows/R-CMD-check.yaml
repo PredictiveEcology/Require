@@ -20,3 +20,7 @@ jobs:
     with:
       extra-env: |
         _R_CHECK_THINGS_IN_OTHER_DIRS_=true
+      ## Legs beyond the org default 8. These still work and are
+      ## deliberate back-compat coverage, so they are preserved.
+      extra-config: |
+        [{"config": {"os": "ubuntu-latest", "nosuggests": false, "r": "oldrel-2"}}, {"config": {"os": "windows-latest", "nosuggests": false, "r": "oldrel-2"}}, {"config": {"os": "ubuntu-latest", "nosuggests": false, "r": "oldrel-3"}}, {"config": {"os": "ubuntu-latest", "nosuggests": false, "r": "release", "extra-env": "R_REQUIRE_RUN_LONG_CI=true"}}]
