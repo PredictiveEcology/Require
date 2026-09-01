@@ -140,3 +140,84 @@ jobs:
           # tests for live exercise of those code paths.
           args: 'c("--no-manual", "--as-cran")'
           upload-snapshots: true
+
+  # ---------------------------------------------------------------------------
+  # CRAN's macOS builders and the BLIS check box lay .libPaths() out, under
+  # R CMD check, as
+  #
+  #   [ <pkg>.Rcheck , <contributed lib> , <base lib> ]
+  #
+  # -- every package we depend on sits in a *middle* entry, because the first is
+  # the check library (which holds only Require) and the last is the base R
+  # library (base/recommended only). The default r-lib runner layout in the
+  # matrix above does not have that shape, which is why 2.1.0 was green on all
+  # eleven entries and still came back from CRAN with 11 test failures on four
+  # macOS flavours plus a NOTE.
+  #
+  # This job forces that layout on an ordinary ubuntu runner: dependencies go
+  # into a library of their own, so under check it lands in the middle. The
+  # "Verify" step below asserts the layout really is the reproducing one, so the
+  # job fails loudly rather than quietly stopping being a reproducer.
+  #
+  # error-on: note, and only here: the leftover `<pkg>.Rcheck/pak` that CRAN
+  # reported is a NOTE, and the matrix above (error-on defaults to warning)
+  # would never have failed on it.
+  # ---------------------------------------------------------------------------
+  split-library-check:
+    if: "!contains(github.event.commits[0].message, '[skip-ci]')"
+    runs-on: ubuntu-latest
+    name: ubuntu-latest (release, CRAN-style split library)
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          Ncpus: 2
+          r-version: 'release'
+          use-public-rspm: true
+
+      # Must be set BEFORE setup-r-dependencies so the dependency closure is
+      # installed here and nowhere else. This is the "contributed lib" of the
+      # layout above.
+      - name: Point R_LIBS_USER at a library of its own
+        run: |
+          mkdir -p "$HOME/Rdeps"
+          echo "R_LIBS_USER=$HOME/Rdeps" >> $GITHUB_ENV
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          pak-version: stable
+          extra-packages: |
+            any::rcmdcheck
+
+      # Guard: assert this job still reproduces the CRAN layout. The check is
+      # the failure condition itself -- would the old head+tail narrowing have
+      # hidden Require's own data.table import? If data.table is reachable from
+      # first+last alone, the layout has drifted and this job is no longer
+      # testing anything, so fail rather than pass vacuously.
+      - name: Verify the split-library layout reproduces the CRAN shape
+        shell: Rscript {0}
+        run: |
+          lp <- c(file.path(tempdir(), "Require.Rcheck"), .libPaths())  # as under check
+          cat("simulated .libPaths() under R CMD check:\n"); print(lp)
+          if (length(lp) < 3L)
+            stop("layout drifted: need >= 3 library paths, got ", length(lp))
+          firstAndLast <- unique(c(head(lp, 1), tail(lp, 1)))
+          ip <- rownames(installed.packages(lib.loc = firstAndLast, noCache = TRUE))
+          if ("data.table" %in% ip)
+            stop("layout drifted: data.table is reachable from first+last alone, ",
+                 "so this job no longer reproduces the CRAN macOS/BLIS shape")
+          cat("OK: data.table lives only in a middle library, as on CRAN's macOS builders\n")
+
+      - uses: r-lib/actions/check-r-package@v2
+        with:
+          args: 'c("--no-manual", "--as-cran")'
+          error-on: '"note"'
+          upload-snapshots: true
