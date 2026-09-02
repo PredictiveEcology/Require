@@ -1,5 +1,12 @@
 # Require (development version)
 
+## Bug fixes
+
+* `splitGitRepo()` now takes the branch from whatever follows `@` rather than from
+  a fixed position, so `account/repo/subFolder@branch` no longer reports the
+  subfolder as the branch (and discards the real one). It also returns the
+  `subFolder` it parsed, for both that spelling and `account/repo@branch/subFolder`.
+
 # Require 2.1.0
 
 ## New features
