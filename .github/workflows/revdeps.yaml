@@ -14,6 +14,17 @@ name: revdeps
 
 on:
   workflow_dispatch:
+    ## Passed through to the shared workflow. Without these the Run-workflow
+    ## button offers no options and every manual run is stuck on the defaults.
+    inputs:
+      cranonly:
+        description: "Limit to CRAN-published revdeps? Uncheck to include r-universe."
+        type: boolean
+        default: true
+      timeout:
+        description: "Max minutes per revdep R CMD check."
+        type: string
+        default: "30"
   schedule:
     ## Sundays, well clear of the weekday runner crunch.
     - cron: '23 23 * * 0'
@@ -22,3 +33,11 @@ jobs:
   revdeps:
     uses: PredictiveEcology/actions/.github/workflows/revdeps.yaml@main
     secrets: inherit
+    with:
+      ## `inputs` is null on the scheduled run, so fall back to the same
+      ## defaults the dispatch form shows rather than passing empty strings.
+      cranonly: ${{ github.event_name == 'workflow_dispatch' && inputs.cranonly || true }}
+      timeout: ${{ github.event_name == 'workflow_dispatch' && inputs.timeout || '30' }}
+      ## Only meaningful with cranonly:false, and harmless otherwise -- the PE
+      ## downstreams that are not on CRAN live here.
+      extra-repositories: https://predictiveecology.r-universe.dev
