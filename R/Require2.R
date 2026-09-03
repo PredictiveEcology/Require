@@ -2070,7 +2070,13 @@ updatePackagesWithNames <- function(pkgDT, packages) {
     whHasHEAD <- grep(HEADgrepWithParentheses, names(packages))
     packageFullNameWithHEAD <- packages[whHasHEAD]
     if (length(whHasHEAD)) {
-      browser() # this should use `checkHEAD` not custom here
+      ## TODO: this should use `checkHEAD` rather than the custom handling
+      ## below. Left as a note, not a stop(): unlike the two guards in pak.R,
+      ## this browser() was not an error check -- it sat unconditionally on a
+      ## live path, and browser() is a no-op in a non-interactive session, so
+      ## this code runs and works for users today. Converting it to stop()
+      ## would turn a working path into a hard error for anyone passing a named
+      ## package with a HEAD spec.
       pkgDT[
         match(packages[origPackagesHaveNames], packageFullName),
         hasHEAD := packageFullName %in% packageFullNameWithHEAD #

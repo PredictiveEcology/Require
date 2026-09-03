@@ -1,0 +1,43 @@
+## Thin caller -- the job harness (checkout, geospatial system libraries, R,
+## dependency install) and the revdeps-check action itself live in
+## PredictiveEcology/actions. See `ci-standards` in pe-package-standards.
+##
+## Manual plus weekly. The shared action's README warns revdep checks are too
+## resource intensive for standard runners, so this must not run per-push.
+## Trigger it by hand before a CRAN submission.
+##
+## Require's CRAN revdep is SpaDES.core, which was archived on 2026-07-13 and
+## is back at 3.2.1. Do not repeat the stored "no reverse dependencies"
+## conclusion in revdep/cran.md -- those results go stale in both directions.
+
+name: revdeps
+
+on:
+  workflow_dispatch:
+    ## Passed through to the shared workflow. Without these the Run-workflow
+    ## button offers no options and every manual run is stuck on the defaults.
+    inputs:
+      cranonly:
+        description: "Limit to CRAN-published revdeps? Uncheck to include r-universe."
+        type: boolean
+        default: true
+      timeout:
+        description: "Max minutes per revdep R CMD check."
+        type: string
+        default: "30"
+  schedule:
+    ## Sundays, well clear of the weekday runner crunch.
+    - cron: '23 23 * * 0'
+
+jobs:
+  revdeps:
+    uses: PredictiveEcology/actions/.github/workflows/revdeps.yaml@main
+    secrets: inherit
+    with:
+      ## `inputs` is null on the scheduled run, so fall back to the same
+      ## defaults the dispatch form shows rather than passing empty strings.
+      cranonly: ${{ github.event_name == 'workflow_dispatch' && inputs.cranonly || true }}
+      timeout: ${{ github.event_name == 'workflow_dispatch' && inputs.timeout || '30' }}
+      ## Only meaningful with cranonly:false, and harmless otherwise -- the PE
+      ## downstreams that are not on CRAN live here.
+      extra-repositories: https://predictiveecology.r-universe.dev

@@ -1,80 +1,30 @@
-on:
-  push:
-    branches:
-      - main
-      - development
-  pull_request:
-    branches:
-      - main
-      - development
+## Thin caller -- covr, codecov upload and the trace-file handling all live in
+## PredictiveEcology/actions. See `ci-standards` in pe-package-standards.
+##
+## Pinned @main deliberately: tags freeze and rot (SpaDES sat on
+## install-spatial-deps@v0.1 for years, whose `libsqlite0-dev` predates noble).
+## The actions repo gates merges with its own self-test CI.
+##
+## `NOT_CRAN=true` used to be set here by hand, and it is load-bearing: covr
+## sets R_COVR but not NOT_CRAN, so without it every skip_on_cran() fires
+## during the coverage run -- 20 of them -- and the figure measures a fraction
+## of the suite. The shared workflow sets it, so it is no longer our business.
 
 name: test-coverage
 
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+    branches: [main, development]
+
+## Never cancel a push/merge coverage run: covr takes ~25 min and merges land
+## minutes apart, so cancelling one surfaces as spurious red. PRs are fair game.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test-coverage:
-    if: "!contains(github.event.commits[0].message, '[skip-ci]')"
-    runs-on: macOS-latest
-    env:
-      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
-      GOOGLEDRIVE_AUTH: ${{ secrets.GOOGLEDRIVE_AUTH }}
-      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-      # covr::package_coverage() sets R_COVR but NOT NOT_CRAN, so without this
-      # every skip_on_cran() fires during the coverage run -- 20 of them -- and
-      # the reported figure measures a fraction of the suite rather than the
-      # suite. skip_on_ci() (11 more) still fires by definition.
-      NOT_CRAN: true
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: r-lib/actions/setup-pandoc@v2
-
-      - uses: r-lib/actions/setup-r@v2
-        with:
-          use-public-rspm: true
-
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          extra-packages: |
-            any::covr
-
-      - id: covr
-        name: Test coverage
-        continue-on-error: true
-        # Dump testthat.Rout.fail to the GHA log via withCallingHandlers so
-        # the dump runs WHILE covr's call frame is still alive (i.e. before
-        # covr's withr-registered tempdir cleanup unwinds). The previous
-        # tryCatch-only version printed nothing because by the time the
-        # error handler ran the tempdir was already wiped. The outer
-        # tryCatch then converts the error to a value so we can stop()
-        # cleanly with the original condition.
-        run: |
-          res <- tryCatch(
-            withCallingHandlers(
-              covr::codecov(token = Sys.getenv("CODECOV_TOKEN")),
-              error = function(e) {
-                files <- list.files(
-                  tempdir(),
-                  pattern = "testthat\\.Rout\\.fail$|test-all\\.Rout\\.fail$",
-                  recursive = TRUE, full.names = TRUE
-                )
-                for (f in files) {
-                  cat("==========================================\n")
-                  cat("=== ", f, " ===\n", sep = "")
-                  cat("==========================================\n")
-                  cat(readLines(f, warn = FALSE), sep = "\n")
-                  cat("\n")
-                }
-              }
-            ),
-            error = function(e) e
-          )
-          if (inherits(res, "error")) stop(res)
-        shell: Rscript {0}
-
-      - if: steps.covr.outcome == 'failure'
-        name: Re-fail the job
-        run: exit 1
+    uses: PredictiveEcology/actions/.github/workflows/test-coverage.yaml@main
+    secrets: inherit

@@ -344,7 +344,14 @@ test_that("checkMissingLibPaths round-trip restores .libPaths from .Rprofile", {
   td <- tempdir2("checkMissingRprof")
   rprof <- file.path(td, ".Rprofile")
   origDir <- setwd(td)
-  on.exit({setwd(origDir); unlink(td, recursive = TRUE)}, add = TRUE)
+  ## checkMissingLibPaths() calls setLibPaths() for real, and setLibPaths()
+  ## narrows .libPaths() to the pair it reads back out of the .Rprofile without
+  ## ever putting the original back. Unrestored, that leaks into every test file
+  ## after this one: the contributed library that setup.R deliberately kept (it
+  ## is the only source of data.table and digest under R CMD check) drops off
+  ## the path, and test-15/test-17 then fail against installed.packages().
+  origLibs <- .libPaths()
+  on.exit({setwd(origDir); .libPaths(origLibs); unlink(td, recursive = TRUE)}, add = TRUE)
 
   prevPath <- .libPaths()[1]
   rp_content <- paste(c(

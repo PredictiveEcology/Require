@@ -151,6 +151,14 @@ setupTest <- function(verbose = getOption("Require.verbose"),
 skip_if_offline2 <- function() {
   # default with testthat::skip_if_offline is apple.com
   #   which was returning true when wifi connection exists, but no internet e.g., on a plane
+  #
+  # testthat::skip_if_offline() itself needs curl. curl is a Suggests, so it is
+  # absent from the restricted library that _R_CHECK_DEPENDS_ONLY_=true builds
+  # for the no-suggests check leg -- there the skip helper ERRORS rather than
+  # skipping, and takes the whole leg down with it. Guard first.
+  if (!requireNamespace("curl", quietly = TRUE)) {
+    skip("curl not available (no-suggests check)")
+  }
   skip_if_offline("github.com")
 }
   omitPkgsTemporarily <- function(pkgs) {

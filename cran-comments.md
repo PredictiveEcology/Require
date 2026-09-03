@@ -1,58 +1,47 @@
 ## Release information
 
-Require 2.1.0.
+Require 2.1.1 fixes the check failures CRAN reported for 2.1.0 on four macOS
+flavours and on the BLIS additional-issues machine. Both were test-suite
+problems rather than package behaviour: the suite assumed the packages it needs
+are reachable from the first and last entries of `.libPaths()`, which is not
+true under `R CMD check` where contributed packages sit in a middle entry; and
+tests that ran `Install()` left a `pak` symlink in the `.Rcheck` directory.
 
-This release adds the `Require.noRemotes` option, which resolves GitHub-style
-package specifications from configured repositories rather than building them
-from source -- removing the need for git authentication and a compiler
-toolchain. It also exports `trimRedundancies()`, `GETWauthThenNonAuth()` and
-`getGitCredsToken()`, and fixes a number of installation-correctness bugs: exact version pins now
-reach the dependency solver, installs proceed one dependency level at a time,
-and `getCRANrepos()` no longer discards non-CRAN repositories when resolving
-the `"@CRAN@"` placeholder. See NEWS.md.
+It follows 2.1.0 by five days because those checks are currently failing.
+
+Also included: a `splitGitRepo()` fix (the branch is now taken from whatever
+follows `@`, not from a fixed position), and two `browser()` calls on
+unreachable-in-practice error paths replaced with `stop()`.
 
 ## Test environments
 
-  ### local
-  * Ubuntu 24.04 - R 4.6.1, R 4.5.3, R 4.4.3 (the full test suite, including
-    the tests gated behind `NOT_CRAN`, passes on R 4.6.1: 822 tests)
-
-  ### win-builder
-  * Windows - R-devel (2026-08-27 r90452, UCRT)
-  * Windows - R 4.6.1 (release)
-  * Windows - R 4.5.3 (oldrelease)
-
-  ### GitHub Actions
-  * Ubuntu - R-devel, R 4.6 (release), R 4.5 (oldrel-1), R 4.4 (oldrel-2),
-    R 4.3 (oldrel-3)
-  * Windows Server - R-devel, R 4.6 (release), R 4.5 (oldrel-1),
-    R 4.4 (oldrel-2)
-  * macOS - R 4.6 (release)
-
-  ### R-hub
-  * macOS - R release (x86_64 and arm64)
+* Ubuntu 24.04, R 4.6.1 (local, `R CMD check --as-cran` on the built tarball)
+* win-builder: R-devel, R 4.6.1 (release), R 4.5.3 (oldrelease)
+* macOS builder (mac.r-project.org): R 4.6.1, Apple M1
+* R-hub: Windows R-devel/release/oldrel; macOS release on arm64 and x86_64;
+  Fedora R-devel with ATLAS
+* GitHub Actions: Ubuntu and Windows from R-devel to R 4.2, macOS release, plus
+  a run with dependencies installed into a library of their own, reproducing the
+  split `.libPaths()` layout above
 
 ## R CMD check results
 
 0 errors | 0 warnings | 1 note
 
-The note came from the win-builder R-oldrelease (R 4.5.3) run, under "checking
-CRAN incoming feasibility". It is an HTTP 403 Forbidden on a URL in
-`man/setLibPaths.Rd`:
+    Days since last update: 5
 
-    Found the following (possibly) invalid URLs:
-      URL: https://stackoverflow.com/a/36873741/3890027
-        From: man/setLibPaths.Rd
-        Status: 403
-        Message: Forbidden
+That is the interval since 2.1.0, explained above.
 
-The URL is correct and opens normally in a browser. Stack Overflow returns
-403 Forbidden to non-browser clients, so the URL checker cannot fetch it -- the
-well-known false positive for stackoverflow.com links. No other platform
-flagged it: the win-builder R-devel and R-release runs, all GitHub Actions
-runs, the R-hub macOS runs and the local checks were 0 errors | 0 warnings |
-0 notes.
+The win-builder R-oldrelease (R 4.5.3) run additionally reported an HTTP 403 on
+`https://stackoverflow.com/a/36873741/3890027` in `man/setLibPaths.Rd`. Stack
+Overflow returns 403 to non-browser clients; the link is valid. No other
+platform reported it.
 
 ## Downstream dependencies
 
-There are no reverse dependencies on CRAN.
+One reverse dependency on CRAN: SpaDES.core 3.2.1. (The 2.1.0 submission
+reported none, which was correct only because SpaDES.core was archived at the
+time; it has since returned.)
+
+revdepcheck: 0 new problems, 0 packages failed to check. SpaDES.core 3.2.1
+checks clean against this version.

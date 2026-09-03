@@ -1,142 +1,141 @@
-on:
-  push:
-    branches:
-      - main
-      - development
-  pull_request:
-    branches:
-      - main
-      - development
+## Thin caller -- the matrix, system dependencies, caching, Drive staging and
+## the check itself all live in PredictiveEcology/actions. This file says which
+## legs we need on top of the org defaults, and keeps one job of its own.
+##
+## Pinned @main deliberately: tags freeze and rot (SpaDES sat on
+## install-spatial-deps@v0.1 for years, whose `libsqlite0-dev` predates noble).
+## The actions repo gates merges with its own self-test CI.
 
 name: R-CMD-check
 
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+    branches: [main, development]
+
+## The shared workflow suffixes its own group with `-reusable`, so declaring
+## one here for `split-library-check` cannot deadlock against it.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+## `[skip-ci]` still works: the guard now lives in the shared workflows
+## (PredictiveEcology/actions#34) rather than in each caller. Note the hyphen --
+## `[skip-ci]` is a PE convention, not one of GitHub's native skip keywords
+## (`[skip ci]`, `[ci skip]`, `[no ci]`, `[skip actions]`, `[actions skip]`),
+## which is why it needs a guard at all. The shared version tests the tip of the
+## push; the hand-rolled one here tested the oldest commit in it.
+
 jobs:
   R-CMD-check:
-    if: "!contains(github.event.commits[0].message, '[skip-ci]')"
-    runs-on: ${{ matrix.config.os }}
+    uses: PredictiveEcology/actions/.github/workflows/R-CMD-check.yaml@main
+    secrets: inherit
+    with:
+      ## `tools:::.check_packages` looks for stray files in the check dir.
+      extra-env: |
+        _R_CHECK_THINGS_IN_OTHER_DIRS_=true
 
-    name: ${{ matrix.config.os }} (${{ matrix.config.r }})
+      ## Legs beyond the org default 8, all deliberate back-compat coverage:
+      ##
+      ##  * oldrel-2 (R 4.3) on both OSes and oldrel-3 (R 4.2) on Ubuntu.
+      ##    windows oldrel-3 is deliberately absent -- pak's stable channel and
+      ##    CRAN's Windows binary index for R 4.2 are thin enough that
+      ##    dep-install storms routinely ran past GHA's 6h cap (seen in #155).
+      ##
+      ##  * a SECOND ubuntu/release leg carrying R_REQUIRE_RUN_LONG_CI. The org
+      ##    default matrix already has a plain ubuntu/release leg and there is
+      ##    no way to add env to an existing leg, so this is a duplicate by
+      ##    construction. That is the right trade here: the gated tests in
+      ##    test-16 (two archived-CRAN install round-trips) and test-06
+      ##    (pkgDepTopoSort, ~626s) add real wall time, and hanging them off the
+      ##    leg every other job waits on would slow the whole matrix.
+      extra-config: |
+        [{"config": {"os": "ubuntu-latest",  "nosuggests": false, "r": "oldrel-2"}},
+         {"config": {"os": "windows-latest", "nosuggests": false, "r": "oldrel-2"}},
+         {"config": {"os": "ubuntu-latest",  "nosuggests": false, "r": "oldrel-3"}},
+         {"config": {"os": "ubuntu-latest",  "nosuggests": false, "r": "release",
+                     "extra-env": "R_REQUIRE_RUN_LONG_CI=true"}}]
 
-    strategy:
-      fail-fast: false
-      matrix:
-        config:
-          - {os: macOS-latest,    r: 'release'}
-          - {os: windows-latest,  r: 'devel'}
-          - {os: windows-latest,  r: 'release'}  ## currently 4.5
-          - {os: windows-latest,  r: 'oldrel-1'} ## currently 4.4
-          - {os: windows-latest,  r: 'oldrel-2'} ## currently 4.3
-          # windows-latest oldrel-3 (R 4.2) intentionally dropped: pak's
-          # stable channel and CRAN's binary index for R 4.2 on Windows
-          # are now thin enough that dep-install storms routinely hang
-          # past GHA's 6h max-runtime (observed during PR #155). R 4.2
-          # is still covered on Linux by ubuntu-latest oldrel-3 below.
-          # Re-add when there's a Windows R 4.2 setup that resolves
-          # deps in well under an hour.
-          - {os: ubuntu-latest,   r: 'devel'}
-          # Single matrix entry that opts in to the slow integration tests
-          # in test-16: two archived-CRAN install round-trips (measured at
-          # 103s and 20s) and the PSPclean-style cascade. Other matrix
-          # entries skip those via R_REQUIRE_RUN_LONG_CI gate so the 11-job
-          # matrix doesn't camp on GHA's 20-job concurrency cap. Coverage
-          # of the slow path is preserved on this one entry.
-          # The cheap tests in that file (pakGetArchive URL construction,
-          # 2.2s for both; .lastInstallFailures, 3.4s) are NOT gated -- they
-          # install nothing worth gating and run on every entry.
-          - {os: ubuntu-latest,   r: 'release', runLong: true}  ## currently 4.5
-          - {os: ubuntu-latest,   r: 'oldrel-1'} ## currently 4.4
-          - {os: ubuntu-latest,   r: 'oldrel-2'} ## currently 4.3
-          - {os: ubuntu-latest,   r: 'oldrel-3'} ## currently 4.2
+  # ---------------------------------------------------------------------------
+  # CRAN's macOS builders and the BLIS check box lay .libPaths() out, under
+  # R CMD check, as
+  #
+  #   [ <pkg>.Rcheck , <contributed lib> , <base lib> ]
+  #
+  # -- every package we depend on sits in a *middle* entry, because the first is
+  # the check library (which holds only Require) and the last is the base R
+  # library (base/recommended only). The default r-lib runner layout in the
+  # shared matrix does not have that shape, which is why 2.1.0 was green on all
+  # eleven entries and still came back from CRAN with 11 test failures on four
+  # macOS flavours plus a NOTE.
+  #
+  # This job forces that layout on an ordinary ubuntu runner: dependencies go
+  # into a library of their own, so under check it lands in the middle. The
+  # "Verify" step below asserts the layout really is the reproducing one, so the
+  # job fails loudly rather than quietly stopping being a reproducer.
+  #
+  # error-on: note, and only here: the leftover `<pkg>.Rcheck/pak` that CRAN
+  # reported is a NOTE, and the shared matrix (error-on defaults to warning)
+  # would never have failed on it.
+  # ---------------------------------------------------------------------------
+  split-library-check:
+    ## Same guard as the shared workflows: the tip of the push, not the oldest
+    ## commit in it.
+    if: ${{ !contains(github.event.head_commit.message, '[skip-ci]') }}
+    runs-on: ubuntu-latest
+    name: ubuntu-latest (release, CRAN-style split library)
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
-      # Set to "true" only on the matrix entry tagged `runLong: true`.
-      # Tests that read this env (3 in test-16installFailureMetadata: two
-      # archived-CRAN install round-trips and the PSPclean cascade; plus the
-      # pkgDepTopoSort section of test-06, ~626s) bypass skip_on_ci() only
-      # when this is non-empty.
-      R_REQUIRE_RUN_LONG_CI: ${{ matrix.config.runLong && 'true' || '' }}
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      # setup-pandoc occasionally fails with HTTP 5xx when its CDN blips
-      # (hit SpaDES.tools today). Three attempts with continue-on-error
-      # ride out those transient failures; transient pandoc-CDN errors
-      # almost always clear on the immediate next call.
-      - id: pandoc1
-        continue-on-error: true
-        uses: r-lib/actions/setup-pandoc@v2
-      - if: steps.pandoc1.outcome == 'failure'
-        id: pandoc2
-        continue-on-error: true
-        uses: r-lib/actions/setup-pandoc@v2
-      - if: steps.pandoc1.outcome == 'failure' && steps.pandoc2.outcome == 'failure'
-        uses: r-lib/actions/setup-pandoc@v2
+      - uses: r-lib/actions/setup-pandoc@v2
 
       - uses: r-lib/actions/setup-r@v2
         with:
           Ncpus: 2
-          r-version: ${{ matrix.config.r }}
+          r-version: 'release'
           use-public-rspm: true
 
-      - name: Set additional env vars for checks when on Ubuntu
-        if: ${{ matrix.config.os == 'ubuntu-latest' }}
+      # Must be set BEFORE setup-r-dependencies so the dependency closure is
+      # installed here and nowhere else. This is the "contributed lib" of the
+      # layout above.
+      - name: Point R_LIBS_USER at a library of its own
         run: |
-          echo "_R_CHECK_THINGS_IN_OTHER_DIRS_=true" >> $GITHUB_ENV
+          mkdir -p "$HOME/Rdeps"
+          echo "R_LIBS_USER=$HOME/Rdeps" >> $GITHUB_ENV
 
-      - id: deps
-        continue-on-error: true
-        uses: r-lib/actions/setup-r-dependencies@v2
+      - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          # Pin pak to its stable channel; devel-pak occasionally regresses
-          # on dep resolution.
           pak-version: stable
           extra-packages: |
             any::rcmdcheck
 
-      # Fallback: when setup-r-dependencies fails (typically a transient
-      # `Cannot query GitHub` / `pkgdepends resolution error` on
-      # rate-limited or blip'd GitHub API calls), retry with a fresh
-      # pak-stable install + pkg_install loop. Up to 3 attempts × 30 min ×
-      # 60 s backoff. Same pattern used in reproducible / SpaDES.core /
-      # SpaDES.project.
-      - name: Install R deps (retry fallback)
-        if: steps.deps.outcome == 'failure'
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 30
-          max_attempts: 3
-          retry_wait_seconds: 60
-          retry_on: error
-          # nick-fields/retry only supports a fixed shell set (bash, sh,
-          # pwsh, cmd, python) -- NOT the `Rscript {0}` custom shell that
-          # works in plain `run:` steps. Using `shell: Rscript {0}` here
-          # fails immediately with "Shell Rscript not supported" (seen on
-          # windows-devel). Wrap the R code in `Rscript -e` under bash
-          # (available on all r-lib GHA runners incl. Windows Git Bash);
-          # multiple -e args run sequentially in one R process, so the
-          # behaviour is identical to the previous three-line script.
-          shell: bash
-          command: |
-            Rscript \
-              -e 'install.packages("pak", repos = "https://r-lib.github.io/p/pak/stable/")' \
-              -e 'pak::local_install_dev_deps(ask = FALSE, dependencies = TRUE)' \
-              -e 'pak::pkg_install("any::rcmdcheck", ask = FALSE)'
+      # Guard: assert this job still reproduces the CRAN layout. The check is
+      # the failure condition itself -- would the old head+tail narrowing have
+      # hidden Require's own data.table import? If data.table is reachable from
+      # first+last alone, the layout has drifted and this job is no longer
+      # testing anything, so fail rather than pass vacuously.
+      - name: Verify the split-library layout reproduces the CRAN shape
+        shell: Rscript {0}
+        run: |
+          lp <- c(file.path(tempdir(), "Require.Rcheck"), .libPaths())  # as under check
+          cat("simulated .libPaths() under R CMD check:\n"); print(lp)
+          if (length(lp) < 3L)
+            stop("layout drifted: need >= 3 library paths, got ", length(lp))
+          firstAndLast <- unique(c(head(lp, 1), tail(lp, 1)))
+          ip <- rownames(installed.packages(lib.loc = firstAndLast, noCache = TRUE))
+          if ("data.table" %in% ip)
+            stop("layout drifted: data.table is reachable from first+last alone, ",
+                 "so this job no longer reproduces the CRAN macOS/BLIS shape")
+          cat("OK: data.table lives only in a middle library, as on CRAN's macOS builders\n")
 
       - uses: r-lib/actions/check-r-package@v2
         with:
-          # Dropped --run-dontrun --run-donttest: man/Require.Rd has a
-          # \dontrun{} block that does ~11 real CRAN/GitHub installs
-          # (crayon, cli, R6, rlang, ellipsis, fpCompare, plus a
-          # multi-package Require() loop). With those flags every matrix
-          # entry on a cold pak cache spent multi-hour wall time on
-          # dep-install storm and routinely wedged through GHA's 6h cap.
-          # Examples are still syntax-checked. Use the runLong flag +
-          # tests for live exercise of those code paths.
           args: 'c("--no-manual", "--as-cran")'
+          error-on: '"note"'
           upload-snapshots: true

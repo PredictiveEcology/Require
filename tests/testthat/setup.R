@@ -162,10 +162,50 @@ if (Sys.info()[["user"]] == "achubaty") {
 ##  some of the tests fail because R will load a copy of a package e.g., rlang that is
 ##  in one of the site libraries. Essentially, this is fine for a user, but the tests
 ##  weren't written to accommodate this.
+##
+## Keeping only the first and last path is wrong under R CMD check. There the
+## first path is the `.Rcheck` library, which holds nothing but the package
+## being checked, and every contributed package -- including Require's own
+## `data.table` import -- sits in a *middle* path. That is the layout on CRAN's
+## macOS builders and on the BLIS check box, and on any plain `R CMD check`
+## where R_LIBS_USER is populated. The Suggests loop above has already loaded
+## those namespaces, so `skip_if_not_installed()` and `packageVersion()` keep
+## reporting them as present and the affected tests do not skip; they then fail
+## on `installed.packages(lib.loc = .libPaths())`, which no longer sees them.
+## So still drop the middle paths, but keep back any one of them that is the
+## only remaining source of a package this suite has loaded.
 lp <- .libPaths()
-lp2 <- c(head(lp, 1), tail(lp, 1))
+lp2 <- unique(c(head(lp, 1), tail(lp, 1)))
+libProvides <- function(libs) rownames(installed.packages(lib.loc = libs, noCache = TRUE))
+needed <- intersect(unique(c(loadedNamespaces(), suggests)), libProvides(lp))
+for (libMiddle in setdiff(lp, lp2)) {
+  stillMissing <- setdiff(needed, libProvides(lp2))
+  if (!length(stillMissing)) break
+  ## Only if this path is what supplies something still missing. Testing that,
+  ## rather than just appending until the set is covered, is what keeps a 4- or
+  ## 5-path machine from dragging every intervening site library back in: an
+  ## empty install-target lib or a wholly redundant site lib contributes
+  ## nothing and stays dropped.
+  if (any(stillMissing %in% libProvides(libMiddle)))
+    lp2 <- append(lp2, libMiddle, after = length(lp2) - 1L)
+}
 orig <- setLibPaths(lp2, standAlone = TRUE)
 withr::defer(.libPaths(lp), envir = teardown_env())
+
+## R CMD check makes the `.Rcheck` directory itself `.libPaths()[1]`, so any
+## `Require()`/`Install()` in the suite that does not pass its own `libPaths`
+## treats it as the project library and -- correctly, for a real project lib --
+## symlinks pak into it (`ensurePakInProjectLib()`). What is left behind is
+## `<pkg>.Rcheck/pak`, which "checking for non-standard things in the check
+## directory" reports as a NOTE. It is the suite's detritus, not something a
+## user would ever end up with, so clear it on the way out. Guarded on pak not
+## already being there, so a real installation is never the thing removed.
+if (nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_"))) {
+  pakInCheckLib <- file.path(lp[1], "pak")
+  if (!file.exists(pakInCheckLib))
+    withr::defer(unlink(pakInCheckLib, recursive = TRUE, force = TRUE),
+                 envir = teardown_env())
+}
 
 ## PPM binaries on Ubuntu/Debian, for everyone -- this was previously inside the
 ## `emcintir` block, so CI never got it. Without it, Linux resolves everything
