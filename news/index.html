@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">Require</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,6 +33,21 @@
       <small>Source: <a href="https://github.com/PredictiveEcology/Require/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="2.1.1" id="require-211">Require 2.1.1<a class="anchor" aria-label="anchor" href="#require-211"></a></h2>
+<div class="section level3">
+<h3 id="bug-fixes-2-1-1">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-2-1-1"></a></h3>
+<ul><li><p><code>splitGitRepo()</code> now takes the branch from whatever follows <code>@</code> rather than from a fixed position, so <code>account/repo/subFolder@branch</code> no longer reports the subfolder as the branch (and discards the real one). It also returns the <code>subFolder</code> it parsed, for both that spelling and <code>account/repo@branch/subFolder</code>.</p></li>
+<li><p>Two <code><a href="https://rdrr.io/r/base/browser.html" class="external-link">browser()</a></code> calls on pak error paths are now <code><a href="https://rdrr.io/r/base/stop.html" class="external-link">stop()</a></code> with an actionable message. <code><a href="https://rdrr.io/r/base/browser.html" class="external-link">browser()</a></code> is a no-op in a non-interactive session, so these never affected a script, but each was a hang in an interactive one. One of the two could never have fired where it sat – the guard followed a line that itself errors on a <code>try-error</code> – and now runs before it.</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="test-suite-2-1-1">Test suite<a class="anchor" aria-label="anchor" href="#test-suite-2-1-1"></a></h3>
+<p>No user-visible change; these fix the check failures CRAN reported for 2.1.0.</p>
+<ul><li><p>The suite no longer assumes the packages it needs are reachable from the first and last entries of <code><a href="https://rdrr.io/r/base/libPaths.html" class="external-link">.libPaths()</a></code>. Under <code>R CMD check</code> the first entry is the <code>.Rcheck</code> library, which holds only the package being checked, so every contributed package – including Require’s own <code>data.table</code> import – sits in a <em>middle</em> entry. That is the layout on CRAN’s macOS builders and on the BLIS check machine, and it produced 11 test failures on four macOS flavours.</p></li>
+<li><p>Tests that run <code><a href="../reference/Require.html">Require()</a></code> or <code><a href="../reference/Require.html">Install()</a></code> under <code>R CMD check</code> no longer leave a <code>pak</code> symlink behind in the <code>.Rcheck</code> directory, which CRAN reported as a “non-standard things in the check directory” NOTE.</p></li>
+<li><p><code>skip_if_offline2()</code> no longer errors when <code>curl</code> is unavailable, so the no-suggests check flavour skips those tests rather than failing.</p></li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="2.1.0" id="require-210">Require 2.1.0<a class="anchor" aria-label="anchor" href="#require-210"></a></h2><p class="text-muted">CRAN release: 2026-08-29</p>
 <div class="section level3">

@@ -1,5 +1,50 @@
 # Changelog
 
+## Require 2.1.1
+
+### Bug fixes
+
+- `splitGitRepo()` now takes the branch from whatever follows `@` rather
+  than from a fixed position, so `account/repo/subFolder@branch` no
+  longer reports the subfolder as the branch (and discards the real
+  one). It also returns the `subFolder` it parsed, for both that
+  spelling and `account/repo@branch/subFolder`.
+
+- Two [`browser()`](https://rdrr.io/r/base/browser.html) calls on pak
+  error paths are now [`stop()`](https://rdrr.io/r/base/stop.html) with
+  an actionable message.
+  [`browser()`](https://rdrr.io/r/base/browser.html) is a no-op in a
+  non-interactive session, so these never affected a script, but each
+  was a hang in an interactive one. One of the two could never have
+  fired where it sat – the guard followed a line that itself errors on a
+  `try-error` – and now runs before it.
+
+### Test suite
+
+No user-visible change; these fix the check failures CRAN reported for
+2.1.0.
+
+- The suite no longer assumes the packages it needs are reachable from
+  the first and last entries of
+  [`.libPaths()`](https://rdrr.io/r/base/libPaths.html). Under
+  `R CMD check` the first entry is the `.Rcheck` library, which holds
+  only the package being checked, so every contributed package –
+  including Require’s own `data.table` import – sits in a *middle*
+  entry. That is the layout on CRAN’s macOS builders and on the BLIS
+  check machine, and it produced 11 test failures on four macOS
+  flavours.
+
+- Tests that run
+  [`Require()`](https://Require.predictiveecology.org/reference/Require.md)
+  or
+  [`Install()`](https://Require.predictiveecology.org/reference/Require.md)
+  under `R CMD check` no longer leave a `pak` symlink behind in the
+  `.Rcheck` directory, which CRAN reported as a “non-standard things in
+  the check directory” NOTE.
+
+- `skip_if_offline2()` no longer errors when `curl` is unavailable, so
+  the no-suggests check flavour skips those tests rather than failing.
+
 ## Require 2.1.0
 
 CRAN release: 2026-08-29
