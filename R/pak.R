@@ -602,8 +602,15 @@ pakRequire <- function(packages, libPaths, doDeps, upgrade, verbose, packagesOri
   }
 
   pkgDT <- try(as.data.table(outs))
+  ## Checked before the subset below, not after: subsetting a try-error object
+  ## errors on its own and the guard never ran.
+  if (is(pkgDT, "try-error"))
+    stop("Require could not assemble pak's install results into a table. ",
+         "This usually means pak returned an unexpected shape for one or more ",
+         "packages. Re-run with `options(Require.verbose = 2)` to see pak's ",
+         "raw output, and please report it at ",
+         "https://github.com/PredictiveEcology/Require/issues with that output.")
   pkgDT <- pkgDT[package != paste0(.txtDummyPackage, "-deps")]
-  if (is(pkgDT, "try-error")) browser()
   setnames(pkgDT, old = c("package", "status"), new = c("Package", "installResult"))
   loadSequence <- match(extractPkgName(packagesOrig), pkgDT$Package)
   loadSequence <- na.omit(loadSequence)
@@ -826,7 +833,12 @@ pakPkgDep <- function(packages, which, simplify, includeSelf, includeBase,
   if (simplify %in% TRUE && any(hasDeps)) {
     deps[hasDeps] <- Map(dep = deps[hasDeps], nam = names(deps)[hasDeps], function(dep, nam) {
       dd <- try(dep$deps)
-      if (is(dd, "try-error")) browser()
+      if (is(dd, "try-error"))
+        stop("Require could not read the dependency list pak returned for ",
+             "package '", nam, "'. Re-run with `options(Require.verbose = 2)` ",
+             "to see pak's raw output, and please report it at ",
+             "https://github.com/PredictiveEcology/Require/issues with that ",
+             "output.")
       dep$deps <- Map(innerDep = dep$deps, outerPkg = dep$package, function(innerDep, outerPkg) {
         if (!nam %in% outerPkg || !any(tolower(unlist(which)) == "suggests")) {
           innerDep[tolower(innerDep$type) %in%
