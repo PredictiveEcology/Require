@@ -874,36 +874,43 @@ splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = 
   gitRepo <- trimVersionNumber(gitRepo)
   hasVersionSpec <- gitRepo != gitRepoOrig
 
-  grSplit <- strsplit(gitRepo, "/|@")
+  ## The branch is whatever follows "@" -- it is not positional. This used to
+  ## split on "/|@" and take the 3rd element as the branch, which is right for
+  ## `Acct/Repo@branch` and `Acct/Repo@branch/subFolder` but wrong for
+  ## `Acct/Repo/subFolder@branch`: there the 3rd element is the subFolder, and
+  ## the real branch was silently discarded. Both spellings are in use.
+  atPos    <- regexpr("@", gitRepo, fixed = TRUE)
+  beforeAt <- ifelse(atPos > 0L, substr(gitRepo, 1L, atPos - 1L), gitRepo)
+  afterAt  <- ifelse(atPos > 0L, substr(gitRepo, atPos + 1L, nchar(gitRepo)), "")
 
-  repo <- lapply(grSplit, function(grsplit) grsplit[[min(2, length(grsplit))]])
-  names(grSplit) <- repo
-  names(repo) <- repo
-  grAcct <- strsplit(gitRepo, "/") # only account and repo
-  lenGT1 <- lengths(grAcct) == 1
-  if (any(lenGT1)) {
-    acct <- default
-    grSplit[lenGT1] <- lapply(grSplit[lenGT1], function(grsplit) append(list(acct), grsplit))
-  } else {
-    acct <- lapply(grSplit, function(grsplit) grsplit[[1]])
-  }
-  lenGT2 <- lengths(grSplit) > 2
-  br <- lapply(grSplit, function(x) list())
-  vs <- br
+  leftSeg  <- strsplit(beforeAt, "/", fixed = TRUE)
+  rightSeg <- strsplit(afterAt, "/", fixed = TRUE)
 
-  if (any(lenGT2)) {
-    br[lenGT2] <- lapply(grSplit[lenGT2], function(grsplit) grsplit[[3]])
-  }
+  repo <- lapply(leftSeg, function(x) x[[min(2L, length(x))]])
+  acct <- lapply(leftSeg, function(x) if (length(x) > 1L) x[[1L]] else default)
+  names(repo) <- names(acct) <- unlist(repo, use.names = FALSE)
 
-  br[!lenGT2] <- "HEAD"
+  br <- lapply(rightSeg, function(r) if (length(r) && nzchar(r[[1L]])) r[[1L]] else "HEAD")
+  names(br) <- names(repo)
 
+  ## Anything past acct/repo on the left, plus anything past the branch on the
+  ## right, is a path to a subfolder within the repo. Returned so callers need
+  ## not re-parse the string; NA when there is none.
+  subFolder <- Map(l = leftSeg, r = rightSeg, f = function(l, r) {
+    extra <- c(if (length(l) > 2L) l[-seq_len(2L)], if (length(r) > 1L) r[-1L])
+    if (length(extra)) paste(extra, collapse = "/") else NA_character_
+  })
+  names(subFolder) <- names(repo)
+
+  vs <- lapply(leftSeg, function(x) list())
+  names(vs) <- names(repo)
   if (any(hasVersionSpec)) {
     versionSpecs <- extractVersionNumber(gitRepoOrig[hasVersionSpec])
     inequs <- extractInequality(gitRepoOrig[hasVersionSpec])
     vs[hasVersionSpec] <- paste0("(", inequs, " ", versionSpecs, ")")
   }
 
-  list(acct = acct, repo = repo, br = br, versionSpec = vs)
+  list(acct = acct, repo = repo, br = br, versionSpec = vs, subFolder = subFolder)
 }
 
 postInstallDESCRIPTIONMods <- function(pkgInstall, libPaths) {
