@@ -20,14 +20,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-## BEHAVIOUR CHANGE on migrating: the hand-rolled matrix carried
-## `if: !contains(github.event.commits[0].message, '[skip-ci]')`, and the
-## shared workflow has no equivalent. Note the hyphen -- `[skip-ci]` is NOT one
-## of GitHub's native skip keywords (`[skip ci]`, `[ci skip]`, `[no ci]`,
-## `[skip actions]`, `[actions skip]`), which is why it needed a manual guard.
-## The guard is kept below on `split-library-check`, the one job we still own.
-## To skip the shared matrix, use GitHub's own `[skip ci]` spelling, or add an
-## opt-in input upstream in PredictiveEcology/actions.
+## `[skip-ci]` still works: the guard now lives in the shared workflows
+## (PredictiveEcology/actions#34) rather than in each caller. Note the hyphen --
+## `[skip-ci]` is a PE convention, not one of GitHub's native skip keywords
+## (`[skip ci]`, `[ci skip]`, `[no ci]`, `[skip actions]`, `[actions skip]`),
+## which is why it needs a guard at all. The shared version tests the tip of the
+## push; the hand-rolled one here tested the oldest commit in it.
 
 jobs:
   R-CMD-check:
@@ -82,7 +80,9 @@ jobs:
   # would never have failed on it.
   # ---------------------------------------------------------------------------
   split-library-check:
-    if: "!contains(github.event.commits[0].message, '[skip-ci]')"
+    ## Same guard as the shared workflows: the tip of the push, not the oldest
+    ## commit in it.
+    if: ${{ !contains(github.event.head_commit.message, '[skip-ci]') }}
     runs-on: ubuntu-latest
     name: ubuntu-latest (release, CRAN-style split library)
 
