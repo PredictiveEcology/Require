@@ -1,0 +1,49 @@
+## Reverse dependency checks. Manual only -- the shared action's own README
+## warns these are too resource intensive for standard GitHub runners, so this
+## must not run on every push. Trigger it before a CRAN submission.
+##
+## Require's CRAN revdep is SpaDES.core, which was archived on 2026-07-13 and
+## is back on CRAN as of 3.2.1. Do not repeat a stored "no reverse
+## dependencies" conclusion from `revdep/` -- those results go stale in both
+## directions. Check the live CRAN page.
+##
+## SpaDES.core pulls terra/sf, hence the geospatial system deps. Stock Noble
+## apt only: the ubuntugis-unstable PPA installs libgdal37, which is
+## ABI-incompatible with the binaries in Posit's noble cache.
+
+name: revdeps
+
+on:
+  workflow_dispatch:
+    inputs:
+      cranonly:
+        description: "Limit checks to packages published on CRAN?"
+        type: boolean
+        default: true
+      timeout:
+        description: "Max minutes to wait for R CMD check per revdep."
+        type: string
+        default: "30"
+
+jobs:
+  revdeps:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: PredictiveEcology/actions/install-spatial-deps@main
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          Ncpus: 4
+          r-version: release
+          use-public-rspm: true
+
+      - uses: PredictiveEcology/actions/revdeps-check@main
+        with:
+          cranonly: ${{ inputs.cranonly }}
+          quiet: true
+          timeout: ${{ inputs.timeout }}

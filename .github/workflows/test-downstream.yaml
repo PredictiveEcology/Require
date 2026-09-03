@@ -1,0 +1,31 @@
+## Checks the packages that depend on Require against THIS branch, rather than
+## against whatever Require is on CRAN or GitHub. Only SpaDES.core and
+## SpaDES.project declare a Require dependency -- the rest of the PE stack does
+## not, so the list is deliberately short rather than "every PE package".
+##
+## The shared workflow strips each downstream's `Remotes:` pin and installs the
+## checkout via `local::`, then asserts the installed package carries no
+## RemoteSha. Without that assertion pak honours the pin, installs Require from
+## GitHub, and the job passes having tested none of the proposed change. Do not
+## work around it.
+
+name: test-downstream
+
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+    branches: [main, development]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test-downstream:
+    uses: PredictiveEcology/actions/.github/workflows/test-downstream.yaml@main
+    secrets: inherit
+    with:
+      downstream: >-
+        [{"repo": "PredictiveEcology/SpaDES.core", "ref": "development"},
+         {"repo": "PredictiveEcology/SpaDES.project", "ref": "development"}]
