@@ -237,24 +237,73 @@ test_that("a pak-backed Require install never invokes sudo (with in-test negativ
     callr::r(
       function(pkgRoot, fixture, loadRequire) {
         loaded <- NA
+        how <- "not attempted"
         if (loadRequire) {
-          ## Report whether the load actually happened. Without this the
-          ## protective run below cannot tell "Require loaded and suppressed
-          ## pak" from "load_all silently did nothing", and the latter makes
-          ## the run an unlabelled second negative control -- it fails with
-          ## exactly the trap signature a real regression would produce.
+          ## Load Require the way a user would when it is installed, and only
+          ## fall back to the source tree when it is not.
+          ##
+          ## The previous version always used pkgload::load_all(pkgRoot), where
+          ## pkgRoot is normalizePath(".") -- the testthat directory -- and
+          ## load_all walks up to find the package root. From a source checkout
+          ## that lands on the real package. Under covr and R CMD check the
+          ## tests run from an INSTALLED tree, so walking up lands on an
+          ## installed package directory: it has a DESCRIPTION but its code is
+          ## in R/Require.rdb, not R/*.R. The namespace ends up registered --
+          ## so `"Require" %in% loadedNamespaces()` is TRUE -- without .onLoad
+          ## having forced PKG_SYSREQS off. pak then computes its own default,
+          ## reaches can_sudo_without_pw(), and probes sudo. That looks
+          ## identical to a privilege-escalation regression and is not one.
+          ## Prefer a real SOURCE tree so the working copy is what gets
+          ## tested; fall back to the installed package otherwise. A directory
+          ## counts as source only if it has both DESCRIPTION and R/*.R -- an
+          ## installed tree has DESCRIPTION but keeps its code in R/<pkg>.rdb,
+          ## which is exactly the case that used to be mistaken for source.
+          isSourceRoot <- function(d) {
+            file.exists(file.path(d, "DESCRIPTION")) &&
+              length(list.files(file.path(d, "R"), pattern = "[.][rR]$")) > 0L
+          }
           loaded <- tryCatch({
-            suppressMessages(pkgload::load_all(pkgRoot, quiet = TRUE))
+            root <- pkgRoot
+            src <- NA_character_
+            for (i in 1:4) {
+              if (isSourceRoot(root)) { src <- root; break }
+              parent <- dirname(root)
+              if (identical(parent, root)) break
+              root <- parent
+            }
+            if (!is.na(src)) {
+              suppressMessages(pkgload::load_all(src, quiet = TRUE))
+              how <- paste0("load_all(", src, ")")
+            } else if (requireNamespace("Require", quietly = TRUE)) {
+              how <- "installed"
+            } else {
+              how <- "unavailable"
+            }
             "Require" %in% loadedNamespaces()
-          }, error = function(e) paste("load_all failed:", conditionMessage(e)))
+          }, error = function(e) {
+            how <<- "failed"
+            paste("load failed:", conditionMessage(e))
+          })
         }
         lib <- tempfile("lp"); dir.create(lib)
         tryCatch(
           pak::pkg_install(paste0("local::", fixture),
                            lib = lib, dependencies = FALSE, ask = FALSE),
           error = function(e) NULL)
-        list(loaded = loaded, sysreqs = Sys.getenv("PKG_SYSREQS"),
-             sysreqsSudo = Sys.getenv("PKG_SYSREQS_SUDO"))
+        list(loaded = loaded, how = how,
+             sysreqs = Sys.getenv("PKG_SYSREQS"),
+             sysreqsSudo = Sys.getenv("PKG_SYSREQS_SUDO"),
+             optionSysreqs = format(getOption("pkg.sysreqs", "<unset>")),
+             ## Did .onLoad actually execute? It stashes .sysreqsUserOptIn in
+             ## the package env, so its presence is the direct evidence --
+             ## "Require" %in% loadedNamespaces() only proves the namespace
+             ## exists, not that the load hook ran.
+             onLoadRan = tryCatch(
+               exists(".sysreqsUserOptIn",
+                      envir = asNamespace("Require")$pkgEnv(), inherits = FALSE),
+               error = function(e) paste("probe failed:", conditionMessage(e))),
+             nsPath = tryCatch(getNamespaceInfo("Require", "path"),
+                               error = function(e) "<none>"))
       },
       args = list(pkgRoot = pkgRoot, fixture = fixture,
                   loadRequire = loadRequire),
@@ -280,6 +329,22 @@ test_that("a pak-backed Require install never invokes sudo (with in-test negativ
   ##     stays empty. If this fires, the CRAN privilege-escalation
   ##     regression has returned.
   protective <- runPak(loadRequire = TRUE, fixture = fixturePos, trap = trapPos)
+
+  ## Printed, not just carried in expect_*() info: CI dumps testthat.Rout.fail
+  ## truncated from the front, so anything logged early is lost. Emitting here,
+  ## immediately before the assertions, keeps it adjacent to any failure.
+  cat("\n=== PROTECTIVE CHILD REPORT ===\n",
+      "  loaded        : ", format(protective$loaded), "\n",
+      "  loaded how    : ", format(protective$how), "\n",
+      "  onLoadRan     : ", format(protective$onLoadRan), "\n",
+      "  PKG_SYSREQS   : [", protective$sysreqs, "]\n",
+      "  PKG_SYSREQS_SUDO: [", protective$sysreqsSudo, "]\n",
+      "  getOption     : ", protective$optionSysreqs, "\n",
+      "  namespace path: ", protective$nsPath, "\n",
+      "  pkgRoot passed: ", pkgRoot, "\n",
+      "  trap log lines: ",
+      if (file.exists(trapPos$log)) length(readLines(trapPos$log)) else 0L, "\n",
+      sep = "")
 
   ## Prove the protective run is actually protective before asserting on the
   ## trap. `pkgRoot` is normalizePath(".") -- the package root found by walking
