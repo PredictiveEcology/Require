@@ -7,6 +7,12 @@
   subfolder as the branch (and discards the real one). It also returns the
   `subFolder` it parsed, for both that spelling and `account/repo@branch/subFolder`.
 
+* Two `browser()` calls on pak error paths are now `stop()` with an actionable
+  message. `browser()` is a no-op in a non-interactive session, so these never
+  affected a script, but each was a hang in an interactive one. One of the two
+  could never have fired where it sat -- the guard followed a line that itself
+  errors on a `try-error` -- and now runs before it.
+
 ## Test suite
 
 No user-visible change; these fix the check failures CRAN reported for 2.1.0.
