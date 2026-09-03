@@ -174,23 +174,36 @@ test_that("a pak-backed Require install never invokes sudo (with in-test negativ
   ## --- PATH-shadowing fake sudo: records any invocation, exits 1
   ##     (mimicking CRAN's "user NOT in sudoers"). It NEVER calls the
   ##     real sudo and can install nothing.
-  trapDir <- file.path(tmp, "sudotrap")
-  dir.create(trapDir)
-  trapLog <- file.path(trapDir, "calls.log")
-  writeLines(c("#!/bin/sh",
-               sprintf('echo "SUDO INVOKED: $*" >> %s', shQuote(trapLog)),
-               "exit 1"),
-             file.path(trapDir, "sudo"))
-  Sys.chmod(file.path(trapDir, "sudo"), "0755")
-  pathWithTrap <- paste(trapDir, Sys.getenv("PATH"), sep = .Platform$path.sep)
+  ## Each scenario gets its OWN trap directory and log. Sharing one log and
+  ## unlink()ing between runs looks equivalent but is not: pak does its work in
+  ## background subprocesses, so a straggler from the negative control can
+  ## recreate the shared log AFTER the unlink, and its `sudo -s id` is then
+  ## attributed to the protective run. That reads exactly like a privilege
+  ## escalation regression while actually being a race -- and it is
+  ## timing-dependent, so it passes on a fast local box and fails on a loaded
+  ## CI runner. Separate logs make the misattribution structurally impossible.
+  makeTrap <- function(nm) {
+    d <- file.path(tmp, paste0("sudotrap-", nm))
+    dir.create(d)
+    lg <- file.path(d, "calls.log")
+    writeLines(c("#!/bin/sh",
+                 sprintf('echo "SUDO INVOKED: $*" >> %s', shQuote(lg)),
+                 "exit 1"),
+               file.path(d, "sudo"))
+    Sys.chmod(file.path(d, "sudo"), "0755")
+    list(dir = d, log = lg,
+         path = paste(d, Sys.getenv("PATH"), sep = .Platform$path.sep))
+  }
+  trapSelf <- makeTrap("selfcheck")
+  trapNeg  <- makeTrap("negative")
+  trapPos  <- makeTrap("protective")
 
   ## --- trap self-check: prove the shim is live, so a broken shim can
   ##     never make the protective assertion pass vacuously.
-  system2(file.path(trapDir, "sudo"), "self-check")
-  testthat::expect_true(file.exists(trapLog) &&
-                          length(readLines(trapLog)) >= 1L,
+  system2(file.path(trapSelf$dir, "sudo"), "self-check")
+  testthat::expect_true(file.exists(trapSelf$log) &&
+                          length(readLines(trapSelf$log)) >= 1L,
     info = "sudo trap shim must record invocations")
-  unlink(trapLog)
 
   ## Fresh R subprocess so Require's .onLoad runs (or not) against the
   ## env we hand it. Inherit the full real environment (so R / compilers
@@ -198,9 +211,9 @@ test_that("a pak-backed Require install never invokes sudo (with in-test negativ
   ## shadows the real one. The ONLY difference between scenarios is
   ## whether Require is loaded -- which is exactly the contract under
   ## test: Require's presence must neutralise pak's sudo path.
-  runPak <- function(loadRequire, fixture) {
+  runPak <- function(loadRequire, fixture, trap) {
     e <- Sys.getenv()
-    e["PATH"] <- pathWithTrap
+    e["PATH"] <- trap$path
     ## callr/processx INHERIT the parent env and apply `env=` as
     ## overrides -- they do not replace it. The test parent has Require
     ## loaded, so its .onLoad already set PKG_SYSREQS=false in this
@@ -223,14 +236,74 @@ test_that("a pak-backed Require install never invokes sudo (with in-test negativ
     extraLibs <- extraLibs[nzchar(extraLibs)]
     callr::r(
       function(pkgRoot, fixture, loadRequire) {
-        if (loadRequire)
-          suppressMessages(pkgload::load_all(pkgRoot, quiet = TRUE))
+        loaded <- NA
+        how <- "not attempted"
+        if (loadRequire) {
+          ## Load Require the way a user would when it is installed, and only
+          ## fall back to the source tree when it is not.
+          ##
+          ## The previous version always used pkgload::load_all(pkgRoot), where
+          ## pkgRoot is normalizePath(".") -- the testthat directory -- and
+          ## load_all walks up to find the package root. From a source checkout
+          ## that lands on the real package. Under covr and R CMD check the
+          ## tests run from an INSTALLED tree, so walking up lands on an
+          ## installed package directory: it has a DESCRIPTION but its code is
+          ## in R/Require.rdb, not R/*.R. The namespace ends up registered --
+          ## so `"Require" %in% loadedNamespaces()` is TRUE -- without .onLoad
+          ## having forced PKG_SYSREQS off. pak then computes its own default,
+          ## reaches can_sudo_without_pw(), and probes sudo. That looks
+          ## identical to a privilege-escalation regression and is not one.
+          ## Prefer a real SOURCE tree so the working copy is what gets
+          ## tested; fall back to the installed package otherwise. A directory
+          ## counts as source only if it has both DESCRIPTION and R/*.R -- an
+          ## installed tree has DESCRIPTION but keeps its code in R/<pkg>.rdb,
+          ## which is exactly the case that used to be mistaken for source.
+          isSourceRoot <- function(d) {
+            file.exists(file.path(d, "DESCRIPTION")) &&
+              length(list.files(file.path(d, "R"), pattern = "[.][rR]$")) > 0L
+          }
+          loaded <- tryCatch({
+            root <- pkgRoot
+            src <- NA_character_
+            for (i in 1:4) {
+              if (isSourceRoot(root)) { src <- root; break }
+              parent <- dirname(root)
+              if (identical(parent, root)) break
+              root <- parent
+            }
+            if (!is.na(src)) {
+              suppressMessages(pkgload::load_all(src, quiet = TRUE))
+              how <- paste0("load_all(", src, ")")
+            } else if (requireNamespace("Require", quietly = TRUE)) {
+              how <- "installed"
+            } else {
+              how <- "unavailable"
+            }
+            "Require" %in% loadedNamespaces()
+          }, error = function(e) {
+            how <<- "failed"
+            paste("load failed:", conditionMessage(e))
+          })
+        }
         lib <- tempfile("lp"); dir.create(lib)
         tryCatch(
           pak::pkg_install(paste0("local::", fixture),
                            lib = lib, dependencies = FALSE, ask = FALSE),
           error = function(e) NULL)
-        invisible(NULL)
+        list(loaded = loaded, how = how,
+             sysreqs = Sys.getenv("PKG_SYSREQS"),
+             sysreqsSudo = Sys.getenv("PKG_SYSREQS_SUDO"),
+             optionSysreqs = format(getOption("pkg.sysreqs", "<unset>")),
+             ## Did .onLoad actually execute? It stashes .sysreqsUserOptIn in
+             ## the package env, so its presence is the direct evidence --
+             ## "Require" %in% loadedNamespaces() only proves the namespace
+             ## exists, not that the load hook ran.
+             onLoadRan = tryCatch(
+               exists(".sysreqsUserOptIn",
+                      envir = asNamespace("Require")$pkgEnv(), inherits = FALSE),
+               error = function(e) paste("probe failed:", conditionMessage(e))),
+             nsPath = tryCatch(getNamespaceInfo("Require", "path"),
+                               error = function(e) "<none>"))
       },
       args = list(pkgRoot = pkgRoot, fixture = fixture,
                   loadRequire = loadRequire),
@@ -243,23 +316,56 @@ test_that("a pak-backed Require install never invokes sudo (with in-test negativ
   ##     default sysreqs path runs -> it must probe sudo -> trap fires.
   ##     Proves the trap is wired to pak's real escalation path, so the
   ##     protective assertion below cannot pass vacuously.
-  runPak(loadRequire = FALSE, fixture = fixtureNeg)
+  runPak(loadRequire = FALSE, fixture = fixtureNeg, trap = trapNeg)
   testthat::expect_true(
-    file.exists(trapLog) && length(readLines(trapLog)) >= 1L,
+    file.exists(trapNeg$log) && length(readLines(trapNeg$log)) >= 1L,
     info = paste("negative control: bare pak (no Require) must reach its",
                  "sudo probe -- if this fails the trap is not wired to the",
                  "real escalation path and the assertion below is vacuous"))
-  unlink(trapLog)
 
   ## --- PROTECTIVE ASSERTION: identical call, but Require IS loaded.
   ##     Require's .onLoad must have forced pak's sysreqs OFF (env var
   ##     inherited by pak's subprocess) -> pak never probes sudo -> trap
   ##     stays empty. If this fires, the CRAN privilege-escalation
   ##     regression has returned.
-  runPak(loadRequire = TRUE, fixture = fixturePos)
+  protective <- runPak(loadRequire = TRUE, fixture = fixturePos, trap = trapPos)
+
+  ## Printed, not just carried in expect_*() info: CI dumps testthat.Rout.fail
+  ## truncated from the front, so anything logged early is lost. Emitting here,
+  ## immediately before the assertions, keeps it adjacent to any failure.
+  cat("\n=== PROTECTIVE CHILD REPORT ===\n",
+      "  loaded        : ", format(protective$loaded), "\n",
+      "  loaded how    : ", format(protective$how), "\n",
+      "  onLoadRan     : ", format(protective$onLoadRan), "\n",
+      "  PKG_SYSREQS   : [", protective$sysreqs, "]\n",
+      "  PKG_SYSREQS_SUDO: [", protective$sysreqsSudo, "]\n",
+      "  getOption     : ", protective$optionSysreqs, "\n",
+      "  namespace path: ", protective$nsPath, "\n",
+      "  pkgRoot passed: ", pkgRoot, "\n",
+      "  trap log lines: ",
+      if (file.exists(trapPos$log)) length(readLines(trapPos$log)) else 0L, "\n",
+      sep = "")
+
+  ## Prove the protective run is actually protective before asserting on the
+  ## trap. `pkgRoot` is normalizePath(".") -- the package root found by walking
+  ## up from tests/testthat -- which under covr is an instrumented copy. If
+  ## load_all does not resolve there, .onLoad never runs, PKG_SYSREQS is never
+  ## forced off, and the assertion below fails for a reason that has nothing to
+  ## do with the escalation contract.
+  testthat::expect_true(
+    isTRUE(protective$loaded),
+    info = paste("Require must actually load in the child for the assertion",
+                 "below to mean anything; got:",
+                 paste(format(protective$loaded), collapse = " ")))
+  testthat::expect_identical(
+    protective$sysreqs, "false",
+    info = paste("Require's .onLoad must force PKG_SYSREQS=false in the child;",
+                 "got:", protective$sysreqs))
+
   testthat::expect_false(
-    file.exists(trapLog) && length(readLines(trapLog)) >= 1L,
+    file.exists(trapPos$log) && length(readLines(trapPos$log)) >= 1L,
     info = paste("loading Require must neutralise pak's sudo path;",
                  "trap fired ->",
-                 if (file.exists(trapLog)) paste(readLines(trapLog), collapse = " | ") else ""))
+                 if (file.exists(trapPos$log))
+                   paste(readLines(trapPos$log), collapse = " | ") else ""))
 })
