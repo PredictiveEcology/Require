@@ -223,14 +223,25 @@ test_that("a pak-backed Require install never invokes sudo (with in-test negativ
     extraLibs <- extraLibs[nzchar(extraLibs)]
     callr::r(
       function(pkgRoot, fixture, loadRequire) {
-        if (loadRequire)
-          suppressMessages(pkgload::load_all(pkgRoot, quiet = TRUE))
+        loaded <- NA
+        if (loadRequire) {
+          ## Report whether the load actually happened. Without this the
+          ## protective run below cannot tell "Require loaded and suppressed
+          ## pak" from "load_all silently did nothing", and the latter makes
+          ## the run an unlabelled second negative control -- it fails with
+          ## exactly the trap signature a real regression would produce.
+          loaded <- tryCatch({
+            suppressMessages(pkgload::load_all(pkgRoot, quiet = TRUE))
+            "Require" %in% loadedNamespaces()
+          }, error = function(e) paste("load_all failed:", conditionMessage(e)))
+        }
         lib <- tempfile("lp"); dir.create(lib)
         tryCatch(
           pak::pkg_install(paste0("local::", fixture),
                            lib = lib, dependencies = FALSE, ask = FALSE),
           error = function(e) NULL)
-        invisible(NULL)
+        list(loaded = loaded, sysreqs = Sys.getenv("PKG_SYSREQS"),
+             sysreqsSudo = Sys.getenv("PKG_SYSREQS_SUDO"))
       },
       args = list(pkgRoot = pkgRoot, fixture = fixture,
                   loadRequire = loadRequire),
@@ -256,7 +267,24 @@ test_that("a pak-backed Require install never invokes sudo (with in-test negativ
   ##     inherited by pak's subprocess) -> pak never probes sudo -> trap
   ##     stays empty. If this fires, the CRAN privilege-escalation
   ##     regression has returned.
-  runPak(loadRequire = TRUE, fixture = fixturePos)
+  protective <- runPak(loadRequire = TRUE, fixture = fixturePos)
+
+  ## Prove the protective run is actually protective before asserting on the
+  ## trap. `pkgRoot` is normalizePath(".") -- the package root found by walking
+  ## up from tests/testthat -- which under covr is an instrumented copy. If
+  ## load_all does not resolve there, .onLoad never runs, PKG_SYSREQS is never
+  ## forced off, and the assertion below fails for a reason that has nothing to
+  ## do with the escalation contract.
+  testthat::expect_true(
+    isTRUE(protective$loaded),
+    info = paste("Require must actually load in the child for the assertion",
+                 "below to mean anything; got:",
+                 paste(format(protective$loaded), collapse = " ")))
+  testthat::expect_identical(
+    protective$sysreqs, "false",
+    info = paste("Require's .onLoad must force PKG_SYSREQS=false in the child;",
+                 "got:", protective$sysreqs))
+
   testthat::expect_false(
     file.exists(trapLog) && length(readLines(trapLog)) >= 1L,
     info = paste("loading Require must neutralise pak's sudo path;",
