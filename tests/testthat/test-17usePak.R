@@ -2055,3 +2055,87 @@ test_that("orderRefsByMissingDepEdges puts a deferred dependency before its depe
     ord(c("a", "b"), "dependency ‘zzz’ is not available for package ‘a’"),
     c("a", "b"))
 })
+
+# ---------------------------------------------------------------------------
+# msgPleaseChangeRqdVersionGH: an unsatisfiable `>=` floor on a GitHub ref is
+# usually the wrong *branch*, not too high a floor. The CRAN spelling of the
+# message sends the user the other way -- `FOR-CAST/nrvtools (>= 0.2.11)` drew
+# "Please change required version e.g., nrvtools (>=0.2.9)" while 0.2.11 sat on
+# `development` all along.
+# ---------------------------------------------------------------------------
+test_that("msgPleaseChangeRqdVersionGH names the branch, not just a lower floor", {
+  msg <- Require:::msgPleaseChangeRqdVersionGH(
+    "FOR-CAST/nrvtools (>= 0.2.11)", ineq = ">=", versionSpec = "0.2.11",
+    newVersion = "0.2.9")
+
+  ## the ref, both versions and the constraint are all named
+  testthat::expect_match(msg, "FOR-CAST/nrvtools", fixed = TRUE)
+  testthat::expect_match(msg, "0.2.9", fixed = TRUE)
+  testthat::expect_match(msg, ">= 0.2.11", fixed = TRUE)
+  ## a bare ref resolves to the default branch, and says so rather than
+  ## printing the literal "HEAD"
+  testthat::expect_match(msg, "its default branch", fixed = TRUE)
+  testthat::expect_false(grepl("HEAD", msg, fixed = TRUE))
+  ## the point of the message: another branch is the thing to check first
+  testthat::expect_match(msg, "Another branch may", fixed = TRUE)
+})
+
+test_that("msgPleaseChangeRqdVersionGH keeps .txtPleaseChangeReqdVers greppable", {
+  ## Not cosmetic: setup.R's testWarnsInUsePleaseChange() and
+  ## test-01packages:254 (which uses the GitHub ref
+  ## "PredictiveEcology/fpCompare (>=2.0.0)", so it lands in exactly this
+  ## message) grep warnings for this constant, case-sensitively. Rewording the
+  ## sentence to sit mid-message -- lower-casing its first letter, say -- reads
+  ## identically and silently fails those tests instead.
+  for (ref in c("FOR-CAST/nrvtools (>= 0.2.11)",
+                "FOR-CAST/nrvtools@development (>= 0.2.11)",
+                "PredictiveEcology/fpCompare (>=2.0.0)")) {
+    msg <- Require:::msgPleaseChangeRqdVersionGH(ref, ineq = ">=",
+                                                 versionSpec = "2.0.0",
+                                                 newVersion = "0.2.9")
+    testthat::expect_true(grepl(Require:::.txtPleaseChangeReqdVers, msg, fixed = TRUE),
+                          info = paste("constant must appear verbatim for", ref))
+  }
+})
+
+test_that("msgPleaseChangeRqdVersionGH names an explicit branch", {
+  msg <- Require:::msgPleaseChangeRqdVersionGH(
+    "FOR-CAST/nrvtools@development (>= 0.2.11)", ineq = ">=",
+    versionSpec = "0.2.11", newVersion = "0.2.9")
+
+  testthat::expect_match(msg, "branch 'development'", fixed = TRUE)
+  testthat::expect_false(grepl("its default branch", msg, fixed = TRUE))
+  ## the suggested fallback ref keeps the branch, so it is copy-pasteable
+  testthat::expect_match(msg, "FOR-CAST/nrvtools@development (>=0.2.9)", fixed = TRUE)
+})
+
+test_that("msgPleaseChangeRqdVersionGH carries a non-'>=' inequality through", {
+  msg <- Require:::msgPleaseChangeRqdVersionGH(
+    "PredictiveEcology/SpaDES.core@development (> 3.0.0)", ineq = ">",
+    versionSpec = "3.0.0", newVersion = "2.1.0")
+  testthat::expect_match(msg, "> 3.0.0", fixed = TRUE)
+  testthat::expect_false(grepl(">=", msg, fixed = TRUE))
+})
+
+test_that("msgUnsatisfiedVersion dispatches on the ref, not the package name", {
+  ## the dispatch pakInstallFiltered uses; a regression here silently reverts
+  ## the fix, since both spellings mention the package either way
+  gh <- Require:::msgUnsatisfiedVersion("FOR-CAST/nrvtools (>= 0.2.11)", "nrvtools",
+                                        ineq = ">=", versionSpec = "0.2.11",
+                                        newVersion = "0.2.9")
+  testthat::expect_match(gh, "Another branch may", fixed = TRUE)
+
+  cran <- Require:::msgUnsatisfiedVersion("nrvtools (>= 0.2.11)", "nrvtools",
+                                          ineq = ">=", versionSpec = "0.2.11",
+                                          newVersion = "0.2.9")
+  testthat::expect_false(grepl("Another branch may", cran, fixed = TRUE))
+  testthat::expect_identical(
+    cran, Require:::msgPleaseChangeRqdVersion("nrvtools", ">=", "0.2.9"),
+    info = "a non-GitHub ref must keep the pre-existing CRAN message verbatim")
+
+  ## pkgDT can carry NA here (a row pak added that the user never named)
+  testthat::expect_identical(
+    Require:::msgUnsatisfiedVersion(NA_character_, "nrvtools", ineq = ">=",
+                                    versionSpec = "0.2.11", newVersion = "0.2.9"),
+    cran)
+})

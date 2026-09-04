@@ -4554,8 +4554,15 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
                     " is available as a binary on this platform -- ",
                     "install from source or wait for the binary to be built.",
                     call. = FALSE)
-          } else if (versionChanged || firstTimeInsufficient || pakChoseInstalled)
-            warning(msgPleaseChangeRqdVersion(pkg, ineq = ">=", newVersion = installedVer), call. = FALSE)
+          } else if (versionChanged || firstTimeInsufficient || pakChoseInstalled) {
+            ## A GitHub ref gets the branch-aware spelling: for those, the usual
+            ## cause is that the ref points at a branch that never carried the
+            ## requested version, not that the requested version is unavailable.
+            warning(msgUnsatisfiedVersion(pkgDT[["packageFullName"]][wh[1L]], pkg,
+                                          ineq = ineq, versionSpec = vSpec,
+                                          newVersion = installedVer),
+                    call. = FALSE)
+          }
           # Always add to warnedDropped: either we already warned above (versionChanged),
           # or pak ran and chose not to update this package, meaning Require's over-strict
           # transitive constraint is the discrepancy -- not a real install failure.

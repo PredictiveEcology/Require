@@ -1,3 +1,17 @@
+# Require (development version)
+
+## Bug fixes
+
+* When a GitHub ref cannot satisfy its own version floor, the warning now names
+  the ref, the branch it resolved to, and the version that branch actually has,
+  rather than only suggesting a lower floor. A GitHub ref pins a branch, so the
+  usual cause is that the ref points at the wrong branch -- not that the version
+  does not exist. `FOR-CAST/nrvtools (>= 0.2.11)` resolves to the default
+  branch, which had 0.2.9, and drew "Please change required version e.g.,
+  nrvtools (>=0.2.9)"; 0.2.11 existed the whole time, on `development`. The
+  message pointed away from the fix, which made an ordinary branch mistake look
+  like a silent failure to update. Non-GitHub refs keep the previous message.
+
 # Require 2.1.1
 
 ## Bug fixes

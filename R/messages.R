@@ -123,6 +123,51 @@ msgPleaseChangeRqdVersion <- function(Package, ineq, newVersion) {
 }
 
 
+## The GitHub spelling of msgPleaseChangeRqdVersion().
+##
+## A GitHub ref names a *branch*, so an unsatisfiable `>=` floor on one usually
+## means the ref points at the wrong branch -- not that the floor is too high.
+## `FOR-CAST/nrvtools (>= 0.2.11)` resolves to the default branch, which had
+## 0.2.9; 0.2.11 existed all along, on `development`. The CRAN spelling of this
+## message ("Please change required version e.g., nrvtools (>=0.2.9)") is then
+## the exact opposite of the fix, and reads as though the requested version does
+## not exist anywhere. Name the ref, the branch it resolved to, and what that
+## branch actually has, so the branch is the first thing the user checks.
+##
+## It still ends with msgPleaseChangeRqdVersion() verbatim, capital and all:
+## `.txtPleaseChangeReqdVers` is a contract, not just prose. The suite greps
+## warnings for it (setup.R's testWarnsInUsePleaseChange(), and
+## test-01:254 for this very GitHub-ref case), so a version of this sentence
+## that merely reads the same -- lower-cased to sit mid-sentence, say -- stops
+## matching and takes those tests with it.
+msgPleaseChangeRqdVersionGH <- function(packageFullName, ineq, versionSpec, newVersion) {
+  ref <- trimVersionNumber(packageFullName)
+  repo <- sub("@.*$", "", ref)
+  branch <- if (grepl("@", ref)) sub("^.*@", "", ref) else "HEAD"
+  branchTxt <- if (identical(branch, "HEAD")) "its default branch"
+               else paste0("branch '", branch, "'")
+  paste0(ref, ": ", branchTxt, " has ", newVersion, ", which does not satisfy '",
+         ineq, " ", versionSpec, "'. Another branch may -- e.g. `", repo,
+         "@<branch> (", ineq, " ", versionSpec, ")`. ",
+         msgPleaseChangeRqdVersion(ref, ineq, newVersion), " if no branch has it")
+}
+
+
+## Picks the spelling that fits the ref: `packageFullName` is what the user
+## actually wrote, so a GitHub ref gets the branch-aware message and everything
+## else keeps the CRAN one.
+msgUnsatisfiedVersion <- function(packageFullName, Package, ineq, versionSpec,
+                                  newVersion) {
+  isGHref <- !is.null(packageFullName) && length(packageFullName) == 1L &&
+    !is.na(packageFullName) && isGH(packageFullName)
+  if (isGHref)
+    msgPleaseChangeRqdVersionGH(packageFullName, ineq = ineq,
+                                versionSpec = versionSpec, newVersion = newVersion)
+  else
+    msgPleaseChangeRqdVersion(Package, ineq = ">=", newVersion = newVersion)
+}
+
+
 msgStdOut <- function(mess, logFile, verbose) {
   # pkg <- extractPkgNameFromWarning(mess)
   # justPackage <- !identical(mess, pkg) && !grepl("\\/|\\\\", pkg)
