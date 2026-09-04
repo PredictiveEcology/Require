@@ -133,6 +133,13 @@ msgPleaseChangeRqdVersion <- function(Package, ineq, newVersion) {
 ## the exact opposite of the fix, and reads as though the requested version does
 ## not exist anywhere. Name the ref, the branch it resolved to, and what that
 ## branch actually has, so the branch is the first thing the user checks.
+##
+## It still ends with msgPleaseChangeRqdVersion() verbatim, capital and all:
+## `.txtPleaseChangeReqdVers` is a contract, not just prose. The suite greps
+## warnings for it (setup.R's testWarnsInUsePleaseChange(), and
+## test-01:254 for this very GitHub-ref case), so a version of this sentence
+## that merely reads the same -- lower-cased to sit mid-sentence, say -- stops
+## matching and takes those tests with it.
 msgPleaseChangeRqdVersionGH <- function(packageFullName, ineq, versionSpec, newVersion) {
   ref <- trimVersionNumber(packageFullName)
   repo <- sub("@.*$", "", ref)
@@ -141,10 +148,8 @@ msgPleaseChangeRqdVersionGH <- function(packageFullName, ineq, versionSpec, newV
                else paste0("branch '", branch, "'")
   paste0(ref, ": ", branchTxt, " has ", newVersion, ", which does not satisfy '",
          ineq, " ", versionSpec, "'. Another branch may -- e.g. `", repo,
-         "@<branch> (", ineq, " ", versionSpec, ")`. Otherwise, ",
-         tolower(substr(.txtPleaseChangeReqdVers, 1, 1)),
-         substring(.txtPleaseChangeReqdVers, 2),
-         " e.g., ", ref, " (", ineq, newVersion, ")")
+         "@<branch> (", ineq, " ", versionSpec, ")`. ",
+         msgPleaseChangeRqdVersion(ref, ineq, newVersion), " if no branch has it")
 }
 
 

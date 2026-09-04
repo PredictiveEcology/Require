@@ -2080,6 +2080,24 @@ test_that("msgPleaseChangeRqdVersionGH names the branch, not just a lower floor"
   testthat::expect_match(msg, "Another branch may", fixed = TRUE)
 })
 
+test_that("msgPleaseChangeRqdVersionGH keeps .txtPleaseChangeReqdVers greppable", {
+  ## Not cosmetic: setup.R's testWarnsInUsePleaseChange() and
+  ## test-01packages:254 (which uses the GitHub ref
+  ## "PredictiveEcology/fpCompare (>=2.0.0)", so it lands in exactly this
+  ## message) grep warnings for this constant, case-sensitively. Rewording the
+  ## sentence to sit mid-message -- lower-casing its first letter, say -- reads
+  ## identically and silently fails those tests instead.
+  for (ref in c("FOR-CAST/nrvtools (>= 0.2.11)",
+                "FOR-CAST/nrvtools@development (>= 0.2.11)",
+                "PredictiveEcology/fpCompare (>=2.0.0)")) {
+    msg <- Require:::msgPleaseChangeRqdVersionGH(ref, ineq = ">=",
+                                                 versionSpec = "2.0.0",
+                                                 newVersion = "0.2.9")
+    testthat::expect_true(grepl(Require:::.txtPleaseChangeReqdVers, msg, fixed = TRUE),
+                          info = paste("constant must appear verbatim for", ref))
+  }
+})
+
 test_that("msgPleaseChangeRqdVersionGH names an explicit branch", {
   msg <- Require:::msgPleaseChangeRqdVersionGH(
     "FOR-CAST/nrvtools@development (>= 0.2.11)", ineq = ">=",
