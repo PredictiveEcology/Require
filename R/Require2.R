@@ -657,6 +657,7 @@ Require <- function(packages,
     }
   } else {
     out <- logical()
+    pkgDT <- NULL # the summary below reads it; character(0) / list() never built one
   }
 
   et <- Sys.time()

@@ -1465,3 +1465,13 @@ test_that("a `(HEAD)` GitHub ref is settled by SHA, not reinstalled blindly", {
     },
     .package = "Require")
 })
+
+test_that("Require() with no packages returns without error", {
+  ## SpaDES.core::simInit() passes character(0) when modules declare no reqdPkgs;
+  ## the end-of-call summary read `pkgDT`, which is only built for >= 1 package:
+  ## "object 'pkgDT' not found".
+  for (require in c(TRUE, FALSE)) {
+    expect_identical(Require::Require(character(0), require = require, verbose = -2), logical())
+    expect_identical(Require::Require(list(), require = require, verbose = -2), logical())
+  }
+})
