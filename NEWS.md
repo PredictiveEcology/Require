@@ -2,6 +2,7 @@
 
 ## Bug fixes
 
+* `Require()` with no packages (`character(0)`, `list()`) returns `logical()` instead of failing with "object 'pkgDT' not found".
 * When a GitHub ref cannot satisfy its own version floor, the warning now names
   the ref, the branch it resolved to, and the version that branch actually has,
   rather than only suggesting a lower floor. A GitHub ref pins a branch, so the
