@@ -657,6 +657,31 @@ pakConstraintSatisfied <- function(installedVer, versionSpec, inequality,
   satisfies
 }
 
+# Packages installed in `lib` that also meet every version requirement `pkgDT` records for them
+# (columns Package, versionSpec, inequality; packages without a requirement just need to be there).
+# identify-and-defer asks "is it still missing?" with this. Asking by name alone treated a package
+# installed below its floor as done, so it was never retried: in CI a CRAN SpaDES.tools 2.1.3
+# satisfied "installed" while fireSenseUtils needed >= 2.1.3.9008 from GitHub, and fireSenseUtils
+# then failed with "dependency 'X' is not available" (fireSense_SpreadFit #31, 2026-09-23).
+.pakSatisfiedInstalled <- function(lib, pkgDT) {
+  ip <- tryCatch(installed.packages(lib.loc = lib, noCache = TRUE), error = function(e) NULL)
+  if (is.null(ip) || !NROW(ip)) return(character(0))
+  pkgs <- unname(ip[, "Package"])
+  vers <- unname(ip[, "Version"])
+  ok <- rep(TRUE, length(pkgs))
+  if (NROW(pkgDT) && all(c("Package", "versionSpec", "inequality") %in% names(pkgDT))) {
+    hasReq <- !is.na(pkgDT$versionSpec) & nzchar(pkgDT$versionSpec) &
+      !is.na(pkgDT$inequality) & nzchar(pkgDT$inequality)
+    for (i in which(hasReq)) {
+      j <- match(pkgDT$Package[i], pkgs)
+      if (is.na(j) || !ok[j]) next
+      ok[j] <- isTRUE(compareVersion2(vers[j], versionSpec = pkgDT$versionSpec[i],
+                                      inequality = pkgDT$inequality[i]))
+    }
+  }
+  pkgs[ok]
+}
+
 # For each plain CRAN ref in `pkgsForPak` that names a package currently
 # installed in `libPaths`, rewrite it to `pkg@<installedVersion>`. Leaves
 # GitHub refs, pre-pinned `pkg@X` refs, packages with an explicit user
@@ -4176,8 +4201,9 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
         # Without this, even successfully-installed packages look "still missing"
         # and the loop falls into the no-parseable-culprits serial fallback for
         # no reason, doubling install time.
-        instNow <- tryCatch(rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
-                            error = function(e) character(0))
+        ## installed AND meeting its requirement: a package present at a version below its floor
+        ## (e.g. a CRAN binary where the floor needs the GitHub build) is still missing
+        instNow <- .pakSatisfiedInstalled(libPaths[1], pkgDT)
         # Same bare-name reduction as pkgNamesAll above. Without stripping
         # "any::" / "owner/" / "@version", instNow's bare names ("cli", "qs")
         # never match passNames' decorated form ("any::cli", "qs@0.27.3") and
@@ -4258,9 +4284,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
         # dependent before its dependency and hit a spurious
         # "dependency 'X' is not available for package 'Y'" build-error.
         deferred <- orderRefsByMissingDepEdges(deferred, allCapturedMsgs)
-        instBeforeDeferred <- tryCatch(
-          rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
-          error = function(e) character(0))
+        instBeforeDeferred <- .pakSatisfiedInstalled(libPaths[1], pkgDT)
         deferred <- .pakDropUnchangedFailures(failMemo, deferred,
                                               instBeforeDeferred, verbose)
       }
@@ -4285,9 +4309,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
         # same pass). Re-attempt the ones still missing while progress is being
         # made -- each newly-installed dependency can unblock another dependent.
         for (retry in seq_len(3L)) {
-          instNow <- tryCatch(
-            rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
-            error = function(e) character(0))
+          instNow <- .pakSatisfiedInstalled(libPaths[1], pkgDT)
           stillMissing <- deferred[!pakRefToBareName(deferred) %in% instNow]
           stillMissing <- .pakDropUnchangedFailures(failMemo, stillMissing,
                                                     instNow, verbose)
@@ -4300,9 +4322,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
             verbose = verbose, verboseLevel = 1)
           pakResetSubprocess()
           capturePak(pakSerialInstall(stillMissing, libPaths[1], repos, verbose, cranDeps = cranDeps))
-          instAfter <- tryCatch(
-            rownames(installed.packages(lib.loc = libPaths[1], noCache = TRUE)),
-            error = function(e) character(0))
+          instAfter <- .pakSatisfiedInstalled(libPaths[1], pkgDT)
           # No progress this pass (none of the still-missing got installed) -> stop.
           if (sum(!pakRefToBareName(stillMissing) %in% instAfter) >= length(stillMissing))
             break
