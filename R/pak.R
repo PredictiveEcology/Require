@@ -2511,6 +2511,16 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   # pak uses logical: TRUE = include Suggests, NA = standard (Imports/Depends/LinkingTo)
   wh <- if (any(grepl("suggests", tolower(unlist(which))))) TRUE else NA
 
+  # A package the user requested as a GitHub ref is installed from GitHub, even
+  # if the user (e.g. a module's reqdPkgs) ALSO listed it as plain CRAN. Move
+  # those plain refs' version specs onto the GitHub ref:
+  # "SpaDES.tools (>= 2.0.0)" -> "PredictiveEcology/SpaDES.tools@development (>= 2.0.0)".
+  # Otherwise trimRedundancies() below keeps the versioned CRAN ref and drops
+  # the unversioned GitHub one, and pak is later asked for a CRAN
+  # `SpaDES.tools@<GitHub dev version>` that does not exist.
+  ghRef <- userGitHubRefs(packages)
+  packages <- plainRefsToGitHub(packages, ghRef)
+
   # Track which packages the user originally requested as plain CRAN refs (no GitHub, no url::).
   # Used in step 2b to normalize Remotes-based GitHub refs back to plain CRAN names so that
   # pakInstallFiltered installs from CRAN rather than from a fork.
@@ -2518,10 +2528,8 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
 
   # Pre-resolve conflicts in the package list using Require's own deduplication logic
   # before handing anything to pak. This handles:
-  #   (a) Same package as both CRAN ref and GitHub ref -> trimRedundantVersionAndNoVersion
-  #       removes the no-version entry, keeping whichever has a version constraint.
-  #       If neither has a version spec, the GitHub ref (higher repoLocation priority)
-  #       is kept by the subsequent name-based dedup below.
+  #   (a) Same package as both CRAN ref and GitHub ref -> already rewritten to
+  #       the GitHub ref by plainRefsToGitHub() above.
   #   (b) Multiple GitHub branches for same package (e.g. @master vs @development) ->
   #       the branch with the highest version constraint wins.
   resolvedPkgs <- tryCatch(
@@ -2673,6 +2681,11 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
         all_reqs[package %in% cran_pkgs, ref := package]
       }
     }
+    # (3) Packages the user requested as a GitHub ref -> that ref, for the same
+    # reason as plainRefsToGitHub() above: a dependent's constraint written as
+    # a plain CRAN row (e.g. "SpaDES.tools (>= 2.1.1)") would displace it.
+    if (length(ghRef))
+      all_reqs[package %in% names(ghRef), ref := ghRef[package]]
   }
 
   # 3. Build packageFullName from pak's ref + op + version
@@ -2853,6 +2866,24 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   }
 
   pkgDT
+}
+
+# Named vector: package name -> the user's GitHub ref for it, version spec and
+# (HEAD) stripped. The first GitHub ref per package wins.
+userGitHubRefs <- function(pkgs) {
+  gh <- pkgs[isGH(pkgs)]
+  gh <- gh[!duplicated(extractPkgName(gh))]
+  setNames(trimVersionNumber(HEADtoNone(gh)), extractPkgName(gh))
+}
+
+# Rewrite plain (CRAN-style) refs of packages in `ghRef` to that GitHub ref,
+# keeping their version spec: "pkg (>= 1.0)" -> "owner/pkg@branch (>= 1.0)".
+plainRefsToGitHub <- function(pkgs, ghRef) {
+  if (!length(ghRef)) return(pkgs)
+  nms <- extractPkgName(pkgs)
+  wh <- which(!isGH(pkgs) & !grepl("::", pkgs) & nms %in% names(ghRef))
+  pkgs[wh] <- paste0(ghRef[nms[wh]], substring(pkgs[wh], nchar(nms[wh]) + 1L))
+  pkgs
 }
 
 # The hard-dep graph (Depends/Imports/LinkingTo) among the packages the global

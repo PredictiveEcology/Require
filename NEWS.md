@@ -2,6 +2,7 @@
 
 ## Bug fixes
 
+* Under pak, a package requested both as a GitHub ref and as plain CRAN refs (`"PredictiveEcology/SpaDES.tools@development"` plus a module's `"SpaDES.tools (>= 2.0.0)"`) now installs from GitHub. The versioned CRAN ref displaced the unversioned GitHub one, so pak was asked for CRAN `SpaDES.tools@2.1.3.9013`, which does not exist, and the package was never installed.
 * A package already installed below its version floor is no longer treated as installed when pak's identify-and-defer pass decides what to retry. A CRAN `SpaDES.tools` 2.1.3 counted as done while `fireSenseUtils` needed >= 2.1.3.9008 from GitHub, so the GitHub build was never retried and `fireSenseUtils` failed with "dependency 'SpaDES.tools' is not available".
 * `Require()` with no packages (`character(0)`, `list()`) returns `logical()` instead of failing with "object 'pkgDT' not found".
 * When a GitHub ref cannot satisfy its own version floor, the warning now names

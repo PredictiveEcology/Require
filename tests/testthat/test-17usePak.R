@@ -1790,6 +1790,42 @@ test_that("dedupInstallRefs keeps the GitHub ref and drops the same-package CRAN
   testthat::expect_true("DBI" %in% out$Package)   # untouched
 })
 
+# A package requested both as a GitHub ref and as plain CRAN refs (a module's
+# reqdPkgs) must stay a GitHub ref in pkgDT. trimRedundancies() used to keep the
+# versioned CRAN row and drop the unversioned GitHub ref, so pakInstallFiltered
+# asked pak for CRAN `SpaDES.tools@<GitHub dev version>`, which never installs.
+test_that("pakDepsToPkgDT keeps a user GitHub ref over same-package versioned CRAN refs", {
+  skip_if_not_installed("pak")
+  dep <- function(ref, package, op, version)
+    data.frame(ref = ref, type = rep("imports", length(ref)), package = package,
+               op = op, version = version)
+  fake_resolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NULL,
+                           type = getOption("pkgType")) {
+    d <- data.frame(package = c("LandR", "SpaDES.tools"),
+                    version = c("1.2.0.9050", "2.1.3.9013"),
+                    ref = c("PredictiveEcology/LandR@development",
+                            "PredictiveEcology/SpaDES.tools@development"),
+                    type = "github", direct = TRUE, lib_status = "new")
+    # LandR's Remotes: PredictiveEcology/SpaDES.tools@development
+    d$deps <- I(list(dep("PredictiveEcology/SpaDES.tools@development", "SpaDES.tools",
+                         ">=", "2.1.1"),
+                     dep(character(), character(), character(), character())))
+    d
+  }
+  packages <- c("PredictiveEcology/SpaDES.tools@development",
+                "PredictiveEcology/LandR@development",
+                "SpaDES.tools", "SpaDES.tools (>= 2.0.0)", "SpaDES.tools (>= 1.0.2)")
+  pkgDT <- testthat::with_mocked_bindings(
+    pakDepsResolve = fake_resolve,
+    Require:::pakDepsToPkgDT(packages, which = c("Imports", "Depends", "LinkingTo"),
+                             libPaths = withr::local_tempdir(), standAlone = TRUE,
+                             verbose = -2, purge = TRUE))
+  st <- pkgDT[Package == "SpaDES.tools"]$packageFullName
+  testthat::expect_true(length(st) > 0)
+  testthat::expect_true(all(startsWith(st, "PredictiveEcology/SpaDES.tools@development")),
+    info = paste("SpaDES.tools rows:", paste(st, collapse = ", ")))
+})
+
 test_that("dedupInstallRefs keeps the strictest constraint among duplicate CRAN rows", {
   dt <- data.table::data.table(
     Package         = c("stringfish", "stringfish"),
