@@ -3308,6 +3308,8 @@ reportInstallFailures <- function(failures, missingPkgNames = character(0),
 # keep the first one (user-input order; the @specific form is typically
 # listed before the @HEAD/bare form). If no GitHub ref exists for a
 # duplicate, keep the first occurrence.
+# Copies of the kept ref that add a version spec are kept too, so
+# trimRedundancies() can apply the strictest spec.
 #
 # Why this exists: trimRedundancies()'s logic for collapsing duplicate
 # package rows relies on `versionSpec` (e.g. `(>= 1.0)`) being set on at
@@ -3331,8 +3333,14 @@ reportInstallFailures <- function(failures, missingPkgNames = character(0),
   for (pn in dupNms) {
     idx <- which(pkgNms == pn)
     ghIdx <- idx[isGH(refs[idx])]
-    if (length(ghIdx) > 0) toRemove <- c(toRemove, setdiff(idx, ghIdx[1L]))
-    else                    toRemove <- c(toRemove, idx[-1L])
+    keep <- if (length(ghIdx) > 0) ghIdx[1L] else idx[1L]
+    ## A copy of the kept ref that adds a version spec is the same ref, not
+    ## another form of the package: keep it, and trimRedundancies() keeps the
+    ## strictest spec. Dropping it lost a module's "acct/LandR@dev (>= X)"
+    ## behind an unversioned "acct/LandR@dev", so LandR below X was never upgraded.
+    hasSpec <- grepl("\\([[:space:]]*[<>=]", refs[idx])
+    sameRef <- trimVersionNumber(refs[idx]) == trimVersionNumber(refs[keep])
+    toRemove <- c(toRemove, setdiff(idx, c(keep, idx[hasSpec & sameRef])))
   }
   if (length(toRemove)) refs[-toRemove] else refs
 }

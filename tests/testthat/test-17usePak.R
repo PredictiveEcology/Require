@@ -1826,6 +1826,45 @@ test_that("pakDepsToPkgDT keeps a user GitHub ref over same-package versioned CR
     info = paste("SpaDES.tools rows:", paste(st, collapse = ", ")))
 })
 
+# setupProject, 2026-10-03. (1) The global listed "PredictiveEcology/LandR@development"
+# and a module "PredictiveEcology/LandR@development (>= 1.2.0.9046)"; the floor was
+# dropped, so an installed LandR 1.2.0.9045 was never upgraded. (2) SpaDES.core's
+# Depends "reproducible (>= 3.2.1.9062)" became a plain CRAN row that displaced the
+# user's GitHub ref, and pak was asked for CRAN `reproducible@3.2.1.9063` (fixed in #218).
+test_that("pakDepsToPkgDT keeps a GitHub ref's version floor from any duplicate", {
+  skip_if_not_installed("pak")
+  dep <- function(ref, package, op, version)
+    data.frame(ref = ref, type = rep("depends", length(ref)), package = package,
+               op = op, version = version)
+  none <- dep(character(), character(), character(), character())
+  fake_resolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NULL,
+                           type = getOption("pkgType")) {
+    d <- data.frame(package = c("LandR", "reproducible", "SpaDES.core"),
+                    version = c("1.2.0.9046", "3.2.1.9063", "3.2.1.9034"),
+                    ref = c("PredictiveEcology/LandR@development",
+                            "PredictiveEcology/reproducible@development",
+                            "PredictiveEcology/SpaDES.core@development"),
+                    type = "github", direct = TRUE, lib_status = "update")
+    d$deps <- I(list(none, none,
+                     dep("reproducible", "reproducible", ">=", "3.2.1.9062")))
+    d
+  }
+  packages <- c("PredictiveEcology/SpaDES.core@development",
+                "PredictiveEcology/reproducible@development (>= 3.2.1.9061)",
+                "PredictiveEcology/LandR@development",
+                "reproducible (>= 2.1.0)",
+                "PredictiveEcology/LandR@development (>= 1.2.0.9046)")
+  pkgDT <- testthat::with_mocked_bindings(
+    pakDepsResolve = fake_resolve,
+    Require:::pakDepsToPkgDT(packages, which = c("Imports", "Depends", "LinkingTo"),
+                             libPaths = withr::local_tempdir(), standAlone = TRUE,
+                             verbose = -2, purge = TRUE))
+  testthat::expect_identical(pkgDT[Package == "LandR"]$packageFullName,
+                             "PredictiveEcology/LandR@development (>= 1.2.0.9046)")
+  testthat::expect_identical(pkgDT[Package == "reproducible"]$packageFullName,
+                             "PredictiveEcology/reproducible@development (>= 3.2.1.9062)")
+})
+
 test_that("dedupInstallRefs keeps the strictest constraint among duplicate CRAN rows", {
   dt <- data.table::data.table(
     Package         = c("stringfish", "stringfish"),
