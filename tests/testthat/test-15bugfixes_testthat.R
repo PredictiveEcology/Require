@@ -941,6 +941,15 @@ test_that(".preferGHrefDedup() collapses multi-form refs preferring GH > CRAN", 
     Require:::.preferGHrefDedup(c("acct/pkg@dev", "acct/pkg", "pkg")),
     "acct/pkg@dev")
 
+  # A later copy of the kept GH ref that adds a version floor is kept, so
+  # trimRedundancies() can apply the floor (2026-10-03: a module's
+  # "LandR@development (>= 1.2.0.9046)" was dropped behind the global's
+  # unversioned ref, and LandR 1.2.0.9045 was never upgraded).
+  expect_identical(
+    Require:::.preferGHrefDedup(c("acct/pkg@dev", "pkg (>= 1.0)",
+                                  "acct/pkg@dev (>= 1.2.0.9046)", "acct/pkg")),
+    c("acct/pkg@dev", "acct/pkg@dev (>= 1.2.0.9046)"))
+
   # No-op when there are no duplicates.
   refs2 <- c("data.table", "fpCompare", "digest")
   expect_identical(Require:::.preferGHrefDedup(refs2), refs2)
