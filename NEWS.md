@@ -2,7 +2,7 @@
 
 ## Dependency changes
 
-* Require now needs R >= 4.3 (was 4.1), the oldest R version its checks run on.
+* Require now needs R >= 4.3 (was 4.1), the oldest R version its checks run on (#220).
 
 ## Bug fixes
 
