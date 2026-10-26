@@ -1,5 +1,9 @@
 # Require (development version)
 
+## Dependency changes
+
+* Require now needs R >= 4.3 (was 4.1), the oldest R version its checks run on.
+
 ## Bug fixes
 
 * Under pak, a GitHub ref listed twice, once unversioned and once with a version floor (`"PredictiveEcology/LandR@development"` in a project's packages and `"PredictiveEcology/LandR@development (>= 1.2.0.9046)"` in a module's reqdPkgs), now keeps the floor. Only the first copy was kept, so an installed LandR 1.2.0.9045 was never upgraded.
