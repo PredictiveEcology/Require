@@ -112,9 +112,12 @@ utils::globalVariables(c(
 #'   then this will override any packages passed to `packages`. By default,
 #'   `Require` will attempt to resolve dependency violations (i.e., if this
 #'   `packageVersionFile` specifies a version of a package that violates
-#'   the dependency specification of another package). If a user wishes to attempt
-#'   to install the `packageVersionFile` without assessing the dependencies,
-#'   set `dependencies = FALSE`.
+#'   the dependency specification of another package). With pak, the snapshot is
+#'   installed as a closed set: exactly the packages and versions or commits it
+#'   lists, without following any package's `Remotes` or adding dependencies
+#'   (which would request a package at another ref, e.g. a branch, beside its
+#'   snapshot pin). To also resolve and install each package's dependencies
+#'   (pak), set `dependencies = TRUE`.
 #' @param libPaths The library path (or libraries) where all packages should be
 #'   installed, and looked for to load (i.e., call `library`). This can be used
 #'   to create isolated, stand alone package installations, if used with
@@ -1108,6 +1111,29 @@ archivedOn <- function(possiblyArchivedPkg, pkgRelPath, verbose, repos, numGroup
   )
 }
 
+# A GitHub ref pinned to a commit (`owner/repo@<sha>`) is not satisfied by an
+# installed copy of another commit, even at the same Version (dev versions do not
+# always bump per commit). Compare the pin with the installed DESCRIPTION's
+# RemoteSha / GithubSHA1 (as alreadyExistingDESCFile() does for branch HEADs) and
+# mark a mismatch not OK. A pin may be abbreviated; an installed copy with no
+# recorded SHA is left as it was.
+installedShaDiffersFromPin <- function(pkgDT, libPaths) {
+  if (!all(c("Repo", "Branch") %in% colnames(pkgDT))) return(pkgDT)
+  isPin <- which(pkgDT[["installedVersionOK"]] %in% TRUE & pkgDT[["isPkgInstalled"]] %in% TRUE &
+                   grepl("^[0-9a-fA-F]{7,40}$", pkgDT[["Branch"]]) &
+                   !grepl("\\(HEAD\\)", pkgDT[["packageFullName"]]))
+  for (k in isPin) {
+    descFile <- file.path(libPaths, pkgDT[["Package"]][k], "DESCRIPTION")
+    descFile <- descFile[file.exists(descFile)][1]
+    if (is.na(descFile)) next
+    sha <- DESCRIPTIONFileOtherV(descFile, other = "RemoteSha")
+    if (is.na(sha) || !nzchar(sha)) sha <- DESCRIPTIONFileOtherV(descFile, other = "GithubSHA1")
+    if (!is.na(sha) && nzchar(sha) && !startsWith(tolower(sha), tolower(pkgDT[["Branch"]][k])))
+      set(pkgDT, k, "installedVersionOK", FALSE)
+  }
+  pkgDT
+}
+
 whichToInstall <- function(pkgDT, install, verbose, libPaths = .libPaths()) {
   set(pkgDT, NULL, "isPkgInstalled", !is.na(pkgDT[["Version"]]))
   set(pkgDT, NULL, "installedVersionOK", !is.na(pkgDT[["Version"]])) # default: if it is installed,  say "OK"
@@ -1125,6 +1151,8 @@ whichToInstall <- function(pkgDT, install, verbose, libPaths = .libPaths()) {
           #by = seq(sum(hasVersionsToCompare))
     ]
   }
+
+  pkgDT <- installedShaDiffersFromPin(pkgDT, libPaths)
 
   pkgDT <- checkHEAD(pkgDT)
   if (any(pkgDT[[hasHEADtxt]])) {
@@ -1910,8 +1938,15 @@ doPkgSnapshot <- function(packageVersionFile, purge, libPaths,
     ## resolves the whole set once, installs it in dependency order with
     ## dependencies = FALSE, and never lets a lone ref pull its deps at
     ## unpinned versions (see pakPinnedInstall in pak.R).
+    ## Unless the caller asks for dependencies (`dependencies = TRUE` or a
+    ## type vector), also keep pak from expanding the set: following a pinned
+    ## package's `Remotes` adds requests at other refs (a branch) beside the
+    ## snapshot's own pins (see pakPinnedClosed in pak.R).
     assign("pakPinnedInstall", TRUE, envir = pakEnv())
-    on.exit(rm(list = intersect(c("pakPinnedInstall", "pakDepGraph"),
+    dotDeps <- list(...)$dependencies
+    if (is.null(dotDeps) || isFALSE(dotDeps))
+      assign("pakPinnedClosed", TRUE, envir = pakEnv())
+    on.exit(rm(list = intersect(c("pakPinnedInstall", "pakPinnedClosed", "pakDepGraph"),
                                 ls(pakEnv(), all.names = TRUE)),
                envir = pakEnv()), add = TRUE)
     out <- Require(need,

@@ -75,9 +75,12 @@ not parse inside \code{{...}} and must use the quoted string form.}
 then this will override any packages passed to \code{packages}. By default,
 \code{Require} will attempt to resolve dependency violations (i.e., if this
 \code{packageVersionFile} specifies a version of a package that violates
-the dependency specification of another package). If a user wishes to attempt
-to install the \code{packageVersionFile} without assessing the dependencies,
-set \code{dependencies = FALSE}.}
+the dependency specification of another package). With pak, the snapshot is
+installed as a closed set: exactly the packages and versions or commits it
+lists, without following any package's \code{Remotes} or adding dependencies
+(which would request a package at another ref, e.g. a branch, beside its
+snapshot pin). To also resolve and install each package's dependencies
+(pak), set \code{dependencies = TRUE}.}
 
 \item{libPaths}{The library path (or libraries) where all packages should be
 installed, and looked for to load (i.e., call \code{library}). This can be used
