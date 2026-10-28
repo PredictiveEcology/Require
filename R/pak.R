@@ -2529,6 +2529,13 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
 
   # pak uses logical: TRUE = include Suggests, NA = standard (Imports/Depends/LinkingTo)
   wh <- if (any(grepl("suggests", tolower(unlist(which))))) TRUE else NA
+  # A closed snapshot (see doPkgSnapshot) asks pak about the pinned refs only:
+  # dependencies = FALSE makes pak follow no `Remotes` and add no other ref;
+  # `which` empty keeps the deps tables from adding requests below.
+  if (isTRUE(get0("pakPinnedClosed", envir = pakEnv(), inherits = FALSE))) {
+    wh <- FALSE
+    which <- character()
+  }
 
   # A package the user requested as a GitHub ref is installed from GitHub, even
   # if the user (e.g. a module's reqdPkgs) ALSO listed it as plain CRAN. Move
@@ -2944,7 +2951,12 @@ pakInstallLevels <- function(pkgs, pkgNames) {
 # whatever version CRAN has today, so a non-closed snapshot fails loudly on the
 # packages that need the missing pin instead of quietly drifting.
 pakPinnedResolve <- function(pkgDT, pak_result, pinned, verbose) {
-  extra <- setdiff(pak_result$package, c(pinned, .basePkgs))
+  # In a closed solve pak_result holds only the pinned refs, so a missing pin
+  # shows as a hard dependency of one of them, not as an added row.
+  hard <- c("depends", "imports", "linkingto")
+  hardDeps <- unlist(lapply(pak_result$deps, function(d)
+    if (NROW(d)) d$package[tolower(d$type) %in% hard]))
+  extra <- setdiff(c(pak_result$package, hardDeps), c(pinned, .basePkgs, "R"))
   if (length(extra)) {
     warning("pinned install: ", length(extra), " package(s) are needed but not pinned ",
             "in the snapshot, so they will not be installed: ",

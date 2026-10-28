@@ -1998,6 +1998,84 @@ test_that("the pak conflict handler keeps an explicit @sha over a @branch", {
   testthat::expect_identical(Require:::pakConflictKeep(lhs = "fireregimetools", rhs = br), br)
 })
 
+# A snapshot is a closed set with every package pinned, so the pak path must
+# install exactly its refs: following fireSenseUtils' Remotes
+# (FOR-CAST/fireregimetools@main) put a request at the branch beside the
+# snapshot's own fireregimetools pin.
+test_that("a snapshot install on the pak path requests only the pinned refs, not their Remotes", {
+  skip_if_not_installed("pak")
+  shaU <- "187033b0000000000000000000000000000000aa"
+  shaR <- "236a7656995420fc1f864742d4f861ae7ad0e27f"
+  asked <- list()
+  fake_resolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NULL,
+                           type = getOption("pkgType")) {
+    asked[[length(asked) + 1L]] <<- list(refs = pkgsForPak, wh = wh)
+    deps <- data.frame(ref = "FOR-CAST/fireregimetools@main", type = "imports",
+                       package = "fireregimetools", op = "", version = "")
+    none <- deps[integer(0), , drop = FALSE]
+    d <- data.frame(package = c("fireSenseUtils", "fireregimetools"),
+                    version = c("0.2.3.9110", "0.1.0.9008"),
+                    ref = c(paste0("FOR-CAST/fireSenseUtils@", shaU),
+                            paste0("FOR-CAST/fireregimetools@", shaR)),
+                    type = "github", direct = TRUE, lib_status = "new")
+    d$deps <- I(list(deps, none))
+    if (!isFALSE(wh)) {   # following the Remotes adds the branch row
+      d <- rbind(d, data.frame(package = "fireregimetools", version = "0.1.0.9010",
+                               ref = "FOR-CAST/fireregimetools@main", type = "github",
+                               direct = FALSE, lib_status = "new",
+                               deps = I(list(none))))
+    }
+    d
+  }
+  assign("pakPinnedInstall", TRUE, envir = Require:::pakEnv())
+  assign("pakPinnedClosed", TRUE, envir = Require:::pakEnv())
+  on.exit(suppressWarnings(rm(list = c("pakPinnedInstall", "pakPinnedClosed", "pakDepGraph"),
+                              envir = Require:::pakEnv())))
+  pkgDT <- testthat::with_mocked_bindings(
+    pakDepsResolve = fake_resolve,
+    Require:::pakDepsToPkgDT(c(paste0("FOR-CAST/fireSenseUtils@", shaU),
+                               paste0("FOR-CAST/fireregimetools@", shaR)),
+                             which = c("Imports", "Depends", "LinkingTo"),
+                             libPaths = withr::local_tempdir(), standAlone = TRUE,
+                             verbose = -2, purge = TRUE))
+  testthat::expect_false(any(grepl("@main", unlist(lapply(asked, `[[`, "refs")))))
+  testthat::expect_true(all(vapply(asked, function(a) isFALSE(a$wh), logical(1))),
+                        info = "pak must not expand the pinned refs' dependencies")
+  testthat::expect_setequal(
+    pkgDT$packageFullName,
+    c(paste0("FOR-CAST/fireSenseUtils@", shaU, " (== 0.2.3.9110)"),
+      paste0("FOR-CAST/fireregimetools@", shaR, " (== 0.1.0.9008)")))
+})
+
+test_that("doPkgSnapshot closes the pak resolution unless dependencies are asked for", {
+  snap <- withr::local_tempfile(fileext = ".csv")
+  data.table::fwrite(data.frame(Package = "fireregimetools", packageFullName =
+                                "FOR-CAST/fireregimetools@236a7656995420fc1f864742d4f861ae7ad0e27f",
+                                Version = "0.1.0.9008", GithubRepo = "fireregimetools",
+                                GithubUsername = "FOR-CAST",
+                                GithubSHA1 = "236a7656995420fc1f864742d4f861ae7ad0e27f"), snap)
+  closedSeen <- function(...) {
+    seen <- NULL
+    testthat::with_mocked_bindings(
+      Require = function(...) {
+        seen <<- isTRUE(get0("pakPinnedClosed", envir = Require:::pakEnv(), inherits = FALSE))
+        TRUE
+      },
+      dealWithSnapshotViolations = function(pkgSnapshotObj, ...) {
+        data.table::data.table(Package = "fireregimetools", packageFullName =
+          pkgSnapshotObj$packageFullName)
+      },
+      Require:::doPkgSnapshot(snap, purge = FALSE, libPaths = withr::local_tempdir(),
+                              install_githubArgs = list(), install.packagesArgs = list(),
+                              verbose = -2, returnDetails = FALSE, ...))
+    seen
+  }
+  testthat::expect_true(closedSeen())
+  testthat::expect_true(closedSeen(dependencies = FALSE))
+  testthat::expect_false(closedSeen(dependencies = TRUE))
+  testthat::expect_false(exists("pakPinnedClosed", envir = Require:::pakEnv(), inherits = FALSE))
+})
+
 # ---------------------------------------------------------------------------
 # A user `>=` / `>` constraint on an already-installed-but-insufficient package
 # must UPGRADE it, not keep the old version. pak has no native lower-bound ref
