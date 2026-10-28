@@ -1057,6 +1057,28 @@ isExplicitShaPin <- function(refs) {
     !grepl("\\([[:space:]]*[<>=]", refs)
 }
 
+# Named vector package -> version from pak's resolution. pak can return one
+# package twice (a Remotes `@branch` row and the user's pinned `@<sha>` row);
+# `pinRefs` (bare `owner/repo@<sha>` refs) put the rows for those pins first so
+# a lookup by package name finds the pinned commit's version, not the branch's.
+pakVersionMap <- function(pak_result, pinRefs = character()) {
+  isPin <- if (is.null(pak_result$ref)) rep(FALSE, NROW(pak_result)) else pak_result$ref %in% pinRefs
+  pak_result <- pak_result[order(!isPin), , drop = FALSE]
+  setNames(as.character(pak_result$version), pak_result$package)
+}
+
+# Which of two refs pak reports as conflicting to keep. A GitHub ref beats a
+# plain CRAN name; between two GitHub refs an explicit `@<sha>` pin (the user's
+# request) beats a `@branch` (usually a dependency's Remotes); otherwise `rhs`.
+pakConflictKeep <- function(lhs, rhs) {
+  lhsGH <- isGH(lhs) || grepl("@", lhs)
+  rhsGH <- isGH(rhs) || grepl("@", rhs)
+  if (!rhsGH) lhs
+  else if (!lhsGH) rhs
+  else if (isExplicitShaPin(lhs) && !isExplicitShaPin(rhs)) lhs
+  else rhs
+}
+
 # Reduce a vector of pak refs to the bare package names that line up with
 # rownames(installed.packages()). Three things to strip:
 #   * "any::"  prefix on plain CRAN refs   (any::cli           -> cli)
@@ -2218,13 +2240,10 @@ pakDepsResolve <- function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NUL
         # Extract the RHS (what it conflicts with), case-insensitive, strip trailing noise
         rhs <- trimws(sub("(?i).*conflicts with\\s*", "", cl, perl = TRUE))
         rhs <- trimws(sub(",.*$", "", rhs))              # strip ", to be installed" etc.
-        # Remove whichever is a plain CRAN ref (no @branch, no owner/);
-        # if both are GitHub, remove the one without a @branch spec
-        lhsGH <- isGH(lhs) || grepl("@", lhs)
-        rhsGH <- isGH(rhs) || grepl("@", rhs)
-        toRm  <- if (!rhsGH) rhs else if (!lhsGH) lhs else rhs
+        # Keep the winner of pakConflictKeep(); remove the other side.
+        keep  <- pakConflictKeep(lhs, rhs)
+        toRm  <- if (identical(keep, lhs)) rhs else lhs
         pkgNmToRm <- extractPkgName(toRm)
-        keep <- if (!rhsGH) lhs else rhs
         # Remove every pkgsForPak entry for this package name that is NOT the winner.
         # Only mark changed if something was actually removed -- otherwise the same
         # conflict will appear in the next attempt and we'll loop until attempt limit.
@@ -2798,15 +2817,18 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   # whenever any version is already installed -- even though the user asked for
   # that exact commit. Attach `(== <version pak resolved for that commit>)` so the
   # commit's version drives the decision: install when the installed version
-  # differs, treat an equal installed version as satisfied (a same-version,
-  # different-commit case is not distinguished -- dev versions bump per commit).
+  # differs. An equal installed version is satisfied unless the installed
+  # DESCRIPTION records another commit (whichToInstall compares the SHA).
+  # pak can return the package twice (a dependency's Remotes `@branch` row and
+  # this pin's row): the version comes from the row whose ref is the pin.
   # Only explicit commit SHAs qualify; branch refs (which track the branch via
   # HEAD), `(HEAD)`-flagged refs, and refs the user already version-constrained
   # are left untouched. Combined with the @sha + (== X) install-path fix, the
   # implicit `(== X)` resolves and installs cleanly (no malformed @sha@X ref).
+  isShaPinned <- isExplicitShaPin(user_pkgFN)
+  shaPinRefs <- trimVersionNumber(user_pkgFN[isShaPinned])
   if (NROW(pak_result) && !is.null(pak_result$version) && !is.null(pak_result$package)) {
-    verMapSha <- setNames(as.character(pak_result$version), pak_result$package)
-    isShaPinned <- isExplicitShaPin(user_pkgFN)
+    verMapSha <- pakVersionMap(pak_result, shaPinRefs)
     for (.j in which(isShaPinned)) {
       v <- verMapSha[extractPkgName(user_pkgFN[.j])]
       if (!is.na(v) && nzchar(v))
@@ -2858,7 +2880,7 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
   # and trimRedundancies on the returned pkgDT, which drops any extra columns.
   if (!is.null(pak_result) && !is.null(pak_result$version) && !is.null(pak_result$package)) {
     assign("pakResolvedVersionMap",
-           setNames(as.character(pak_result$version), pak_result$package),
+           pakVersionMap(pak_result, shaPinRefs),
            envir = pakEnv())
     assign("pakDepGraph", pakHardDepGraph(pak_result), envir = pakEnv())
     if (isTRUE(get0("pakPinnedInstall", envir = pakEnv(), inherits = FALSE)))

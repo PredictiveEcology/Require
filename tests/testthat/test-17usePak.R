@@ -1923,6 +1923,81 @@ test_that("isExplicitShaPin qualifies only bare GitHub @sha refs", {
                          c(TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE))
 })
 
+# Installing from a snapshot: another snapshotted package's Remotes names the same
+# package at a branch, so pak resolves it twice (the branch HEAD and the pinned
+# commit). The pin must take the commit's version, not the first row by name.
+sha_pin_pkgs <- function(sha) c(paste0("FOR-CAST/fireregimetools@", sha), "clusters")
+sha_pin_resolve <- function(sha, branchFirst = TRUE) {
+  function(pkgsForPak, wh, repos, verbose, purge, userPkgs = NULL,
+           type = getOption("pkgType")) {
+    d <- data.frame(package = c("fireregimetools", "fireregimetools", "clusters"),
+                    version = c("0.1.0.9010", "0.1.0.9008", "0.0.85"),
+                    ref = c("FOR-CAST/fireregimetools@main",
+                            paste0("FOR-CAST/fireregimetools@", sha),
+                            "PredictiveEcology/clusters@development"),
+                    type = "github", direct = TRUE, lib_status = "new")
+    if (!branchFirst) d <- d[c(2, 1, 3), ]
+    none <- data.frame(ref = character(), type = character(), package = character(),
+                       op = character(), version = character())
+    d$deps <- I(rep(list(none), nrow(d)))
+    d
+  }
+}
+
+test_that("a pinned GitHub commit takes the version of its own pak row, not the branch row's", {
+  skip_if_not_installed("pak")
+  sha <- "236a7656995420fc1f864742d4f861ae7ad0e27f"
+  for (branchFirst in c(TRUE, FALSE)) {
+    pkgDT <- testthat::with_mocked_bindings(
+      pakDepsResolve = sha_pin_resolve(sha, branchFirst),
+      Require:::pakDepsToPkgDT(sha_pin_pkgs(sha),
+                               which = c("Imports", "Depends", "LinkingTo"),
+                               libPaths = withr::local_tempdir(), standAlone = TRUE,
+                               verbose = -2, purge = TRUE))
+    testthat::expect_identical(
+      pkgDT[Package == "fireregimetools"]$packageFullName,
+      paste0("FOR-CAST/fireregimetools@", sha, " (== 0.1.0.9008)"),
+      info = paste("branch row first:", branchFirst))
+  }
+})
+
+# Dev versions do not always bump per commit, so a same-version, different-commit
+# install must be recognised by the SHA recorded in the installed DESCRIPTION.
+test_that("whichToInstall reinstalls a pinned commit whose installed SHA differs at the same version", {
+  sha <- "236a7656995420fc1f864742d4f861ae7ad0e27f"
+  lib <- withr::local_tempdir()
+  mkInstalled <- function(pkg, field, value) {
+    dir.create(file.path(lib, pkg))
+    writeLines(c(paste0("Package: ", pkg), "Version: 0.1.0.9008",
+                 paste0(field, ": ", value)), file.path(lib, pkg, "DESCRIPTION"))
+  }
+  mkInstalled("fireregimetools", "RemoteSha", strrep("a", 40))      # other commit
+  mkInstalled("samecommit", "GithubSHA1", sha)                      # same commit
+  mkInstalled("abbrev", "RemoteSha", sha)                           # pin is abbreviated
+  refs <- c(paste0("FOR-CAST/fireregimetools@", sha, " (== 0.1.0.9008)"),
+            paste0("FOR-CAST/samecommit@", sha, " (== 0.1.0.9008)"),
+            paste0("FOR-CAST/abbrev@", substr(sha, 1, 8), " (== 0.1.0.9008)"))
+  pkgDT <- Require:::toPkgDTFull(refs)
+  data.table::set(pkgDT, NULL, "Version", "0.1.0.9008")
+  out <- Require:::whichToInstall(pkgDT, install = TRUE, verbose = -2, libPaths = lib)
+  testthat::expect_identical(out$needInstall[match("fireregimetools", out$Package)], "install")
+  testthat::expect_identical(out$needInstall[match("samecommit", out$Package)], "dontInstall")
+  testthat::expect_identical(out$needInstall[match("abbrev", out$Package)], "dontInstall")
+})
+
+# pak reports "X@main: Conflicts with X@<sha>" when both are requested; the
+# explicit commit pin is the user's request and must be the one kept.
+test_that("the pak conflict handler keeps an explicit @sha over a @branch", {
+  sha <- "236a7656995420fc1f864742d4f861ae7ad0e27f"
+  pin <- paste0("FOR-CAST/fireregimetools@", sha)
+  br  <- "FOR-CAST/fireregimetools@main"
+  testthat::expect_identical(Require:::pakConflictKeep(lhs = br, rhs = pin), pin)
+  testthat::expect_identical(Require:::pakConflictKeep(lhs = pin, rhs = br), pin)
+  # unchanged: a GitHub ref beats a plain CRAN name, either side
+  testthat::expect_identical(Require:::pakConflictKeep(lhs = br, rhs = "fireregimetools"), br)
+  testthat::expect_identical(Require:::pakConflictKeep(lhs = "fireregimetools", rhs = br), br)
+})
+
 # ---------------------------------------------------------------------------
 # A user `>=` / `>` constraint on an already-installed-but-insufficient package
 # must UPGRADE it, not keep the old version. pak has no native lower-bound ref
