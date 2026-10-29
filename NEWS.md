@@ -1,5 +1,9 @@
 # Require (development version)
 
+## Dependency changes
+
+* Require now needs R >= 4.3 (was 4.1), the oldest R version its checks run on (#220).
+
 ## Bug fixes
 
 * Under pak, a package installed from GitHub (e.g. `Require` itself) and also named in a dependency's `Remotes` no longer makes the batch resolution fail. The installed copy is pinned as `Require@2.1.1.9001`; when pak reported it as conflicting with `PredictiveEcology/Require@development`, the pin was treated as a GitHub ref and kept, so nothing was removed and resolution fell back to per-package installs, leaving `reproducible` at CRAN 3.2.1 below its `>= 3.2.1.9075` floor.
