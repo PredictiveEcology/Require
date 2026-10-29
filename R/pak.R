@@ -1068,11 +1068,12 @@ pakVersionMap <- function(pak_result, pinRefs = character()) {
 }
 
 # Which of two refs pak reports as conflicting to keep. A GitHub ref beats a
-# plain CRAN name; between two GitHub refs an explicit `@<sha>` pin (the user's
-# request) beats a `@branch` (usually a dependency's Remotes); otherwise `rhs`.
+# plain CRAN name or a `pkg@version` pin (no `owner/`, so not GitHub); between
+# two GitHub refs an explicit `@<sha>` pin (the user's request) beats a
+# `@branch` (usually a dependency's Remotes); otherwise `rhs`.
 pakConflictKeep <- function(lhs, rhs) {
-  lhsGH <- isGH(lhs) || grepl("@", lhs)
-  rhsGH <- isGH(rhs) || grepl("@", rhs)
+  lhsGH <- isGH(lhs)
+  rhsGH <- isGH(rhs)
   if (!rhsGH) lhs
   else if (!lhsGH) rhs
   else if (isExplicitShaPin(lhs) && !isExplicitShaPin(rhs)) lhs
@@ -3733,6 +3734,20 @@ pakSerialInstall <- function(pkgs, lib, repos, verbose, cranDeps = NA) {
   invisible(failed)
 }
 
+# TRUE when the DESCRIPTION at `descPath` belongs to a build that this install
+# replaces: pak resolved `pkg` to a version other than the installed one. The
+# dependencies on disk are then those of the old build -- often one in another
+# library on the path -- and say nothing about the plan, which pak resolved for
+# the new build. Unknown resolved version -> FALSE (the check proceeds).
+pakInstalledIsReplaced <- function(pkg, descPath) {
+  resolvedMap <- get0("pakResolvedVersionMap", envir = pakEnv(), inherits = FALSE)
+  resolved <- unname(resolvedMap[pkg])
+  if (!length(resolved) || is.na(resolved) || !nzchar(resolved)) return(FALSE)
+  installed <- tryCatch(read.dcf(descPath, fields = "Version")[1L, 1L],
+                        error = function(e) NA_character_)
+  !is.na(installed) && !identical(as.character(installed), resolved)
+}
+
 # Install only the packages Require has determined need installing (needInstall == .txtInstall).
 # pak is called with exact version pins or any:: to avoid re-resolving deps.
 pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
@@ -3795,6 +3810,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
         system.file("DESCRIPTION", package = pkg, lib.loc = origPaths),
         error = function(e) "")
       if (!nzchar(descPath)) next  # not installed locally; can't pre-check
+      if (pakInstalledIsReplaced(pkg, descPath)) next  # its deps are not the plan's
       hardDeps <- tryCatch(
         unique(extractPkgName(DESCRIPTIONFileDeps(
           descPath, which = c("Depends", "Imports", "LinkingTo")))),

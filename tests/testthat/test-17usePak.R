@@ -1576,6 +1576,37 @@ test_that("pakInstallFiltered aborts install when a hard dep is unresolved (pre-
   )
 })
 
+# (d2) -- the pre-install check must read the deps of the build that will be
+#         installed, not of an older/newer build of the same package that sits
+#         in another library on the path (e.g. R_LIBS_SITE). Such a build is
+#         about to be replaced; its deps (here "notInstalledDep") are not the
+#         plan's, and used to stop the install: "depends on (not installed,
+#         not in plan)".
+test_that("pakInstalledIsReplaced: installed build differs from the version pak resolved", {
+  outerLib <- file.path(tempdir(), paste0("outerLib", sample(1e5, 1)))
+  dir.create(file.path(outerLib, "fakeOuterPkg"), recursive = TRUE)
+  on.exit(unlink(outerLib, recursive = TRUE), add = TRUE)
+  descPath <- file.path(outerLib, "fakeOuterPkg", "DESCRIPTION")
+  writeLines(c("Package: fakeOuterPkg", "Version: 2.0.0",
+               "Imports: notInstalledDep"), descPath)
+
+  env <- Require:::pakEnv()
+  hadMap <- exists("pakResolvedVersionMap", envir = env, inherits = FALSE)
+  oldMap <- get0("pakResolvedVersionMap", envir = env, inherits = FALSE)
+  on.exit(if (hadMap) assign("pakResolvedVersionMap", oldMap, envir = env)
+          else rm("pakResolvedVersionMap", envir = env), add = TRUE)
+
+  assign("pakResolvedVersionMap", c(fakeOuterPkg = "1.0.0"), envir = env)
+  expect_true(Require:::pakInstalledIsReplaced("fakeOuterPkg", descPath))
+
+  assign("pakResolvedVersionMap", c(fakeOuterPkg = "2.0.0"), envir = env)
+  expect_false(Require:::pakInstalledIsReplaced("fakeOuterPkg", descPath))
+
+  ## pak resolved nothing for this package: keep checking
+  assign("pakResolvedVersionMap", c(otherPkg = "1.0.0"), envir = env)
+  expect_false(Require:::pakInstalledIsReplaced("fakeOuterPkg", descPath))
+})
+
 # (c) -- pinInstalledForPak's own semantics are unchanged: it respects
 #        user-supplied version specs and GitHub/url::/@-pinned refs.
 #        This is what lets the new always-pin behaviour stay safe: if a
@@ -1996,6 +2027,10 @@ test_that("the pak conflict handler keeps an explicit @sha over a @branch", {
   # unchanged: a GitHub ref beats a plain CRAN name, either side
   testthat::expect_identical(Require:::pakConflictKeep(lhs = br, rhs = "fireregimetools"), br)
   testthat::expect_identical(Require:::pakConflictKeep(lhs = "fireregimetools", rhs = br), br)
+  # a `pkg@version` pin of an installed package is not a GitHub ref: the
+  # dependency's Remotes ref wins, so the pin is the one removed
+  testthat::expect_identical(Require:::pakConflictKeep(lhs = br, rhs = "fireregimetools@0.1.0"), br)
+  testthat::expect_identical(Require:::pakConflictKeep(lhs = "fireregimetools@0.1.0", rhs = br), br)
 })
 
 # A snapshot is a closed set with every package pinned, so the pak path must
