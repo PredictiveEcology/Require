@@ -56,3 +56,18 @@ testthat::test_that("splitGitRepo is vectorised and names elements by repo", {
   testthat::expect_identical(unname(unlist(g$subFolder)), c(NA_character_, "z"))
   testthat::expect_identical(names(g$repo), c("b", "y"))
 })
+
+testthat::test_that("splitGitRepo decodes %2F in a branch name", {
+  g <- Require:::splitGitRepo("Acct/Repo@feature%2Fx")
+  testthat::expect_identical(g$br[[1]], "feature/x")
+  testthat::expect_true(is.na(g$subFolder[[1]]))
+
+  g <- Require:::splitGitRepo("Acct/Repo@feature%2fx/modules/mod")
+  testthat::expect_identical(g$br[[1]], "feature/x")
+  testthat::expect_identical(g$subFolder[[1]], "modules/mod")
+
+  ## unescaped: the first segment is still the branch
+  g <- Require:::splitGitRepo("Acct/Repo@feature/x")
+  testthat::expect_identical(g$br[[1]], "feature")
+  testthat::expect_identical(g$subFolder[[1]], "x")
+})

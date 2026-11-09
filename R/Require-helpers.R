@@ -890,7 +890,10 @@ splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = 
   acct <- lapply(leftSeg, function(x) if (length(x) > 1L) x[[1L]] else default)
   names(repo) <- names(acct) <- unlist(repo, use.names = FALSE)
 
-  br <- lapply(rightSeg, function(r) if (length(r) && nzchar(r[[1L]])) r[[1L]] else "HEAD")
+  ## A "/" inside a branch name is written "%2F" (`Acct/Repo@feature%2Fx`), since a
+  ## bare "/" after the branch starts a subfolder.
+  br <- lapply(rightSeg, function(r)
+    if (length(r) && nzchar(r[[1L]])) gsub("%2F", "/", r[[1L]], ignore.case = TRUE) else "HEAD")
   names(br) <- names(repo)
 
   ## Anything past acct/repo on the left, plus anything past the branch on the
