@@ -3591,7 +3591,7 @@ rmPackageFirst <- function(toInstall, libPaths, verbose) {
 }
 
 downloadAndBuildToLocalFile <- function(Account, Repo, Branch, Package, GitSubFolder, verbose, VersionOnRepos) {
-  gitRepo <- paste0(Account, "/", Repo, "@", Branch)
+  gitRepo <- joinGitRepo(Account, Repo, Branch)
   names(gitRepo) <- Package
   out <- downloadRepo(gitRepo, subFolder = GitSubFolder,
                       overwrite = TRUE, destDir = ".", verbose = verbose)
