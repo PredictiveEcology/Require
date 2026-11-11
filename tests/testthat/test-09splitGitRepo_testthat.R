@@ -71,3 +71,49 @@ testthat::test_that("splitGitRepo decodes %2F in a branch name", {
   testthat::expect_identical(g$br[[1]], "feature")
   testthat::expect_identical(g$subFolder[[1]], "x")
 })
+
+## parseGitHub() (package refs) and splitGitRepo() (repo downloads) are two parsers of
+## one spec. A non-pak install goes through both: parseGitHub() splits the ref, then
+## downloadAndBuildToLocalFile() rebuilds `acct/repo@branch` for splitGitRepo(). A "/"
+## in the branch broke that hand-off.
+testthat::test_that("parseGitHub and splitGitRepo agree on account, repo, branch, subfolder", {
+  specs <- c("A/R@dev", "A/R", "A/R/sub@dev", "A/R@fix%2Fpak-x", "A/R/sub@fix%2Fy",
+             "A/R@dev (>= 1.0)")
+  p <- Require:::parseGitHub(specs)
+  g <- Require:::splitGitRepo(specs)
+  sub <- if (is.null(p$GitSubFolder)) NA_character_ else p$GitSubFolder
+  testthat::expect_identical(p$Account, unname(unlist(g$acct)))
+  testthat::expect_identical(p$Repo, unname(unlist(g$repo)))
+  testthat::expect_identical(p$Branch, unname(unlist(g$br)))
+  testthat::expect_identical(sub, unname(unlist(g$subFolder)))
+})
+
+testthat::test_that("parseGitHub: a package ref's branch may contain '/'", {
+  p <- Require:::parseGitHub(c("A/R@fix/pak-x", "A/R/sub@fix/sub-y"))
+  testthat::expect_identical(p$Account, c("A", "A"))
+  testthat::expect_identical(p$Repo, c("R", "R"))
+  testthat::expect_identical(p$Branch, c("fix/pak-x", "fix/sub-y"))
+  testthat::expect_identical(p$GitSubFolder, c(NA, "sub"))
+})
+
+testthat::test_that("joinGitRepo is undone by splitGitRepo", {
+  j <- Require:::joinGitRepo(c("A", "A"), c("R", "R"), c("fix/pak-x", "dev"))
+  testthat::expect_identical(j, c("A/R@fix%2Fpak-x", "A/R@dev"))
+  testthat::expect_identical(unname(unlist(Require:::splitGitRepo(j)$br)), c("fix/pak-x", "dev"))
+})
+
+testthat::test_that("non-pak install: the downloaded branch is the whole branch name", {
+  got <- NULL
+  testthat::local_mocked_bindings(
+    downloadRepo = function(gitRepo, subFolder, ...) got <<- list(gitRepo = gitRepo, subFolder = subFolder),
+    build = function(...) NULL, .package = "Require")
+  p <- Require:::parseGitHub("PredictiveEcology/quickPlot@ci/migrate-to-org-workflow")
+  withr::local_dir(withr::local_tempdir())
+  Require:::downloadAndBuildToLocalFile(p$Account, p$Repo, p$Branch, "quickPlot",
+                                        GitSubFolder = p$GitSubFolder, verbose = -1,
+                                        VersionOnRepos = NA)
+  g <- Require:::splitGitRepo(got$gitRepo)
+  testthat::expect_identical(g$br[[1]], "ci/migrate-to-org-workflow")
+  testthat::expect_true(is.na(g$subFolder[[1]]))
+  testthat::expect_true(is.null(got$subFolder) || is.na(got$subFolder))
+})
