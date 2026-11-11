@@ -1092,11 +1092,46 @@ pakConflictKeep <- function(lhs, rhs) {
 # survives as "pkg@X" and the install-summary / iter-loop / archive-fallback
 # checks all misclassify it as still-missing -- even right after a successful
 # install -- because installed.packages() returns "pkg".
+## A GitHub repository can be named differently from the package it holds:
+## RNCan/BioSimClient_R is package BioSIM. For such a ref the repo name is
+## wrong, so the name pak solved for the ref is used when this install's solve
+## recorded one (pakRefPkgMap, set in pakDepsToPkgDT). Otherwise the install
+## levels lost BioSIM's dependency on J4R (built in parallel: "dependency 'J4R'
+## is not available"), and an installed BioSIM was reported still-missing.
 pakRefToBareName <- function(refs) {
   isUrl <- startsWith(refs, "url::")
   if (any(isUrl))
     refs[isUrl] <- extractPkgName(filenames = basename(refs[isUrl]))
-  sub("@.*$", "", sub("^any::", "", sub("^[^/]+/", "", extractPkgName(refs))))
+  out <- sub("@.*$", "", sub("^any::", "", sub("^[^/]+/", "", extractPkgName(refs))))
+  refPkg <- get0("pakRefPkgMap", envir = pakEnv(), inherits = FALSE)
+  if (length(refPkg) && length(refs)) {
+    hit <- unname(refPkg[pakRefKey(refs)])
+    out[!is.na(hit)] <- hit[!is.na(hit)]
+  }
+  out
+}
+
+## Normalise a GitHub ref to the "owner/repo" key pakRefPkgMap uses: no "any::"
+## or "github::" prefix, no "@ref", no version spec, lower case. Refs without an
+## owner give NA, so CRAN refs never match.
+pakRefKey <- function(refs) {
+  key <- sub("^(any|github)::", "", trimws(refs))
+  key <- sub("[[:space:]]*\\(.*$", "", key)
+  key <- sub("@.*$", "", key)
+  key <- tolower(key)
+  key[!grepl("^[^/[:space:]]+/[^/[:space:]]+$", key)] <- NA_character_
+  key
+}
+
+## owner/repo key -> the package pak solved for that GitHub ref, only where the
+## two names differ (where they agree the repo name is already right).
+pakRefPkgMap <- function(pak_result) {
+  if (is.null(pak_result$ref) || is.null(pak_result$package)) return(character())
+  key <- pakRefKey(as.character(pak_result$ref))
+  pkg <- as.character(pak_result$package)
+  repo <- sub("^.*/", "", key)
+  keep <- !is.na(key) & !is.na(pkg) & repo != tolower(pkg) & !duplicated(key)
+  setNames(pkg[keep], key[keep])
 }
 
 # pkgdepends (0.9.x, pkgplan_i_lp_deduplicate) rules out an older source
@@ -2891,6 +2926,7 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
            pakVersionMap(pak_result, shaPinRefs),
            envir = pakEnv())
     assign("pakDepGraph", pakHardDepGraph(pak_result), envir = pakEnv())
+    assign("pakRefPkgMap", pakRefPkgMap(pak_result), envir = pakEnv())
     if (isTRUE(get0("pakPinnedInstall", envir = pakEnv(), inherits = FALSE)))
       pkgDT <- pakPinnedResolve(pkgDT, pak_result, extractPkgName(packages), verbose)
   }
@@ -4230,8 +4266,9 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   # pak call costs a few seconds of subprocess and metadata work, so levelling
   # an ordinary CRAN batch was pure overhead. The graph is this install's: do
   # not let it leak into a later one that resolved differently, or not at all.
-  on.exit(if (exists("pakDepGraph", envir = pakEnv(), inherits = FALSE))
-            rm("pakDepGraph", envir = pakEnv()), add = TRUE)
+  on.exit(for (nm in c("pakDepGraph", "pakRefPkgMap"))
+            if (exists(nm, envir = pakEnv(), inherits = FALSE)) rm(list = nm, envir = pakEnv()),
+          add = TRUE)
   levels <- if (pinned) pakInstallLevels(pkgs, pkgNamesAll) else list(pkgs)
   installLevel <- function(pkgs) {
     if (identical(strategy, "original")) {
@@ -4607,11 +4644,20 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
                                LibPath = character(0))
   }
   nowInstalledAll <- NULL  # computed lazily in the else-branch below
+  ## The name the package installs under, which for a GitHub repo named
+  ## differently from its package (RNCan/BioSimClient_R -> BioSIM) is not `Package`.
+  instNames <- toInstall$Package
+  refPkg <- get0("pakRefPkgMap", envir = pakEnv(), inherits = FALSE)
+  if (length(refPkg) && !is.null(toInstall$packageFullName)) {
+    hit <- unname(refPkg[pakRefKey(as.character(toInstall$packageFullName))])
+    instNames[!is.na(hit)] <- hit[!is.na(hit)]
+  }
 
   for (pkg in toInstall$Package) {
     wh <- which(pkgDT$Package == pkg)
     if (!length(wh)) next
-    nowRow <- nowInstalled[Package == pkg]
+    inst <- instNames[match(pkg, toInstall$Package)]
+    nowRow <- nowInstalled[Package == inst]
     if (NROW(nowRow)) {
       installedVer <- nowRow$Version[1]
       # Check if installed version actually satisfies the original requirement.
@@ -4630,7 +4676,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
         if (!isTRUE(satisfies)) {
           pakVerMap <- get0("pakResolvedVersionMap", envir = pakEnv(), inherits = FALSE)
           if (!is.null(pakVerMap)) {
-            cand <- pakVerMap[pkg]
+            cand <- pakVerMap[inst]
             if (!is.na(cand) && nzchar(cand)) pakRes <- unname(cand)
           }
           satisfies <- pakConstraintSatisfied(installedVer, vSpec, ineq, pakRes)
@@ -4708,7 +4754,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
                                         LibPath = character(0))
         }
       }
-      elseRow <- nowInstalledAll[Package == pkg]
+      elseRow <- nowInstalledAll[Package == inst]
       if (NROW(elseRow)) {
         elseVer <- elseRow$Version[1]
         vSpec   <- pkgDT$versionSpec[wh[1L]]

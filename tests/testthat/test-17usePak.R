@@ -949,6 +949,37 @@ test_that("pakRefToBareName output matches installed.packages() rownames", {
                   " as 'pkg@ver' the iter-loop will misclassify them as missing"))
 })
 
+## A GitHub repo named differently from its package: RNCan/BioSimClient_R holds BioSIM, which
+## Imports the GitHub-only J4R. The install levels looked BioSIM up in the dependency graph as
+## "BioSimClient_R", found nothing, and built it beside J4R ("dependency 'J4R' is not
+## available"); an installed BioSIM was then reported still-missing (BiomeBGC_core#12).
+test_that("a GitHub ref uses the package name pak solved, for levels and still-missing checks", {
+  mkdeps <- function(...) data.frame(package = c(...), type = rep("Imports", length(c(...))))
+  pak_result <- data.frame(ref = c("CWFC-CCFB/J4R", "RNCan/BioSimClient_R", "any::cli"),
+                           package = c("J4R", "BioSIM", "cli"),
+                           version = c("1.3.0", "1.1.2", "3.6.5"))
+  pak_result$deps <- list(mkdeps(), mkdeps("J4R", "cli"), mkdeps())
+
+  ## only refs whose repo name differs from the package are mapped
+  refPkg <- Require:::pakRefPkgMap(pak_result)
+  expect_identical(refPkg, c("rncan/biosimclient_r" = "BioSIM"))
+
+  env <- Require:::pakEnv()
+  withr::defer(for (nm in c("pakDepGraph", "pakRefPkgMap"))
+    if (exists(nm, envir = env, inherits = FALSE)) rm(list = nm, envir = env))
+  assign("pakDepGraph", Require:::pakHardDepGraph(pak_result), envir = env)
+  assign("pakRefPkgMap", refPkg, envir = env)
+
+  refs <- c("CWFC-CCFB/J4R", "RNCan/BioSimClient_R")
+  expect_identical(Require:::pakRefToBareName(refs), c("J4R", "BioSIM"))
+  expect_identical(Require:::pakRefToBareName(c("rncan/biosimclient_r@main",
+                                                "RNCan/BioSimClient_R (>= 1.1)",
+                                                "tidyverse/ggplot2@main", "qs@0.27.3")),
+                   c("BioSIM", "BioSIM", "ggplot2", "qs"))
+  levels <- unname(Require:::pakInstallLevels(refs, Require:::pakRefToBareName(refs)))
+  expect_identical(levels, list("CWFC-CCFB/J4R", "RNCan/BioSimClient_R"))
+})
+
 # ---------------------------------------------------------------------------
 # 19. pakDepsCacheKey: user-supplied version constraints are part of the key
 # ---------------------------------------------------------------------------
