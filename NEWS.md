@@ -2,6 +2,7 @@
 
 ## Bug fixes
 
+* A GitHub branch whose name only starts with "main" or "master" (`@maintenance`, `@master-fix`) is no longer rewritten to `HEAD` (`@HEADtenance`).
 * A GitHub branch name containing "/" can be given as `%2F` (`Acct/Repo@feature%2Fx`); a bare "/" after the branch still starts a subfolder.
 * Without pak, a GitHub package on a branch whose name contains "/" (`Acct/Repo@fix/x`) now installs. The branch was cut at the first "/" when the repository was downloaded, and the rest was taken as a subfolder.
 * Under pak, a package installed from GitHub (e.g. `Require` itself) and also named in a dependency's `Remotes` no longer makes the batch resolution fail. The installed copy is pinned as `Require@2.1.1.9001`; when pak reported it as conflicting with `PredictiveEcology/Require@development`, the pin was treated as a GitHub ref and kept, so nothing was removed and resolution fell back to per-package installs, leaving `reproducible` at CRAN 3.2.1 below its `>= 3.2.1.9075` floor.

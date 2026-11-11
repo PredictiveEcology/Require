@@ -117,3 +117,13 @@ testthat::test_that("non-pak install: the downloaded branch is the whole branch 
   testthat::expect_true(is.na(g$subFolder[[1]]))
   testthat::expect_true(is.null(got$subFolder) || is.na(got$subFolder))
 })
+
+## masterMainToHead() matched "@main"/"@master" as a prefix, so a branch that only
+## starts with those words was rewritten: `@maintenance` became `@HEADtenance`.
+testthat::test_that("masterMainToHead rewrites only a whole 'main' or 'master' branch", {
+  testthat::expect_identical(
+    Require:::masterMainToHead(c("A/R@main", "A/R@master (>= 1.0)", "A/R@main(>=1.0)", "A/R",
+                                 "A/R@maintenance", "A/R@master-fix", "A/R@main/x", "A/R@dev")),
+    c("A/R@HEAD", "A/R@HEAD (>= 1.0)", "A/R@HEAD(>=1.0)", "A/R@HEAD",
+      "A/R@maintenance", "A/R@master-fix", "A/R@main/x", "A/R@dev"))
+})
