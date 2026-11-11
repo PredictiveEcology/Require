@@ -44,8 +44,10 @@ parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
       isGitHub <- which(isGH)
       set(pkgDT, isGitHub, "fullGit", trimVersionNumber(pkgDT$packageFullName[isGitHub]))
       set(pkgDT, isGitHub, "fullGit", masterMainToHead(pkgDT$fullGit[isGitHub]))
-      set(pkgDT, isGitHub, "Account", gsub("^(.*)/.*$", "\\1", pkgDT$fullGit[isGitHub]))
-      set(pkgDT, isGitHub, "RepoWBranch", gsub("^(.*)/(.*)@*.*$", "\\2", pkgDT$fullGit[isGitHub]))
+      ## A subfolder comes before the "@"; anything after it is the branch, which may
+      ## contain "/" (`Acct/Repo@fix/x`) or "%2F" (the form splitGitRepo() reads).
+      set(pkgDT, isGitHub, "Account", gsub("^(.*)/.*$", "\\1", sub("@.*$", "", pkgDT$fullGit[isGitHub])))
+      set(pkgDT, isGitHub, "RepoWBranch", sub("^[^/]*/", "", pkgDT$fullGit[isGitHub]))
       set(pkgDT, isGitHub, "hasSubFolder", grepl("/", pkgDT$Account[isGitHub]))
       if (any(pkgDT$hasSubFolder, na.rm = TRUE)) { # fix both Account and RepoWBranch
         hasSubFold <- which(pkgDT$hasSubFolder)
@@ -60,7 +62,7 @@ parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
               by = seq(sum(hasSubFolder, na.rm = TRUE))
         ]
         pkgDT[hasSubFolder %in% TRUE,
-              RepoWBranch := gsub(paste0("/", GitSubFolder), "", RepoWBranch),
+              RepoWBranch := sub(paste0("/", GitSubFolder), "", RepoWBranch, fixed = TRUE),
               by = seq(sum(hasSubFolder, na.rm = TRUE))
         ]
       }
@@ -68,7 +70,7 @@ parseGitHub <- function(pkgDT, verbose = getOption("Require.verbose")) {
       # set(pkgDT, isGitHub, "Branch", "HEAD")
       set(pkgDT, isGitHub, "Branch", "main")
       wh1 <- which(isGH & grepl("@", pkgDT$RepoWBranch))
-      set(pkgDT, wh1, "Branch", gsub("^.*@(.*)$", "\\1", pkgDT$RepoWBranch[wh1]))
+      set(pkgDT, wh1, "Branch", gsub("%2F", "/", sub("^[^@]*@", "", pkgDT$RepoWBranch[wh1]), ignore.case = TRUE))
       set(pkgDT, NULL, c("RepoWBranch", "fullGit"), NULL)
     }
   }
@@ -890,7 +892,10 @@ splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = 
   acct <- lapply(leftSeg, function(x) if (length(x) > 1L) x[[1L]] else default)
   names(repo) <- names(acct) <- unlist(repo, use.names = FALSE)
 
-  br <- lapply(rightSeg, function(r) if (length(r) && nzchar(r[[1L]])) r[[1L]] else "HEAD")
+  ## A "/" inside a branch name is written "%2F" (`Acct/Repo@feature%2Fx`), since a
+  ## bare "/" after the branch starts a subfolder.
+  br <- lapply(rightSeg, function(r)
+    if (length(r) && nzchar(r[[1L]])) gsub("%2F", "/", r[[1L]], ignore.case = TRUE) else "HEAD")
   names(br) <- names(repo)
 
   ## Anything past acct/repo on the left, plus anything past the branch on the
@@ -912,6 +917,10 @@ splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = 
 
   list(acct = acct, repo = repo, br = br, versionSpec = vs, subFolder = subFolder)
 }
+
+## The inverse of splitGitRepo(): `acct/repo@br`, with a "/" in the branch written "%2F".
+joinGitRepo <- function(acct, repo, br)
+  paste0(acct, "/", repo, "@", gsub("/", "%2F", br, fixed = TRUE))
 
 postInstallDESCRIPTIONMods <- function(pkgInstall, libPaths) {
   whGitHub <- which(pkgInstall$repoLocation %in% .txtGitHub)
