@@ -1,5 +1,9 @@
 # Require (development version)
 
+## Dependency changes
+
+* Require now needs R >= 4.3 (was 4.1), the oldest R version its checks run on (#220).
+
 ## Bug fixes
 
 * A GitHub ref with the subfolder before "@" (`Acct/Repo/sub@fix/x`) now reads the whole rest as the branch when the repository is downloaded; it used to get branch `fix` and subfolder `sub/x`.

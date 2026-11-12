@@ -33,7 +33,7 @@ Authors@R: c(
            role = "cph")
     )
 Depends:
-    R (>= 4.1)
+    R (>= 4.3)
 Imports:
     callr,
     data.table (>= 1.10.4),
