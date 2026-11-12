@@ -902,13 +902,8 @@ purgePkgDep <- function(purge) {
 #'    or @sha or @tag
 #' @return The git repository with @HEAD if it had @master, @main or no @.
 masterMainToHead <- function(gitRepo) {
-  masterOrMain <- "@(master|main) *"
-  areMasterOrMain <- grepl(masterOrMain, gitRepo)
-  if (any(areMasterOrMain)) {
-    masterOrMainNoSpace <- "@(master|main)"
-    gitRepo[areMasterOrMain] <-
-      gsub(paste0("(", masterOrMainNoSpace, ")"), "@HEAD", gitRepo[areMasterOrMain])
-  }
+  ## the whole branch only: not `@maintenance` or `@main/x`
+  gitRepo <- sub("@(master|main)( |\\(|$)", "@HEAD\\2", gitRepo)
 
   noAt <- !grepl("@", gitRepo)
   if (any(noAt)) {
