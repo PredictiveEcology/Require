@@ -118,6 +118,18 @@ testthat::test_that("non-pak install: the downloaded branch is the whole branch 
   testthat::expect_true(is.null(got$subFolder) || is.na(got$subFolder))
 })
 
+## With the subfolder before "@" (`Acct/Repo/sub@fix/x`), everything after "@" can only
+## be the branch. splitGitRepo() still cut it at the first "/", unlike parseGitHub().
+testthat::test_that("splitGitRepo: a subfolder before '@' leaves the whole rest as the branch", {
+  g <- Require:::splitGitRepo("PE/myMod/subFolder@fix/thisone")
+  testthat::expect_identical(g$br[[1]], "fix/thisone")
+  testthat::expect_identical(g$subFolder[[1]], "subFolder")
+  specs <- c("PE/myMod/subFolder@fix/thisone", "PE/myMod/a/b@fix%2Fy", "PE/myMod/sub@dev")
+  p <- Require:::parseGitHub(specs)
+  g <- Require:::splitGitRepo(specs)
+  testthat::expect_identical(p$Branch, unname(unlist(g$br)))
+})
+
 ## masterMainToHead() matched "@main"/"@master" as a prefix, so a branch that only
 ## starts with those words was rewritten: `@maintenance` became `@HEADtenance`.
 testthat::test_that("masterMainToHead rewrites only a whole 'main' or 'master' branch", {

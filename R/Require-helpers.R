@@ -887,6 +887,9 @@ splitGitRepo <- function(gitRepo, default = "PredictiveEcology", masterOrMain = 
 
   leftSeg  <- strsplit(beforeAt, "/", fixed = TRUE)
   rightSeg <- strsplit(afterAt, "/", fixed = TRUE)
+  ## A subfolder before "@" (`Acct/Repo/sub@fix/x`): all of the rest is the branch.
+  subBeforeAt <- lengths(leftSeg) > 2L & nzchar(afterAt)
+  rightSeg[subBeforeAt] <- as.list(afterAt[subBeforeAt])
 
   repo <- lapply(leftSeg, function(x) x[[min(2L, length(x))]])
   acct <- lapply(leftSeg, function(x) if (length(x) > 1L) x[[1L]] else default)

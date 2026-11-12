@@ -2,6 +2,7 @@
 
 ## Bug fixes
 
+* A GitHub ref with the subfolder before "@" (`Acct/Repo/sub@fix/x`) now reads the whole rest as the branch when the repository is downloaded; it used to get branch `fix` and subfolder `sub/x`.
 * A GitHub branch whose name only starts with "main" or "master" (`@maintenance`, `@master-fix`) is no longer rewritten to `HEAD` (`@HEADtenance`).
 * Under pak, a GitHub package whose repository is named differently from the package (`RNCan/BioSimClient_R` holds `BioSIM`) is now installed after its GitHub dependencies and no longer reported as not installed. The install levels looked it up by the repository name, so `BioSIM` lost its dependency on `J4R`, was built beside it, and could fail with "dependency 'J4R' is not available". When it did install, identify-and-defer still reported `BioSimClient_R` missing, retried it, tried the CRAN archive, and warned "could not be installed: BioSimClient_R". The name pak solved for each GitHub ref is now used.
 * A GitHub branch name containing "/" can be given as `%2F` (`Acct/Repo@feature%2Fx`); a bare "/" after the branch still starts a subfolder.
