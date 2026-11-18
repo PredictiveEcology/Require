@@ -3776,8 +3776,6 @@ cloneSources <- function(rcf = getOption("Require.cloneFrom"), toLib) {
 # One row per copy, in the order of `libs`.
 clonablePackages <- function(libs, pkgs) {
   fields <- c("Built", "NeedsCompilation", "RemoteType", "RemoteSha", "GithubSHA1")
-  none <- data.table(Package = character(), LibPath = character(), Version = character())
-  if (!length(pkgs)) return(none)
   ip <- do.call(rbind, lapply(libs, function(lib) {
     if (dir.exists(file.path(lib, "00LOCK"))) return(NULL)
     mess <- capture.output(
@@ -3788,9 +3786,12 @@ clonablePackages <- function(libs, pkgs) {
     ip <- ip[ip[, "Package"] %in% pkgs, , drop = FALSE]
     if (length(grep("Error in readRDS", mess))) # some packages in lib are broken
       ip <- ip[!ip[, "Package"] %in% unlist(unname(packageHasError(lib))), , drop = FALSE]
+    # none of pkgs here; also, paste0("00LOCK-", character(0)) below is "00LOCK-"
+    if (!NROW(ip)) return(NULL)
     ip[!dir.exists(file.path(lib, paste0("00LOCK-", ip[, "Package"]))), , drop = FALSE]
   }))
-  if (is.null(ip)) return(none)
+  if (is.null(ip)) return(data.table(Package = character(), LibPath = character(),
+                                     Version = character()))
   ip <- canClone(ip)
   ip <- ip[!ip[, "Package"] %in% .pakNoCopyPkgs(), , drop = FALSE]
   as.data.table(ip)

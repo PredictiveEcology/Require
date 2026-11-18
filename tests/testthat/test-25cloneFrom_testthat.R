@@ -249,6 +249,25 @@ test_that("a package mid-install (00LOCK) is not cloned", {
   expect_identical(Require:::clonablePackages(from, c("tinyCloneA", "tinyCloneB"))$Package, "tinyCloneB")
 })
 
+test_that("a cloneFrom library holding none of the packages is skipped, not an error", {
+  ## CI runners have an empty or unrelated library on the path; its zero rows made the 00LOCK
+  ## filter fail with "logical subscript too long", so Require() itself failed under pak.
+  from <- cloneFromLib()
+  empty <- withr::local_tempdir()
+  other <- withr::local_tempdir()
+  tinyPkg(other, "tinyCloneOther")
+  for (libs in list(c(empty, from), c(other, from), c(from, empty)))
+    expect_identical(sort(Require:::clonablePackages(libs, c("tinyCloneA", "tinyCloneB"))$Package),
+                     c("tinyCloneA", "tinyCloneB"))
+  expect_identical(nrow(Require:::clonablePackages(c(empty, other), "tinyCloneA")), 0L)
+
+  withr::local_options(Require.cloneFrom = c(empty, other, from))
+  setSolve()
+  to <- withr::local_tempdir()
+  out <- Require:::pakClonePackages(planDT(), libPaths = to, verbose = 0)
+  expect_true(all(out$needInstall == Require:::.txtDontInstall))
+})
+
 test_that("cloneFrom = TRUE means R_LIBS, R_LIBS_USER and R_LIBS_SITE, never the target", {
   a <- withr::local_tempdir(); b <- withr::local_tempdir(); target <- withr::local_tempdir()
   withr::local_envvar(R_LIBS = paste(a, target, sep = .Platform$path.sep), R_LIBS_USER = b,
