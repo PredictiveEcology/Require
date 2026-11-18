@@ -3783,6 +3783,8 @@ clonablePackages <- function(libs, pkgs) {
     )
     clearErrorReadRDSFile(mess, lib)
     ip <- ip[ip[, "Package"] %in% pkgs, , drop = FALSE]
+    # none of pkgs here; also, paste0("00LOCK-", character(0)) below is "00LOCK-"
+    if (!NROW(ip)) return(NULL)
     if (length(grep("Error in readRDS", mess))) # some packages in lib are broken
       ip <- ip[!ip[, "Package"] %in% unlist(unname(packageHasError(lib))), , drop = FALSE]
     ip[!dir.exists(file.path(lib, paste0("00LOCK-", ip[, "Package"]))), , drop = FALSE]
