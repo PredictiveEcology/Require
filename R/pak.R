@@ -3052,7 +3052,7 @@ pakClonePackages <- function(pkgDT, libPaths, verbose = getOption("Require.verbo
   repeat {
     final <- c(resolved, baseVers[!names(baseVers) %in% names(resolved)])
     final[names(vers)] <- vers
-    e <- cloneEdges[cloneEdges$from %in% names(vers)]
+    e <- cloneEdges[cloneEdges[["from"]] %in% names(vers)]
     v <- unname(final[e$package])
     hasReq <- !is.na(e$version) & nzchar(e$version)
     ok <- !is.na(v)
