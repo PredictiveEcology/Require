@@ -2927,7 +2927,6 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
            envir = pakEnv())
     assign("pakDepGraph", pakHardDepGraph(pak_result), envir = pakEnv())
     if (!is.null(getOption("Require.cloneFrom")) && !isFALSE(getOption("Require.cloneFrom"))) {
-      assign("pakDepEdges", pakHardDepEdges(pak_result), envir = pakEnv())
       assign("pakResolvedShaMap", pakResolvedShaMap(pak_result), envir = pakEnv())
     }
     assign("pakRefPkgMap", pakRefPkgMap(pak_result), envir = pakEnv())
@@ -2973,20 +2972,6 @@ pakHardDepGraph <- function(pak_result) {
   graph
 }
 
-# The hard-dep edges of the global solve, with their version requirements:
-# one row per (from, package, op, version). pakClonePackages() checks a cloned
-# version against these, so a clone never breaks a package that pak resolved
-# to need something newer.
-pakHardDepEdges <- function(pak_result) {
-  hard <- c("depends", "imports", "linkingto")
-  rbindlist(Map(from = pak_result$package, deps = pak_result$deps, function(from, deps) {
-    if (is.null(deps) || !NROW(deps)) return(NULL)
-    deps <- deps[tolower(deps$type) %in% hard & deps$package != "R", , drop = FALSE]
-    data.table(from = rep(from, NROW(deps)), package = deps$package,
-               op = deps$op, version = deps$version)
-  }))
-}
-
 # The commit pak resolved for each GitHub package: package -> RemoteSha. A
 # package resolved to more than one commit (per-package fallback) is left out.
 pakResolvedShaMap <- function(pak_result) {
@@ -3003,20 +2988,21 @@ pakResolvedShaMap <- function(pak_result) {
 # installed from a cloneFrom library (see cloneSources()) into libPaths[1]
 # instead. A GitHub package is cloned only from a copy of the commit pak
 # resolved; a CRAN-style one only from a copy that is not a development
-# build. The copy must meet every version requirement: the user's (pkgDT) and
-# those in pak's resolved dep graph; and the plan must meet the copy's own.
+# build. The copy must meet every version requirement in pkgDT (the user's
+# and, from pak's solve, those of the packages that depend on it); and the
+# plan must meet the copy's own.
 # Of several copies, pak's resolved version wins, else the highest. A package
 # already in libPaths[1] is never overwritten. Cloned rows leave the install
 # plan; pak then installs the rest and, with upgrade = FALSE, keeps the clones.
 pakClonePackages <- function(pkgDT, libPaths, verbose = getOption("Require.verbose")) {
   env <- pakEnv()
-  edges <- get0("pakDepEdges", envir = env, inherits = FALSE)
   shas <- get0("pakResolvedShaMap", envir = env, inherits = FALSE)
   resolved <- get0("pakResolvedVersionMap", envir = env, inherits = FALSE)
-  # Consume them: without a fresh solve there is nothing to check a clone against.
-  suppressWarnings(rm(list = c("pakDepEdges", "pakResolvedShaMap"), envir = env))
+  # Consume the SHA map: it marks a fresh solve; without one there is nothing
+  # to check a clone against.
+  suppressWarnings(rm("pakResolvedShaMap", envir = env))
   libs <- cloneSources(toLib = libPaths[1])
-  if (!length(libs) || is.null(edges) || is.null(resolved)) return(pkgDT)
+  if (!length(libs) || is.null(shas) || is.null(resolved)) return(pkgDT)
 
   inst <- pkgDT[needInstall %in% .txtInstall]
   refs <- inst$packageFullName
@@ -3032,7 +3018,7 @@ pakClonePackages <- function(pkgDT, libPaths, verbose = getOption("Require.verbo
   if (!NROW(cp)) return(pkgDT)
 
   sha <- ifelse(is.na(cp$RemoteSha), cp$GithubSHA1, cp$RemoteSha)
-  wantSha <- if (is.null(shas)) rep(NA_character_, NROW(cp)) else unname(shas[cp$Package])
+  wantSha <- unname(shas[cp$Package])
   cp <- cp[ifelse(cp$Package %in% ghPkgs, (sha == wantSha) %in% TRUE, !cloneIsDevBuild(cp))]
 
   # The user's own requirements, per copy
@@ -3055,20 +3041,18 @@ pakClonePackages <- function(pkgDT, libPaths, verbose = getOption("Require.verbo
     data.table(from = rep(cp$Package[i], length(d)), package = extractPkgName(d),
                op = extractInequality(d), version = extractVersionNumber(d))
   }))
-  # Drop clones until every edge touching one is met. A failing edge into a
-  # clone means the clone is too old for its dependent; a failing edge out of
-  # a clone means the plan lacks what the clone needs.
+  # Drop clones until the plan meets every clone's own requirements. A failing
+  # requirement on another clone drops that clone (it then gets pak's
+  # version); any other failing requirement drops the clone that has it.
   # Base and recommended packages are not in pak's plan: use R's own copies.
-  basePkgs <- intersect(unique(c(edges$package, cloneEdges$package)), .basePkgs)
+  basePkgs <- intersect(unique(cloneEdges$package), .basePkgs)
   baseVers <- vapply(basePkgs, function(p)
     tryCatch(as.character(packageVersion(p, lib.loc = .Library)), error = function(e) NA_character_),
     character(1))
   repeat {
     final <- c(resolved, baseVers[!names(baseVers) %in% names(resolved)])
     final[names(vers)] <- vers
-    e <- rbindlist(list(edges[!from %in% names(vers)],
-                        cloneEdges[from %in% names(vers)]), use.names = TRUE)
-    e <- e[package %in% names(vers) | from %in% names(vers)]
+    e <- cloneEdges[from %in% names(vers)]
     v <- unname(final[e$package])
     hasReq <- !is.na(e$version) & nzchar(e$version)
     ok <- !is.na(v)

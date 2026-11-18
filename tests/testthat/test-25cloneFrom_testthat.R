@@ -33,14 +33,11 @@ planDT <- function(pkgs = c("tinyCloneA", "tinyCloneB"), refs = pkgs,
 
 ## What pakDepsToPkgDT leaves in pakEnv() after a global solve.
 setSolve <- function(resolved = c(tinyCloneA = "0.0.1", tinyCloneB = "0.0.1"),
-                     edges = data.table::data.table(from = "tinyCloneB", package = "tinyCloneA",
-                                                    op = ">=", version = "0.0.1"),
                      shas = character(), envir = parent.frame()) {
   env <- Require:::pakEnv()
   assign("pakResolvedVersionMap", resolved, envir = env)
-  assign("pakDepEdges", edges, envir = env)
   assign("pakResolvedShaMap", shas, envir = env)
-  withr::defer(suppressWarnings(rm(list = c("pakResolvedVersionMap", "pakDepEdges", "pakResolvedShaMap"),
+  withr::defer(suppressWarnings(rm(list = c("pakResolvedVersionMap", "pakResolvedShaMap"),
                                    envir = env)), envir = envir)
 }
 
@@ -58,11 +55,13 @@ test_that("pakClonePackages hard-links packages that meet every requirement", {
     inodes <- system2("stat", c("-c", "%i", shQuote(f)), stdout = TRUE)
     expect_identical(inodes[1], inodes[2])
   }
-  ## the edges are consumed: a later call without a fresh solve clones nothing
-  expect_false(exists("pakDepEdges", envir = Require:::pakEnv(), inherits = FALSE))
+  ## the solve is consumed: a later call without a fresh one clones nothing
+  expect_false(exists("pakResolvedShaMap", envir = Require:::pakEnv(), inherits = FALSE))
 })
 
-test_that("pakClonePackages skips a clone that misses the user's requirement", {
+test_that("pakClonePackages skips a clone that misses a requirement in the plan", {
+  ## pkgDT carries the user's requirements and, from pak's solve, those of the packages that
+  ## depend on each one (tinyCloneA (>= 0.0.2) when a planned package needs it).
   from <- cloneFromLib()
   to <- withr::local_tempdir()
   withr::local_options(Require.cloneFrom = from)
@@ -74,29 +73,11 @@ test_that("pakClonePackages skips a clone that misses the user's requirement", {
   expect_false(dir.exists(file.path(to, "tinyCloneA")))
 })
 
-test_that("pakClonePackages skips a clone that is too old for a package in pak's plan", {
-  from <- cloneFromLib()
-  to <- withr::local_tempdir()
-  withr::local_options(Require.cloneFrom = from)
-  ## pak planned tinyCloneC, which is not in cloneFrom and needs tinyCloneA >= 0.0.2: the 0.0.1
-  ## copy won't do. tinyCloneB's copy still works against the planned tinyCloneA 0.0.2.
-  setSolve(resolved = c(tinyCloneA = "0.0.2", tinyCloneB = "0.0.1", tinyCloneC = "1.0"),
-           edges = data.table::data.table(from = c("tinyCloneB", "tinyCloneC"),
-                                          package = "tinyCloneA", op = ">=",
-                                          version = c("0.0.1", "0.0.2")))
-  out <- Require:::pakClonePackages(planDT(c("tinyCloneA", "tinyCloneB", "tinyCloneC")),
-                                    libPaths = to, verbose = 0)
-  expect_identical(out[Package == "tinyCloneA"]$needInstall, Require:::.txtInstall)
-  expect_identical(out[Package == "tinyCloneB"]$needInstall, Require:::.txtDontInstall)
-  expect_identical(out[Package == "tinyCloneC"]$needInstall, Require:::.txtInstall)
-})
-
 test_that("pakClonePackages skips a clone whose own dependency is not in the plan", {
   from <- cloneFromLib()
   to <- withr::local_tempdir()
   withr::local_options(Require.cloneFrom = from)
-  setSolve(resolved = c(tinyCloneB = "0.0.1"), edges = data.table::data.table(
-    from = character(), package = character(), op = character(), version = character()))
+  setSolve(resolved = c(tinyCloneB = "0.0.1"))
   out <- Require:::pakClonePackages(planDT("tinyCloneB"), libPaths = to, verbose = 0)
   expect_identical(out$needInstall, Require:::.txtInstall)
   expect_false(dir.exists(file.path(to, "tinyCloneB")))
@@ -142,16 +123,14 @@ test_that("a GitHub ref is cloned only from a copy of the commit pak resolved", 
   tinyPkg(from, "tinyCloneA", extra = c("RemoteType: github", paste0("RemoteSha: ", sha)))
   withr::local_options(Require.cloneFrom = from)
   plan <- planDT("tinyCloneA", refs = "Owner/tinyCloneA@main")
-  edges0 <- data.table::data.table(from = character(), package = character(), op = character(),
-                                   version = character())
 
   to <- withr::local_tempdir()
-  setSolve(resolved = c(tinyCloneA = "0.0.1"), edges = edges0, shas = c(tinyCloneA = "ffff"))
+  setSolve(resolved = c(tinyCloneA = "0.0.1"), shas = c(tinyCloneA = "ffff"))
   expect_identical(Require:::pakClonePackages(plan, libPaths = to, verbose = 0)$needInstall,
                    Require:::.txtInstall)
 
   to <- withr::local_tempdir()
-  setSolve(resolved = c(tinyCloneA = "0.0.1"), edges = edges0, shas = c(tinyCloneA = sha))
+  setSolve(resolved = c(tinyCloneA = "0.0.1"), shas = c(tinyCloneA = sha))
   expect_identical(Require:::pakClonePackages(plan, libPaths = to, verbose = 0)$needInstall,
                    Require:::.txtDontInstall)
 })
@@ -161,8 +140,7 @@ test_that("a CRAN-style ref never clones a development build", {
   tinyPkg(from, "tinyCloneA", extra = c("RemoteType: github", "RemoteSha: abc"))
   withr::local_options(Require.cloneFrom = from)
   to <- withr::local_tempdir()
-  setSolve(resolved = c(tinyCloneA = "0.0.1"), edges = data.table::data.table(
-    from = character(), package = character(), op = character(), version = character()))
+  setSolve(resolved = c(tinyCloneA = "0.0.1"))
   out <- Require:::pakClonePackages(planDT("tinyCloneA"), libPaths = to, verbose = 0)
   expect_identical(out$needInstall, Require:::.txtInstall)
 })
@@ -173,17 +151,15 @@ test_that("of several copies, pak's resolved version wins, else the highest", {
   tinyPkg(lib2, "tinyCloneA", version = "0.0.3")
   tinyPkg(lib3, "tinyCloneA", version = "0.0.2")
   withr::local_options(Require.cloneFrom = c(lib1, lib2, lib3))
-  edges0 <- data.table::data.table(from = character(), package = character(), op = character(),
-                                   version = character())
   ver <- function(to) read.dcf(file.path(to, "tinyCloneA", "DESCRIPTION"), "Version")[[1]]
 
   to <- withr::local_tempdir()
-  setSolve(resolved = c(tinyCloneA = "0.0.2"), edges = edges0)
+  setSolve(resolved = c(tinyCloneA = "0.0.2"))
   Require:::pakClonePackages(planDT("tinyCloneA"), libPaths = to, verbose = 0)
   expect_identical(ver(to), "0.0.2")
 
   to <- withr::local_tempdir()
-  setSolve(resolved = c(tinyCloneA = "0.0.9"), edges = edges0)
+  setSolve(resolved = c(tinyCloneA = "0.0.9"))
   Require:::pakClonePackages(planDT("tinyCloneA"), libPaths = to, verbose = 0)
   expect_identical(ver(to), "0.0.3")
 })
@@ -228,8 +204,7 @@ test_that("a clone's version requirement on a base package is checked against R'
   tinyPkg(from, "tinyCloneA", imports = "utils (>= 3.4)")
   withr::local_options(Require.cloneFrom = from)
   to <- withr::local_tempdir()
-  setSolve(resolved = c(tinyCloneA = "0.0.1"), edges = data.table::data.table(
-    from = character(), package = character(), op = character(), version = character()))
+  setSolve(resolved = c(tinyCloneA = "0.0.1"))
   out <- Require:::pakClonePackages(planDT("tinyCloneA"), libPaths = to, verbose = 0)
   expect_identical(out$needInstall, Require:::.txtDontInstall)
 })
@@ -246,10 +221,7 @@ test_that("dropping one clone drops the clones that need it, round by round", {
   withr::local_options(Require.cloneFrom = from)
   to <- withr::local_tempdir()
   setSolve(resolved = c(tinyCloneA = "0.0.2", tinyCloneB = "0.0.2", tinyCloneC = "0.0.1",
-                        tinyCloneD = "0.0.1"),
-           edges = data.table::data.table(from = c("tinyCloneB", "tinyCloneC"),
-                                          package = c("tinyCloneA", "tinyCloneB"),
-                                          op = ">=", version = "0.0.2"))
+                        tinyCloneD = "0.0.1"))
   pkgs <- c("tinyCloneA", "tinyCloneB", "tinyCloneC", "tinyCloneD")
   plan <- planDT(pkgs, versionSpec = c("0.0.2", NA, NA, NA), inequality = c(">=", NA, NA, NA))
   out <- Require:::pakClonePackages(plan, libPaths = to, verbose = 0)
