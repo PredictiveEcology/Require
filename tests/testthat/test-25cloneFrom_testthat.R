@@ -157,17 +157,28 @@ test_that("a compiled package built here is cloned under pak and works from the 
 })
 
 test_that("canClone takes a compiled copy only if built for this platform, and never on Windows", {
-  built <- function(platform) paste0("R ", getRversion(), "; ", platform, "; 2026-11-18 00:00:00 UTC; unix")
-  ## the platform field, not NeedsCompilation, says whether a copy has compiled code: R fills it in
-  ## only when it compiled something (tidyselect declares "yes" and has none)
-  ip <- cbind(Package = c("pure", "saysYesButPure", "compHere", "compElsewhere"),
-              NeedsCompilation = c("no", "yes", "yes", "yes"),
-              Built = built(c("", "", R.version$platform, "aarch64-apple-darwin20")))
-  rownames(ip) <- ip[, "Package"]
+  ## compiled = R installed a libs/ folder; the platform comes from the installed DESCRIPTION,
+  ## because before R 4.6 installed.packages() gives Built as just "4.5.3"
+  lib <- withr::local_tempdir()
+  fakeBuild <- function(name, platform) {
+    tinyPkg(lib, name)
+    d <- file.path(lib, name)
+    dir.create(file.path(d, "libs"))
+    desc <- read.dcf(file.path(d, "DESCRIPTION"))
+    desc[, "Built"] <- sub("^(R [^;]*); *[^;]*;", paste0("\\1; ", platform, ";"), desc[, "Built"])
+    write.dcf(desc, file.path(d, "DESCRIPTION"))
+  }
+  tinyPkg(lib, "pure")
+  tinyPkg(lib, "saysYesButPure")
+  f <- file.path(lib, "saysYesButPure", "DESCRIPTION")
+  writeLines(sub("^NeedsCompilation: no$", "NeedsCompilation: yes", readLines(f)), f)
+  fakeBuild("compHere", R.version$platform)
+  fakeBuild("compElsewhere", "aarch64-apple-darwin20")
+  ip <- installed.packages(lib, fields = c("Built", "NeedsCompilation"), noCache = TRUE)
   local_mocked_bindings(isWindows = function() FALSE, .package = "Require")
-  expect_identical(rownames(Require:::canClone(ip)), c("pure", "saysYesButPure", "compHere"))
+  expect_identical(sort(rownames(Require:::canClone(ip))), c("compHere", "pure", "saysYesButPure"))
   local_mocked_bindings(isWindows = function() TRUE, .package = "Require")
-  expect_identical(rownames(Require:::canClone(ip)), c("pure", "saysYesButPure"))
+  expect_identical(sort(rownames(Require:::canClone(ip))), c("pure", "saysYesButPure"))
 })
 
 test_that("always-from-source packages are cloned under pak, but not by the legacy path", {

@@ -4023,15 +4023,23 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
 
 canClone <- function(ip) {
   keep <- correctBuilt(ip, RversionDot()) %in% TRUE
-  # Built is "R 4.6.1; <platform>; <date>; <OS>"; R fills in <platform> only
-  # when it compiled code at install, so it says whether this copy has any
-  # (NeedsCompilation does not: tidyselect says "yes" and has none). A compiled
-  # copy is cloned only when built for this platform, and never on Windows (a
-  # loaded DLL is locked, so a hard-linked one would block later updates in
-  # both libraries).
-  builtPlatform <- sub("^[^;]*; *([^;]*);.*$", "\\1", ip[, "Built"])
-  keep <- keep & (builtPlatform %in% "" |
-                    (!isWindows() & builtPlatform %in% R.version$platform))
+  # A copy has compiled code if R installed a libs/ folder (NeedsCompilation
+  # is unreliable: tidyselect says "yes" and has none). It is cloned only when
+  # built for this platform, and never on Windows (a loaded DLL is locked, so
+  # a hard-linked one would block later updates in both libraries). The
+  # platform is read from the installed DESCRIPTION: before R 4.6,
+  # installed.packages() gives Built as the bare version ("4.5.3").
+  pkgDir <- file.path(ip[, "LibPath"], ip[, "Package"])
+  compiled <- dir.exists(file.path(pkgDir, "libs"))
+  if (isWindows()) {
+    keep <- keep & !compiled
+  } else {
+    sameBuild <- vapply(pkgDir[keep & compiled], function(d) {
+      built <- read.dcf(file.path(d, "DESCRIPTION"), fields = "Built")[1, 1]
+      sub("^[^;]*; *([^;]*);.*$", "\\1", built) %in% R.version$platform
+    }, logical(1))
+    keep[keep & compiled] <- sameBuild
+  }
   ip[keep, , drop = FALSE]
 }
 
@@ -4048,8 +4056,9 @@ BuiltVersion2 <- function(ip) {
 }
 
 correctBuilt <- function(ip, RversionDot) {
-  # installed.packages() gives Built as the raw DESCRIPTION field,
-  # "R 4.6.1; ; <date>; unix", so drop the "R " before comparing.
+  # installed.packages() gives Built as the raw DESCRIPTION field in R >= 4.6
+  # ("R 4.6.1; ; <date>; unix") and as the bare version before ("4.5.3"), so
+  # drop any "R " before comparing.
   startsWith(sub("^R ", "", ip[, "Built"]), prefix = RversionDot)
 }
 
