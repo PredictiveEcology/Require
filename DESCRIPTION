@@ -16,7 +16,7 @@ URL:
     https://Require.predictiveecology.org,
     https://github.com/PredictiveEcology/Require
 Date: 2026-09-04
-Version: 2.1.1.9015
+Version: 2.1.1.9016
 Authors@R: c(
     person(given = "Eliot J B",
            family = "McIntire",
@@ -79,6 +79,7 @@ Collate:
     'messages.R'
     'Require2.R'
     'RequireOptions.R'
+    'cloneCheck.R'
     'envs.R'
     'extract.R'
     'helpers.R'

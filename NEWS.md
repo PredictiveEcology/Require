@@ -1,5 +1,9 @@
 # Require (development version)
 
+## New features
+
+* Every package cloned by `Require.cloneFrom` is now loaded in a fresh R process after the install. A clone that fails to load is deleted (the source copy is untouched), installed normally instead, and never cloned into that library again. In an interactive session the check runs in the background and the next `Require()`/`Install()` on that library acts on it; in scripts and CI the call waits for it and repairs at once. Compiled packages are no longer cloned from a library on a network drive.
+
 ## Bug fixes
 
 * Under pak, `Require()` and `Install()` no longer fail with "logical subscript too long" when one of the `Require.cloneFrom` libraries (by default those in `R_LIBS`, `R_LIBS_USER` and `R_LIBS_SITE`) holds none of the packages to be installed, as on CI runners.
