@@ -117,6 +117,85 @@ test_that("canClone reads the Built field as installed.packages() gives it", {
   expect_identical(rownames(Require:::canClone(ip)), "tinyCloneA")
 })
 
+## A package with compiled C code: f() returns 42L through .Call.
+tinyCompiledPkg <- function(lib, name) {
+  src <- withr::local_tempdir()
+  p <- file.path(src, name)
+  dir.create(file.path(p, "R"), recursive = TRUE)
+  dir.create(file.path(p, "src"))
+  writeLines(c(paste0("Package: ", name), "Version: 0.0.1", "Title: t", "Description: t.",
+               "License: MIT", "Encoding: UTF-8", "NeedsCompilation: yes"), file.path(p, "DESCRIPTION"))
+  writeLines(c(paste0("useDynLib(", name, ", .registration = TRUE)"), "export(f)"),
+             file.path(p, "NAMESPACE"))
+  writeLines("f <- function() .Call(c_f)", file.path(p, "R", "f.R"))
+  writeLines(c("#include <R.h>", "#include <Rinternals.h>", "#include <R_ext/Rdynload.h>",
+               "SEXP c_f(void) { return ScalarInteger(42); }",
+               "static const R_CallMethodDef calls[] = {{\"c_f\", (DL_FUNC) &c_f, 0}, {NULL, NULL, 0}};",
+               paste0("void R_init_", name, "(DllInfo *dll) { R_registerRoutines(dll, NULL, calls, NULL, NULL); }")),
+             file.path(p, "src", "f.c"))
+  system2(file.path(R.home("bin"), "R"), c("CMD", "INSTALL", "-l", shQuote(lib), shQuote(p)),
+          stdout = TRUE, stderr = TRUE)
+  invisible(lib)
+}
+
+test_that("a compiled package built here is cloned under pak and works from the new library", {
+  skip_on_os("windows")
+  from <- withr::local_tempdir()
+  tinyCompiledPkg(from, "tinyCloneComp")
+  skip_if_not(dir.exists(file.path(from, "tinyCloneComp")), "no C compiler")
+  withr::local_options(Require.cloneFrom = from)
+  setSolve(resolved = c(tinyCloneComp = "0.0.1"))
+  to <- withr::local_tempdir()
+  out <- Require:::pakClonePackages(planDT("tinyCloneComp"), libPaths = to, verbose = 0)
+  expect_identical(out$needInstall, Require:::.txtDontInstall)
+  ## the shared library came along and loads from the new library, in a fresh R (both paths
+  ## normalized: on macOS the temp dir is under /var, a link to /private/var)
+  res <- system2(file.path(R.home("bin"), "Rscript"),
+                 c("-e", shQuote(paste0("cat(tinyCloneComp::f(), normalizePath(find.package('tinyCloneComp', lib.loc = '",
+                                        to, "')))"))),
+                 env = paste0("R_LIBS=", to), stdout = TRUE)
+  expect_identical(res, paste(42L, normalizePath(file.path(to, "tinyCloneComp"))))
+})
+
+test_that("canClone takes a compiled copy only if built for this platform, and never on Windows", {
+  ## compiled = R installed a libs/ folder; the platform comes from the installed DESCRIPTION,
+  ## because before R 4.6 installed.packages() gives Built as just "4.5.3"
+  lib <- withr::local_tempdir()
+  fakeBuild <- function(name, platform) {
+    tinyPkg(lib, name)
+    d <- file.path(lib, name)
+    dir.create(file.path(d, "libs"))
+    desc <- read.dcf(file.path(d, "DESCRIPTION"))
+    desc[, "Built"] <- sub("^(R [^;]*); *[^;]*;", paste0("\\1; ", platform, ";"), desc[, "Built"])
+    write.dcf(desc, file.path(d, "DESCRIPTION"))
+  }
+  tinyPkg(lib, "pure")
+  tinyPkg(lib, "saysYesButPure")
+  f <- file.path(lib, "saysYesButPure", "DESCRIPTION")
+  writeLines(sub("^NeedsCompilation: no$", "NeedsCompilation: yes", readLines(f)), f)
+  fakeBuild("compHere", R.version$platform)
+  fakeBuild("compElsewhere", "aarch64-apple-darwin20")
+  ip <- installed.packages(lib, fields = c("Built", "NeedsCompilation"), noCache = TRUE)
+  local_mocked_bindings(isWindows = function() FALSE, .package = "Require")
+  expect_identical(sort(rownames(Require:::canClone(ip))), c("compHere", "pure", "saysYesButPure"))
+  local_mocked_bindings(isWindows = function() TRUE, .package = "Require")
+  expect_identical(sort(rownames(Require:::canClone(ip))), c("pure", "saysYesButPure"))
+})
+
+test_that("always-from-source packages are cloned under pak, but not by the legacy path", {
+  from <- cloneFromLib()
+  withr::local_options(Require.cloneFrom = from, Require.otherPkgs = "tinyCloneA")
+  setSolve(resolved = c(tinyCloneA = "0.0.1"))
+  to <- withr::local_tempdir()
+  Require:::pakClonePackages(planDT("tinyCloneA"), libPaths = to, verbose = 0)
+  expect_identical(dir(to), "tinyCloneA")
+
+  av <- cbind(Package = "tinyCloneA", Version = "0.0.1"); rownames(av) <- "tinyCloneA"
+  to2 <- withr::local_tempdir()
+  Require:::clonePackages(from, list(pkgs = "tinyCloneA", available = av), libPaths = to2, verbose = 0)
+  expect_identical(dir(to2), character())
+})
+
 test_that("a GitHub ref is cloned only from a copy of the commit pak resolved", {
   sha <- "0012d2ffb58646ffd2eb5d6d6381f0ba220a97e4"
   from <- withr::local_tempdir()

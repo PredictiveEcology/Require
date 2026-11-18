@@ -3768,8 +3768,9 @@ cloneSources <- function(rcf = getOption("Require.cloneFrom"), toLib) {
 }
 
 # The copies of `pkgs` in libraries `libs` that may be cloned (hard-linked or
-# copied) instead of installed: no compiled code, built under this R version,
-# not a sourcePkgs() package, readable, and not mid-install (00LOCK). pak /
+# copied) instead of installed: built under this R version (and, if compiled,
+# for this platform and not on Windows; see canClone()), readable, and not
+# mid-install (00LOCK). pak /
 # callr / processx / cli are never cloned -- they bundle native helper
 # executables that don't survive a file-by-file copy (see .pakNoCopyPkgs()).
 # One row per copy, in the order of `libs`.
@@ -3783,16 +3784,16 @@ clonablePackages <- function(libs, pkgs) {
     )
     clearErrorReadRDSFile(mess, lib)
     ip <- ip[ip[, "Package"] %in% pkgs, , drop = FALSE]
-    # none of pkgs here; also, paste0("00LOCK-", character(0)) below is "00LOCK-"
-    if (!NROW(ip)) return(NULL)
     if (length(grep("Error in readRDS", mess))) # some packages in lib are broken
       ip <- ip[!ip[, "Package"] %in% unlist(unname(packageHasError(lib))), , drop = FALSE]
+    # none of pkgs here; also, paste0("00LOCK-", character(0)) below is "00LOCK-"
+    if (!NROW(ip)) return(NULL)
     ip[!dir.exists(file.path(lib, paste0("00LOCK-", ip[, "Package"]))), , drop = FALSE]
   }))
   if (is.null(ip)) return(data.table(Package = character(), LibPath = character(),
                                      Version = character()))
   ip <- canClone(ip)
-  ip <- ip[!ip[, "Package"] %in% c(sourcePkgs(), .pakNoCopyPkgs()), , drop = FALSE]
+  ip <- ip[!ip[, "Package"] %in% .pakNoCopyPkgs(), , drop = FALSE]
   as.data.table(ip)
 }
 
@@ -3810,16 +3811,17 @@ cloneCopies <- function(cp, toLib) {
 }
 
 # Legacy path: clone a package when a copy is at exactly the version that
-# would be installed. `skip`: packages not to clone (GitHub installs).
+# would be installed. `skip`: packages not to clone (GitHub installs). This path
+# still builds sourcePkgs() from source, so it never clones them.
 clonePackages <- function(rcf, ipa, libPaths, skip = character(),
                           verbose = getOption("Require.verbose")) {
   wantToInstall <- ipa[["available"]][, "Version"]
-  cp <- clonablePackages(rcf, setdiff(names(wantToInstall), skip))
+  cp <- clonablePackages(rcf, setdiff(names(wantToInstall), c(skip, sourcePkgs())))
   cp <- cp[!cloneIsDevBuild(cp) & Version == wantToInstall[Package]]
   cp <- cp[!duplicated(Package)]
   if (NROW(cp)) {
     mess <- paste0("  -- Cloning (", NROW(cp)," of ", length(wantToInstall),
-                   ") instead of Installing (don't need compiling): ",
+                   ") instead of Installing: ",
                    paste(cp[["Package"]], collapse = comma))
     mess <- paste0WithLineFeed(mess)
     messageVerbose(green(mess), verbose = verbose)
@@ -4021,14 +4023,25 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
 # }
 
 canClone <- function(ip) {
-  RversionDot <- RversionDot()
-  correctBuilt <- correctBuilt(ip, RversionDot)
-  # correctBuilt <- Rversion == BuiltVersion # needs to re-add package_version to both those functions
-  keepCols6 <- correctBuilt %in% TRUE
-  # if (isWindows()) {
-  keepCols6 <- keepCols6 & ip[,  "NeedsCompilation"] == "no"
-  # }
-  ip[keepCols6 %in% TRUE, , drop = FALSE]
+  keep <- correctBuilt(ip, RversionDot()) %in% TRUE
+  # A copy has compiled code if R installed a libs/ folder (NeedsCompilation
+  # is unreliable: tidyselect says "yes" and has none). It is cloned only when
+  # built for this platform, and never on Windows (a loaded DLL is locked, so
+  # a hard-linked one would block later updates in both libraries). The
+  # platform is read from the installed DESCRIPTION: before R 4.6,
+  # installed.packages() gives Built as the bare version ("4.5.3").
+  pkgDir <- file.path(ip[, "LibPath"], ip[, "Package"])
+  compiled <- dir.exists(file.path(pkgDir, "libs"))
+  if (isWindows()) {
+    keep <- keep & !compiled
+  } else {
+    sameBuild <- vapply(pkgDir[keep & compiled], function(d) {
+      built <- read.dcf(file.path(d, "DESCRIPTION"), fields = "Built")[1, 1]
+      sub("^[^;]*; *([^;]*);.*$", "\\1", built) %in% R.version$platform
+    }, logical(1))
+    keep[keep & compiled] <- sameBuild
+  }
+  ip[keep, , drop = FALSE]
 }
 
 RversionDot <- function() {
@@ -4044,8 +4057,9 @@ BuiltVersion2 <- function(ip) {
 }
 
 correctBuilt <- function(ip, RversionDot) {
-  # installed.packages() gives Built as the raw DESCRIPTION field,
-  # "R 4.6.1; ; <date>; unix", so drop the "R " before comparing.
+  # installed.packages() gives Built as the raw DESCRIPTION field in R >= 4.6
+  # ("R 4.6.1; ; <date>; unix") and as the bare version before ("4.5.3"), so
+  # drop any "R " before comparing.
   startsWith(sub("^R ", "", ip[, "Built"]), prefix = RversionDot)
 }
 
