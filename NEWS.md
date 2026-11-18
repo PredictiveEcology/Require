@@ -1,5 +1,9 @@
 # Require (development version)
 
+## Dependency changes
+
+* Require now needs R >= 4.3 (was 4.1), the oldest R version its checks run on (#220).
+
 ## Bug fixes
 
 * Every option in `RequireOptions()` can be given its startup value by an environment variable named `R_REQUIRE_` plus the option name in upper snake case, e.g. `R_REQUIRE_CLONE_FROM=FALSE` or `R_REQUIRE_USE_PAK=FALSE`. An option already set when Require loads (e.g. in `.Rprofile`) still wins. Useful where `.Rprofile` is not read (`Rscript --vanilla`, CI, containers).

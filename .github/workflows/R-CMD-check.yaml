@@ -38,9 +38,11 @@ jobs:
 
       ## Legs beyond the org default 8, all deliberate back-compat coverage:
       ##
-      ##  * oldrel-2 (R 4.3) on both OSes and oldrel-3 (R 4.2) on Ubuntu.
+      ##  * oldrel-2 on both OSes and oldrel-3 on Ubuntu (R 4.4 and 4.3 since
+      ##    R 4.6.0). oldrel-3 is the oldest R tested, so it sets the R floor
+      ##    in DESCRIPTION; raise the floor when it rolls forward each April.
       ##    windows oldrel-3 is deliberately absent -- pak's stable channel and
-      ##    CRAN's Windows binary index for R 4.2 are thin enough that
+      ##    CRAN's older Windows binary indexes are thin enough that
       ##    dep-install storms routinely ran past GHA's 6h cap (seen in #155).
       ##
       ##  * a SECOND ubuntu/release leg carrying R_REQUIRE_RUN_LONG_CI. The org
