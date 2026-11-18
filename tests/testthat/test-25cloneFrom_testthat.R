@@ -148,10 +148,11 @@ test_that("a compiled package built here is cloned under pak and works from the 
   to <- withr::local_tempdir()
   out <- Require:::pakClonePackages(planDT("tinyCloneComp"), libPaths = to, verbose = 0)
   expect_identical(out$needInstall, Require:::.txtDontInstall)
-  ## the shared library came along and loads from the new library, in a fresh R
+  ## the shared library came along and loads from the new library, in a fresh R (both paths
+  ## normalized: on macOS the temp dir is under /var, a link to /private/var)
   res <- system2(file.path(R.home("bin"), "Rscript"),
-                 c("-e", shQuote(paste0("cat(tinyCloneComp::f(), find.package('tinyCloneComp', lib.loc = '",
-                                        to, "'))"))),
+                 c("-e", shQuote(paste0("cat(tinyCloneComp::f(), normalizePath(find.package('tinyCloneComp', lib.loc = '",
+                                        to, "')))"))),
                  env = paste0("R_LIBS=", to), stdout = TRUE)
   expect_identical(res, paste(42L, normalizePath(file.path(to, "tinyCloneComp"))))
 })
