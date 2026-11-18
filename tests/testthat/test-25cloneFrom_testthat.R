@@ -233,3 +233,81 @@ test_that("a clone's version requirement on a base package is checked against R'
   out <- Require:::pakClonePackages(planDT("tinyCloneA"), libPaths = to, verbose = 0)
   expect_identical(out$needInstall, Require:::.txtDontInstall)
 })
+
+test_that("dropping one clone drops the clones that need it, round by round", {
+  ## tinyCloneA's copy misses the user's floor, so pak installs 0.0.2. tinyCloneB's copy needs
+  ## tinyCloneA <= 0.0.1, so it goes next round; tinyCloneC's copy needs tinyCloneB <= 0.0.1, so it
+  ## goes the round after. tinyCloneD depends on nothing and stays cloned.
+  from <- withr::local_tempdir()
+  tinyPkg(from, "tinyCloneA")
+  tinyPkg(from, "tinyCloneB", imports = "tinyCloneA (<= 0.0.1)")
+  tinyPkg(from, "tinyCloneC", imports = "tinyCloneB (<= 0.0.1)")
+  tinyPkg(from, "tinyCloneD")
+  withr::local_options(Require.cloneFrom = from)
+  to <- withr::local_tempdir()
+  setSolve(resolved = c(tinyCloneA = "0.0.2", tinyCloneB = "0.0.2", tinyCloneC = "0.0.1",
+                        tinyCloneD = "0.0.1"),
+           edges = data.table::data.table(from = c("tinyCloneB", "tinyCloneC"),
+                                          package = c("tinyCloneA", "tinyCloneB"),
+                                          op = ">=", version = "0.0.2"))
+  pkgs <- c("tinyCloneA", "tinyCloneB", "tinyCloneC", "tinyCloneD")
+  plan <- planDT(pkgs, versionSpec = c("0.0.2", NA, NA, NA), inequality = c(">=", NA, NA, NA))
+  out <- Require:::pakClonePackages(plan, libPaths = to, verbose = 0)
+  expect_identical(out[match(pkgs, Package)]$needInstall,
+                   c(rep(Require:::.txtInstall, 3), Require:::.txtDontInstall))
+  expect_identical(dir(to), "tinyCloneD")
+})
+
+## Source tarballs of tiny packages in a local CRAN-like repository: list(name, version, imports).
+tinyRepo <- function(pkgs, envir = parent.frame()) {
+  repo <- withr::local_tempdir(.local_envir = envir)
+  contrib <- file.path(repo, "src", "contrib")
+  dir.create(contrib, recursive = TRUE)
+  src <- withr::local_tempdir()
+  for (p in pkgs) {
+    d <- file.path(src, paste0(p$name, "_", p$version), p$name)
+    dir.create(file.path(d, "R"), recursive = TRUE)
+    writeLines(c(paste0("Package: ", p$name), paste0("Version: ", p$version), "Title: t",
+                 "Description: t.", "License: MIT", "Encoding: UTF-8", "NeedsCompilation: no",
+                 if (length(p$imports)) paste0("Imports: ", paste(p$imports, collapse = ", "))),
+               file.path(d, "DESCRIPTION"))
+    writeLines("export(f)", file.path(d, "NAMESPACE"))
+    writeLines("f <- function() 1", file.path(d, "R", "f.R"))
+    withr::with_dir(contrib, system2(file.path(R.home("bin"), "R"),
+                                     c("CMD", "build", "--no-build-vignettes", shQuote(d)),
+                                     stdout = TRUE, stderr = TRUE))
+  }
+  tools::write_PACKAGES(contrib, type = "source")
+  paste0("file://", normalizePath(repo, winslash = "/"))
+}
+
+test_that("Install() under pak clones what it can and pak installs the rest around the clones", {
+  skip_on_cran()
+  skip_if_not_installed("pak")
+  ## Three levels: tinyIntC Imports tinyIntB and tinyIntA (>= 1.1); tinyIntB Imports tinyIntA.
+  ## tinyIntD is a sibling with no deps. The repository has newer A and D than the clone library.
+  repo <- tinyRepo(list(
+    list(name = "tinyIntA", version = "1.1"),
+    list(name = "tinyIntB", version = "1.0", imports = "tinyIntA (>= 1.0)"),
+    list(name = "tinyIntC", version = "1.0", imports = c("tinyIntB", "tinyIntA (>= 1.1)")),
+    list(name = "tinyIntD", version = "2.0")))
+  from <- withr::local_tempdir()
+  tinyPkg(from, "tinyIntA", version = "1.0")     # too old for tinyIntC: must not be cloned
+  tinyPkg(from, "tinyIntB", version = "1.0", imports = "tinyIntA (>= 1.0)")
+  tinyPkg(from, "tinyIntD", version = "1.5")     # older than the repo's, but nothing needs newer
+  to <- withr::local_tempdir()
+  withr::local_options(Require.cloneFrom = from, Require.usePak = TRUE,
+                       repos = c(tiny = repo, getOption("repos")))
+
+  msgs <- capture_messages(
+    out <- Install(c("tinyIntC", "tinyIntD"), libPaths = to, standAlone = TRUE, verbose = 1))
+  ver <- function(p) read.dcf(file.path(to, p, "DESCRIPTION"), "Version")[[1]]
+  cloneMsg <- grep("Cloning", msgs, value = TRUE)
+  expect_length(cloneMsg, 1)
+  expect_true(all(vapply(c("tinyIntB", "tinyIntD"), grepl, logical(1), x = cloneMsg)))
+  expect_false(any(vapply(c("tinyIntA", "tinyIntC"), grepl, logical(1), x = cloneMsg)))
+  expect_identical(ver("tinyIntA"), "1.1")     # installed by pak from the repository
+  expect_identical(ver("tinyIntB"), "1.0")     # cloned
+  expect_identical(ver("tinyIntC"), "1.0")     # installed by pak
+  expect_identical(ver("tinyIntD"), "1.5")     # cloned, and pak did not upgrade it
+})
