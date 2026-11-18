@@ -66,6 +66,9 @@ notOnCranOrCIInteractive <- interactive() && notOnCranOrCI &&
 withr::local_options(
   .new = list(
     Require.usePak = Require.usePak,
+    ## No cloning from the personal library: a test's outcome must not depend on what happens
+    ## to be installed there (see helper_0.R). The cloneFrom tests set it themselves.
+    Require.cloneFrom = FALSE,
     Require.verbose = ifelse(notOnCranOrCI, verboseForDev, -2)
   ),
   .local_envir = teardown_env()
@@ -228,7 +231,6 @@ if (Sys.info()["user"] %in% "emcintir") {
   secretPath <- if (isWindows()) "c:/Eliot/.secret" else "/home/emcintir/.secret"
   withr::local_options(
     .local_envir = teardown_env(),
-    Require.cloneFrom = Sys.getenv("R_LIBS_USER"),
     "Require.installPackagesSys" = Require.installPackageSys,
     Ncpus = 8,
     Require.origLibPathForTests = .libPaths()[1],
@@ -240,7 +242,7 @@ if (Sys.info()["user"] %in% "emcintir") {
              length(dir(file.path(Sys.getenv("R_REQUIRE_CACHE"), "packages/4.4"), recursive = FALSE)),
              "\n"))
   print(options()[c("Ncpus", "repos", "Require.installPackagesSys", "Require.verbose",
-                    "Require.cloneFrom", "Require.usePak")])
+                    "Require.usePak")])
   print(paste("Cache size:", length(dir(cachePkgDir())), "files"))
 } else {
   ## clean up cache on GA and other

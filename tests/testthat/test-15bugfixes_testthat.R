@@ -1026,53 +1026,30 @@ test_that("the pak-not-on-.libPaths hint names the cause, not the metadata cache
                fixed = TRUE)
 })
 
-test_that("linkOrCopyPackageFiles() excludes pak/callr/processx/cli even when asked", {
+test_that("clonablePackages() never offers pak/callr/processx/cli for cloning", {
   # Regression: SpaDES.project::setupPackages (pre-pak) used to file-copy
   # the system lib into the project lib; pak's embedded callr/processx
   # native helpers don't survive that on Windows and the resulting pak
   # install dies inside processx with `Command '' not found` on the next
-  # subprocess spawn. linkOrCopyPackageFiles() must therefore drop those
-  # packages from the copy list so the install machinery installs them
-  # fresh instead.
-
-  # Build a synthetic installed.packages() matrix with Built that satisfies
-  # Require:::correctBuilt() for the current R version (so cantClone()
-  # treats every row as clone-eligible by default).
-  rvDot <- Require:::RversionDot()  # e.g. "4.5."
-  built <- paste0(rvDot, "0; ; ;")
-  pkgs  <- c("data.table", "pak", "callr", "processx", "cli", "rlang")
-  ip <- cbind(
-    Package          = pkgs,
-    Version          = rep("1.0.0", length(pkgs)),
-    NeedsCompilation = rep("no", length(pkgs)),  # all clone-eligible by NeedsCompilation
-    Built            = rep(built, length(pkgs))
-  )
-  rownames(ip) <- pkgs
-
-  passedThrough <- NULL
-  testthat::with_mocked_bindings(
-    linkOrCopyPackageFilesInner = function(Packages, fromLib, toLib) {
-      passedThrough <<- Packages
-      invisible()
-    },
-    .package = "Require",
-    {
-      Require:::linkOrCopyPackageFiles(
-        Packages = pkgs,
-        fromLib  = tempdir(),
-        toLib    = tempdir(),
-        ip       = ip
-      )
-    }
-  )
-
-  expect_false(is.null(passedThrough),
-               info = "linkOrCopyPackageFilesInner mock was never invoked")
-  # pak / callr / processx / cli must NOT be cloned
-  expect_false(any(c("pak", "callr", "processx", "cli") %in% passedThrough),
-               info = paste("got passed through:", paste(passedThrough, collapse = ", ")))
-  # The non-pak rows still go through normally
-  expect_true(all(c("data.table", "rlang") %in% passedThrough))
+  # subprocess spawn. Cloning must therefore leave those packages to the
+  # install machinery, which installs them fresh.
+  #
+  # Tiny pure-R stand-ins under those names, otherwise clone-eligible.
+  lib <- withr::local_tempdir()
+  pkgs <- c("pak", "callr", "processx", "cli", "tinyCloneKeep")
+  for (pk in pkgs) {
+    d <- file.path(withr::local_tempdir(), pk)
+    dir.create(file.path(d, "R"), recursive = TRUE)
+    writeLines(c(paste0("Package: ", pk), "Version: 1.0.0", "Title: t", "Description: t.",
+                 "License: MIT", "NeedsCompilation: no"), file.path(d, "DESCRIPTION"))
+    writeLines("", file.path(d, "NAMESPACE"))
+    writeLines("f <- function() 1", file.path(d, "R", "f.R"))
+    system2(file.path(R.home("bin"), "R"),
+            c("CMD", "INSTALL", "--no-test-load", "-l", shQuote(lib), shQuote(d)),
+            stdout = TRUE, stderr = TRUE)
+  }
+  out <- Require:::clonablePackages(lib, pkgs)$Package
+  expect_identical(out, "tinyCloneKeep")
 })
 
 test_that("ensurePakInProjectLib() is a no-op when Require.usePak is FALSE", {

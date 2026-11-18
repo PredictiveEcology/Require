@@ -492,6 +492,8 @@ Require <- function(packages,
       needInstalls <- (any(pkgDT$needInstall %in% .txtInstall) && (isTRUE(install))) || install %in% "force"
       if (needInstalls) {
         if (getOption("Require.usePak", FALSE)) {
+          if (!identical(install, "force") && !isTRUE(purge))
+            pkgDT <- pakClonePackages(pkgDT, libPaths = libPaths, verbose = verbose)
           ## Cache shortcut: if every package we'd install is already in
           ## pak's download cache, skip pak's online resolver and install
           ## from the cache directly. Avoids pak's metadata refresh (which
@@ -818,9 +820,11 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
                      keep.null = TRUE
   )
 
-  rcf <- getOption("Require.cloneFrom")
-  if (isTRUE(is.character(rcf))) {
-    ipa <- clonePackages(rcf, ipa, libPaths = libPaths, verbose)
+  rcf <- cloneSources(toLib = libPaths[1])
+  if (length(rcf)) {
+    ipa <- clonePackages(rcf, ipa, libPaths = libPaths,
+                         skip = toInstall[["Package"]][toInstall[["repoLocation"]] %in% .txtGitHub],
+                         verbose = verbose)
   }
 
   if (NROW(ipa$available)) {
@@ -3749,72 +3753,81 @@ substitutePackages <- function(packagesSubstituted, envir = parent.frame()) {
   packages
 }
 
-clonePackages <- function(rcf, ipa, libPaths, verbose = getOption("Require.verbose")) {
-  mess <- capture.output(
-    type = "message",
-    ip <- installed.packages(lib.loc = rcf, fields = c("Built", "NeedsCompilation"))
-  )
-  clearErrorReadRDSFile(mess, rcf)
-  #
-  # oo <- capture.output(type = "message",
-  #                      ip <- installed.packages(lib.loc = rcf, fields = c("Built", "NeedsCompilation")))
-  #                      # ip <- .installed.pkgs(lib.loc = rcf, which = c("Built", "NeedsCompilation")))
-  ignorePackages <- character()
-  ipCanTryNeedsNoCompilAndGoodRVer <- canClone(ip)
-  alreadyInstalledCanClone <- intersect(rownames(ipCanTryNeedsNoCompilAndGoodRVer), ipa$pkgs)
-  alreadyInstalledCanClone <- ipCanTryNeedsNoCompilAndGoodRVer[, "Version"][alreadyInstalledCanClone]
-  alreadyInstalledCanClone <- alreadyInstalledCanClone[!names(alreadyInstalledCanClone) %in% sourcePkgs()]
-  # Never clone pak / callr / processx / cli -- they bundle native binaries
-  # and helper executables that don't survive a file-by-file copy on Windows
-  # (see .pakNoCopyPkgs() in R/pak.R for why). Keeping them in the install
-  # plan (cantClone) forces a fresh install via the normal install machinery.
-  alreadyInstalledCanClone <- alreadyInstalledCanClone[!names(alreadyInstalledCanClone) %in% .pakNoCopyPkgs()]
+# The libraries Require.cloneFrom names. TRUE: the libraries R builds a
+# session from (R_LIBS, R_LIBS_USER, R_LIBS_SITE). Never the target library
+# `toLib` or R's own .Library.
+cloneSources <- function(rcf = getOption("Require.cloneFrom"), toLib) {
+  if (isTRUE(rcf))
+    rcf <- unlist(strsplit(Sys.getenv(c("R_LIBS", "R_LIBS_USER", "R_LIBS_SITE")),
+                           .Platform[["path.sep"]], fixed = TRUE))
+  if (!is.character(rcf)) return(character())
+  norm <- function(x) normalizePath(path.expand(x), winslash = "/", mustWork = FALSE)
+  rcf <- unique(norm(rcf[nzchar(rcf)]))
+  rcf <- rcf[dir.exists(rcf)]
+  setdiff(rcf, norm(c(toLib, .Library)))
+}
 
-  if (length(grep("Error in readRDS", mess))) {
-    # This means that the packages in rcf are broken
-    aa <- packageHasError(rcf)
-    igns <- unlist(unname(aa))
-    if (length(igns))
-      ignorePackages <- names(alreadyInstalledCanClone)[names(alreadyInstalledCanClone) %in% igns]
-  }
+# The copies of `pkgs` in libraries `libs` that may be cloned (hard-linked or
+# copied) instead of installed: no compiled code, built under this R version,
+# not a sourcePkgs() package, readable, and not mid-install (00LOCK). pak /
+# callr / processx / cli are never cloned -- they bundle native helper
+# executables that don't survive a file-by-file copy (see .pakNoCopyPkgs()).
+# One row per copy, in the order of `libs`.
+clonablePackages <- function(libs, pkgs) {
+  fields <- c("Built", "NeedsCompilation", "RemoteType", "RemoteSha", "GithubSHA1")
+  ip <- do.call(rbind, lapply(libs, function(lib) {
+    if (dir.exists(file.path(lib, "00LOCK"))) return(NULL)
+    mess <- capture.output(
+      type = "message",
+      ip <- installed.packages(lib.loc = lib, fields = fields)
+    )
+    clearErrorReadRDSFile(mess, lib)
+    ip <- ip[ip[, "Package"] %in% pkgs, , drop = FALSE]
+    if (length(grep("Error in readRDS", mess))) # some packages in lib are broken
+      ip <- ip[!ip[, "Package"] %in% unlist(unname(packageHasError(lib))), , drop = FALSE]
+    ip[!dir.exists(file.path(lib, paste0("00LOCK-", ip[, "Package"]))), , drop = FALSE]
+  }))
+  if (is.null(ip)) return(data.table(Package = character(), LibPath = character(),
+                                     Version = character()))
+  ip <- canClone(ip)
+  ip <- ip[!ip[, "Package"] %in% c(sourcePkgs(), .pakNoCopyPkgs()), , drop = FALSE]
+  as.data.table(ip)
+}
 
-  if (length(ignorePackages))
-    alreadyInstalledCanClone <- alreadyInstalledCanClone[!names(alreadyInstalledCanClone) %in% ignorePackages]
-  wantToInstall <- ipa$available[, "Version"]
-  cantClone <- setdiffNamed(wantToInstall, alreadyInstalledCanClone)# if (isWindows()) {
-  canClone <- setdiffNamed(wantToInstall, cantClone)
-  canClone <- names(canClone)
-  if (length(canClone)) {
-    mess <- paste0("  -- Cloning (", length(canClone)," of ", length(wantToInstall),
+# A copy built from a git remote (a development build): never cloned for a
+# CRAN-style request, even at a version that meets it.
+cloneIsDevBuild <- function(cp) {
+  !is.na(cp[["RemoteType"]]) & !cp[["RemoteType"]] %in% c("standard", "any", "cran")
+}
+
+# Hard-link (or copy) each package in `cp` (rows of clonablePackages()) from
+# its library into `toLib`.
+cloneCopies <- function(cp, toLib) {
+  for (lib in unique(cp[["LibPath"]]))
+    linkOrCopyPackageFilesInner(cp[["Package"]][cp[["LibPath"]] == lib], fromLib = lib, toLib = toLib)
+}
+
+# Legacy path: clone a package when a copy is at exactly the version that
+# would be installed. `skip`: packages not to clone (GitHub installs).
+clonePackages <- function(rcf, ipa, libPaths, skip = character(),
+                          verbose = getOption("Require.verbose")) {
+  wantToInstall <- ipa[["available"]][, "Version"]
+  cp <- clonablePackages(rcf, setdiff(names(wantToInstall), skip))
+  cp <- cp[!cloneIsDevBuild(cp) & Version == wantToInstall[Package]]
+  cp <- cp[!duplicated(Package)]
+  if (NROW(cp)) {
+    mess <- paste0("  -- Cloning (", NROW(cp)," of ", length(wantToInstall),
                    ") instead of Installing (don't need compiling): ",
-                   paste(canClone, collapse = comma))
+                   paste(cp[["Package"]], collapse = comma))
     mess <- paste0WithLineFeed(mess)
     messageVerbose(green(mess), verbose = verbose)
 
-    linkOrCopyPackageFiles(Packages = canClone, fromLib = rcf[1], toLib = libPaths[1], ip = ip)
-    ipa$pkgs <- names(cantClone)
+    cloneCopies(cp, toLib = libPaths[1])
+    ipa[["pkgs"]] <- setdiff(names(wantToInstall), cp[["Package"]])
     messageVerbose(green("... Done!"), verbose = verbose)
-    ipa$available <- ipa$available[ipa$pkgs, , drop = FALSE]
+    ipa[["available"]] <- ipa[["available"]][ipa[["pkgs"]], , drop = FALSE]
   }
   ipa
-}
-
-linkOrCopyPackageFiles <- function(Packages, fromLib, toLib, ip) {
-  if (missing(ip)) {
-    mess <- capture.output(
-      type = "message",
-      ip <- installed.packages(fromLib, fields = c("Built", "NeedsCompilation"))
-    )
-    clearErrorReadRDSFile(mess, fromLib)
-  }
-  cant <- cantClone(ip)
-  # Defense-in-depth: even if a caller bypasses clonePackages() and reaches
-  # this helper directly, pak/callr/processx/cli must never be file-copied
-  # across libs (their embedded native binaries don't survive on Windows).
-  cant <- unique(c(sourcePkgs(), cant[, "Package"], .pakNoCopyPkgs()))
-  Packages <- setdiff(Packages, cant)
-  linkOrCopyPackageFilesInner(Packages, fromLib, toLib)
-  return(invisible())
 }
 
 linkOrCopyPackageFilesInner <- function(Packages, fromLib, toLib) {
@@ -4016,12 +4029,6 @@ canClone <- function(ip) {
   ip[keepCols6 %in% TRUE, , drop = FALSE]
 }
 
-cantClone <- function(ip) {
-  RversionDot <- RversionDot()
-  correctBuilt <- correctBuilt(ip, RversionDot)
-  ip[(ip[, "NeedsCompilation"] == "yes" | correctBuilt %in% FALSE)  %in% TRUE, , drop = FALSE]
-}
-
 RversionDot <- function() {
   # This adds a trailing "." so that it is e.g., 4.3., not 4.3  because
   paste0(paste(R.version$major,
@@ -4035,7 +4042,9 @@ BuiltVersion2 <- function(ip) {
 }
 
 correctBuilt <- function(ip, RversionDot) {
-  startsWith(ip[, "Built"], prefix = RversionDot)
+  # installed.packages() gives Built as the raw DESCRIPTION field,
+  # "R 4.6.1; ; <date>; unix", so drop the "R " before comparing.
+  startsWith(sub("^R ", "", ip[, "Built"]), prefix = RversionDot)
 }
 
 colsOfDeps <- c("Depends", "Imports", "LinkingTo", "Remotes", "Suggests")
