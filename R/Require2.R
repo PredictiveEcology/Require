@@ -3768,13 +3768,16 @@ cloneSources <- function(rcf = getOption("Require.cloneFrom"), toLib) {
 }
 
 # The copies of `pkgs` in libraries `libs` that may be cloned (hard-linked or
-# copied) instead of installed: no compiled code, built under this R version,
-# not a sourcePkgs() package, readable, and not mid-install (00LOCK). pak /
+# copied) instead of installed: built under this R version (and, if compiled,
+# for this platform and not on Windows; see canClone()), readable, and not
+# mid-install (00LOCK). pak /
 # callr / processx / cli are never cloned -- they bundle native helper
 # executables that don't survive a file-by-file copy (see .pakNoCopyPkgs()).
 # One row per copy, in the order of `libs`.
 clonablePackages <- function(libs, pkgs) {
   fields <- c("Built", "NeedsCompilation", "RemoteType", "RemoteSha", "GithubSHA1")
+  none <- data.table(Package = character(), LibPath = character(), Version = character())
+  if (!length(pkgs)) return(none)
   ip <- do.call(rbind, lapply(libs, function(lib) {
     if (dir.exists(file.path(lib, "00LOCK"))) return(NULL)
     mess <- capture.output(
@@ -3787,10 +3790,9 @@ clonablePackages <- function(libs, pkgs) {
       ip <- ip[!ip[, "Package"] %in% unlist(unname(packageHasError(lib))), , drop = FALSE]
     ip[!dir.exists(file.path(lib, paste0("00LOCK-", ip[, "Package"]))), , drop = FALSE]
   }))
-  if (is.null(ip)) return(data.table(Package = character(), LibPath = character(),
-                                     Version = character()))
+  if (is.null(ip)) return(none)
   ip <- canClone(ip)
-  ip <- ip[!ip[, "Package"] %in% c(sourcePkgs(), .pakNoCopyPkgs()), , drop = FALSE]
+  ip <- ip[!ip[, "Package"] %in% .pakNoCopyPkgs(), , drop = FALSE]
   as.data.table(ip)
 }
 
@@ -3808,16 +3810,17 @@ cloneCopies <- function(cp, toLib) {
 }
 
 # Legacy path: clone a package when a copy is at exactly the version that
-# would be installed. `skip`: packages not to clone (GitHub installs).
+# would be installed. `skip`: packages not to clone (GitHub installs). This path
+# still builds sourcePkgs() from source, so it never clones them.
 clonePackages <- function(rcf, ipa, libPaths, skip = character(),
                           verbose = getOption("Require.verbose")) {
   wantToInstall <- ipa[["available"]][, "Version"]
-  cp <- clonablePackages(rcf, setdiff(names(wantToInstall), skip))
+  cp <- clonablePackages(rcf, setdiff(names(wantToInstall), c(skip, sourcePkgs())))
   cp <- cp[!cloneIsDevBuild(cp) & Version == wantToInstall[Package]]
   cp <- cp[!duplicated(Package)]
   if (NROW(cp)) {
     mess <- paste0("  -- Cloning (", NROW(cp)," of ", length(wantToInstall),
-                   ") instead of Installing (don't need compiling): ",
+                   ") instead of Installing: ",
                    paste(cp[["Package"]], collapse = comma))
     mess <- paste0WithLineFeed(mess)
     messageVerbose(green(mess), verbose = verbose)
@@ -4019,14 +4022,17 @@ getArchiveDetailsInner <- function(Repository, ava, Package, cols, versionSpec, 
 # }
 
 canClone <- function(ip) {
-  RversionDot <- RversionDot()
-  correctBuilt <- correctBuilt(ip, RversionDot)
-  # correctBuilt <- Rversion == BuiltVersion # needs to re-add package_version to both those functions
-  keepCols6 <- correctBuilt %in% TRUE
-  # if (isWindows()) {
-  keepCols6 <- keepCols6 & ip[,  "NeedsCompilation"] == "no"
-  # }
-  ip[keepCols6 %in% TRUE, , drop = FALSE]
+  keep <- correctBuilt(ip, RversionDot()) %in% TRUE
+  # Built is "R 4.6.1; <platform>; <date>; <OS>"; R fills in <platform> only
+  # when it compiled code at install, so it says whether this copy has any
+  # (NeedsCompilation does not: tidyselect says "yes" and has none). A compiled
+  # copy is cloned only when built for this platform, and never on Windows (a
+  # loaded DLL is locked, so a hard-linked one would block later updates in
+  # both libraries).
+  builtPlatform <- sub("^[^;]*; *([^;]*);.*$", "\\1", ip[, "Built"])
+  keep <- keep & (builtPlatform %in% "" |
+                    (!isWindows() & builtPlatform %in% R.version$platform))
+  ip[keep, , drop = FALSE]
 }
 
 RversionDot <- function() {

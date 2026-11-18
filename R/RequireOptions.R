@@ -78,8 +78,9 @@
 #'   libraries R starts a session from (`R_LIBS`, `R_LIBS_USER`, `R_LIBS_SITE`);
 #'   a character vector names the libraries; `FALSE` or `NULL` turns cloning
 #'   off. The destination library and R's own `.Library` are never used.
-#'   Only packages that need no compilation and were built under the same R
-#'   minor version are cloned, never `pak`, `callr`, `processx` or `cli`, whose
+#'   Only copies built under the same R minor version are cloned; a copy with
+#'   compiled code also has to have been built for this platform, and is never
+#'   cloned on Windows. Never cloned: `pak`, `callr`, `processx` or `cli`, whose
 #'   native helper executables do not survive a file-by-file copy, and never a
 #'   copy that is mid-install or unreadable. A package already in the
 #'   destination library is never overwritten. A GitHub package is cloned
@@ -88,8 +89,9 @@
 #'   copy is used when its version meets the user's requirement and those of
 #'   every package pak plans to install; of several copies, the version pak
 #'   resolved is preferred, then the highest. Under `Require.usePak = FALSE` the
-#'   copy must be exactly the version that would be installed, and GitHub
-#'   packages are not cloned.}
+#'   copy must be exactly the version that would be installed, and neither
+#'   GitHub packages nor the always-from-source packages ([sourcePkgs()]) are
+#'   cloned.}
 #' \item{`downloadTimeout`}{Default: `300L` (seconds). Used as the floor for
 #'   `options("timeout")` during GitHub source-archive downloads in the legacy
 #'   (non-pak) install path. R's stock 60-second timeout is too short for
