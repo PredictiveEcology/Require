@@ -823,7 +823,7 @@ installAll <- function(toInstall, repos = getOptions("repos"), purge = FALSE, in
   rcf <- cloneSources(toLib = libPaths[1])
   if (length(rcf)) {
     ipa <- clonePackages(rcf, ipa, libPaths = libPaths,
-                         skip = toInstall$Package[toInstall$repoLocation %in% .txtGitHub],
+                         skip = toInstall[["Package"]][toInstall[["repoLocation"]] %in% .txtGitHub],
                          verbose = verbose)
   }
 
@@ -3759,7 +3759,7 @@ substitutePackages <- function(packagesSubstituted, envir = parent.frame()) {
 cloneSources <- function(rcf = getOption("Require.cloneFrom"), toLib) {
   if (isTRUE(rcf))
     rcf <- unlist(strsplit(Sys.getenv(c("R_LIBS", "R_LIBS_USER", "R_LIBS_SITE")),
-                           .Platform$path.sep, fixed = TRUE))
+                           .Platform[["path.sep"]], fixed = TRUE))
   if (!is.character(rcf)) return(character())
   norm <- function(x) normalizePath(path.expand(x), winslash = "/", mustWork = FALSE)
   rcf <- unique(norm(rcf[nzchar(rcf)]))
@@ -3797,35 +3797,35 @@ clonablePackages <- function(libs, pkgs) {
 # A copy built from a git remote (a development build): never cloned for a
 # CRAN-style request, even at a version that meets it.
 cloneIsDevBuild <- function(cp) {
-  !is.na(cp$RemoteType) & !cp$RemoteType %in% c("standard", "any", "cran")
+  !is.na(cp[["RemoteType"]]) & !cp[["RemoteType"]] %in% c("standard", "any", "cran")
 }
 
 # Hard-link (or copy) each package in `cp` (rows of clonablePackages()) from
 # its library into `toLib`.
 cloneCopies <- function(cp, toLib) {
-  for (lib in unique(cp$LibPath))
-    linkOrCopyPackageFilesInner(cp$Package[cp$LibPath == lib], fromLib = lib, toLib = toLib)
+  for (lib in unique(cp[["LibPath"]]))
+    linkOrCopyPackageFilesInner(cp[["Package"]][cp[["LibPath"]] == lib], fromLib = lib, toLib = toLib)
 }
 
 # Legacy path: clone a package when a copy is at exactly the version that
 # would be installed. `skip`: packages not to clone (GitHub installs).
 clonePackages <- function(rcf, ipa, libPaths, skip = character(),
                           verbose = getOption("Require.verbose")) {
-  wantToInstall <- ipa$available[, "Version"]
+  wantToInstall <- ipa[["available"]][, "Version"]
   cp <- clonablePackages(rcf, setdiff(names(wantToInstall), skip))
   cp <- cp[!cloneIsDevBuild(cp) & Version == wantToInstall[Package]]
   cp <- cp[!duplicated(Package)]
   if (NROW(cp)) {
     mess <- paste0("  -- Cloning (", NROW(cp)," of ", length(wantToInstall),
                    ") instead of Installing (don't need compiling): ",
-                   paste(cp$Package, collapse = comma))
+                   paste(cp[["Package"]], collapse = comma))
     mess <- paste0WithLineFeed(mess)
     messageVerbose(green(mess), verbose = verbose)
 
     cloneCopies(cp, toLib = libPaths[1])
-    ipa$pkgs <- setdiff(names(wantToInstall), cp$Package)
+    ipa[["pkgs"]] <- setdiff(names(wantToInstall), cp[["Package"]])
     messageVerbose(green("... Done!"), verbose = verbose)
-    ipa$available <- ipa$available[ipa$pkgs, , drop = FALSE]
+    ipa[["available"]] <- ipa[["available"]][ipa[["pkgs"]], , drop = FALSE]
   }
   ipa
 }
