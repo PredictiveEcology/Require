@@ -18,6 +18,15 @@
 #' the option. Sometimes these options can be placed in the user's `.Rprofile`
 #' file so they persist between sessions.
 #'
+#' Each option can also be given a startup value with an environment variable:
+#' `R_REQUIRE_` followed by the option name in upper case with words separated
+#' by `_`, e.g. `R_REQUIRE_CLONE_FROM=FALSE` for `Require.cloneFrom` or
+#' `R_REQUIRE_USE_PAK=FALSE` for `Require.usePak`. `TRUE` and `FALSE` are read
+#' as logical, a number as a number when the option is numeric, and anything
+#' else as a comma-separated character vector. An option already set when
+#' `Require` loads (e.g., in `.Rprofile`) takes precedence. The exception is
+#' `cachePkgDir`, which uses `R_REQUIRE_PKG_CACHE`.
+#'
 #' The following options are likely of interest to most users:
 #' \describe{
 #' \item{`install`}{ Default: `TRUE`. This is the default argument to `Require`,
@@ -61,17 +70,26 @@
 #'   by `Require` will be deleted and rebuilt. This should not generally be
 #'   necessary as it will automatically be deleted after (by default) 1 hour (set
 #'   via `R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE` environment variable in seconds).}
-#' \item{`cloneFrom`}{ Default: `NULL`. A path to an existing package library.
-#'   When set, any package that is already installed there at the version being
-#'   requested is copied or hard-linked into the destination library instead of
-#'   being downloaded and installed, which is much faster when populating a new
-#'   project library on a machine that already has the packages. Only packages
-#'   that need no compilation and were built under a compatible R version are
-#'   cloned; the rest go through the normal install machinery, as do `pak`,
-#'   `callr`, `processx` and `cli`, whose native helper executables do not
-#'   survive a file-by-file copy. Has no effect under `Require.usePak = TRUE`
-#'   (the default): cloning lives in the legacy (non-pak) install path, so this
-#'   option is consulted only when `Require.usePak = FALSE`.}
+#' \item{`cloneFrom`}{ Default: `TRUE`. Libraries to clone packages from: any
+#'   package that is to be installed and is already in one of them, in a usable
+#'   form, is hard-linked (or, across file systems, copied) into the
+#'   destination library instead of being downloaded and installed, which is
+#'   much faster when populating a new project library. `TRUE` means the
+#'   libraries R starts a session from (`R_LIBS`, `R_LIBS_USER`, `R_LIBS_SITE`);
+#'   a character vector names the libraries; `FALSE` or `NULL` turns cloning
+#'   off. The destination library and R's own `.Library` are never used.
+#'   Only packages that need no compilation and were built under the same R
+#'   minor version are cloned, never `pak`, `callr`, `processx` or `cli`, whose
+#'   native helper executables do not survive a file-by-file copy, and never a
+#'   copy that is mid-install or unreadable. A package already in the
+#'   destination library is never overwritten. A GitHub package is cloned
+#'   only from a copy of the same commit; a CRAN package never from a
+#'   development (GitHub) build. Under `Require.usePak = TRUE` (the default) a
+#'   copy is used when its version meets the user's requirement and those of
+#'   every package pak plans to install; of several copies, the version pak
+#'   resolved is preferred, then the highest. Under `Require.usePak = FALSE` the
+#'   copy must be exactly the version that would be installed, and GitHub
+#'   packages are not cloned.}
 #' \item{`downloadTimeout`}{Default: `300L` (seconds). Used as the floor for
 #'   `options("timeout")` during GitHub source-archive downloads in the legacy
 #'   (non-pak) install path. R's stock 60-second timeout is too short for
@@ -127,17 +145,17 @@
 #'   across sessions.}
 #' \item{`usePak`}{ Default: `TRUE`. Use pak to resolve and install packages.
 #'   `FALSE` selects the pre-pak path. Several options apply only to that path
-#'   and do nothing under the default: `cachePkgDir`, `cloneFrom`,
-#'   `downloadTimeout` and `installPackagesSys`.}
+#'   and do nothing under the default: `cachePkgDir`, `downloadTimeout` and
+#'   `installPackagesSys`.}
 #' \item{`verbose`}{ Default: `1`. See ?Require. }
 #' }
 #'
 #' @rdname RequireOptions
 RequireOptions <- function() {
-  list(
+  optionsFromEnvVars(list(
     Require.cachePkgDir = "default",
     Require.checkInternet = TRUE,
-    Require.cloneFrom = NULL,
+    Require.cloneFrom = TRUE,
     Require.downloadTimeout = 300L,
     Require.install = TRUE,
     Require.installPackagesSys = 2L, # if (isMacOS()) 2L else 2L,
@@ -170,7 +188,42 @@ RequireOptions <- function() {
     Require.forcePakReinstall = FALSE,
     Require.updateRprofile = FALSE,
     Require.verbose = 1
-  )
+  ))
+}
+
+# The environment variable that sets an option's startup value:
+# Require.cloneFrom -> R_REQUIRE_CLONE_FROM.
+requireOptionEnvVar <- function(opt) {
+  paste0("R_REQUIRE_", toupper(gsub("([a-z0-9])([A-Z])", "\\1_\\2", sub("^Require\\.", "", opt))))
+}
+
+# Replace each default in `opts` whose environment variable (see
+# requireOptionEnvVar()) is set. TRUE/FALSE are read as logical, a number
+# when the default is a number, anything else as a comma-separated character
+# vector. Require.cachePkgDir is left out: it is deprecated, and has
+# R_REQUIRE_PKG_CACHE.
+optionsFromEnvVars <- function(opts) {
+  for (nm in setdiff(names(opts), "Require.cachePkgDir")) {
+    val <- trimws(Sys.getenv(requireOptionEnvVar(nm)))
+    if (!nzchar(val)) next
+    def <- opts[[nm]]
+    new <- if (toupper(val) %in% c("TRUE", "FALSE")) {
+      as.logical(toupper(val))
+    } else if (is.numeric(def)) {
+      num <- suppressWarnings(as.numeric(val))
+      if (is.integer(def) && !is.na(num)) num <- as.integer(num)
+      num
+    } else {
+      trimws(strsplit(val, ",", fixed = TRUE)[[1]])
+    }
+    if (length(new) == 1 && is.na(new)) {
+      warning(requireOptionEnvVar(nm), " = '", val, "' is not a valid value for ", nm,
+              "; using the default", call. = FALSE)
+      next
+    }
+    opts[[nm]] <- new
+  }
+  opts
 }
 
 #' @export

@@ -14,6 +14,32 @@ test_that("RequireOptions functions", {
   testthat::expect_identical(names(ro), names(gro))
 })
 
+test_that("environment variables set Require options' startup values", {
+  testthat::expect_identical(Require:::requireOptionEnvVar("Require.cloneFrom"), "R_REQUIRE_CLONE_FROM")
+  testthat::expect_identical(Require:::requireOptionEnvVar("Require.snapshotInstallerUsePPM"),
+                             "R_REQUIRE_SNAPSHOT_INSTALLER_USE_PPM")
+  withr::local_envvar(R_REQUIRE_CLONE_FROM = "false", R_REQUIRE_VERBOSE = "2",
+                      R_REQUIRE_INSTALL_PACKAGES_SYS = "0", R_REQUIRE_OTHER_PKGS = "a, b",
+                      R_REQUIRE_PACKAGE_VERSION_FILE = "pv.txt", R_REQUIRE_PKG_CACHE = "",
+                      R_REQUIRE_CACHE_PKG_DIR = "ignored")
+  ro <- RequireOptions()
+  testthat::expect_identical(ro[["Require.cloneFrom"]], FALSE)
+  testthat::expect_identical(ro[["Require.verbose"]], 2)
+  testthat::expect_identical(ro[["Require.installPackagesSys"]], 0L)
+  testthat::expect_identical(ro[["Require.otherPkgs"]], c("a", "b"))
+  testthat::expect_identical(ro[["Require.packageVersionFile"]], "pv.txt")
+  testthat::expect_identical(ro[["Require.cachePkgDir"]], "default")   # has R_REQUIRE_PKG_CACHE instead
+
+  ## a path list for cloneFrom
+  withr::local_envvar(R_REQUIRE_CLONE_FROM = "/a/lib,/b/lib")
+  testthat::expect_identical(RequireOptions()[["Require.cloneFrom"]], c("/a/lib", "/b/lib"))
+
+  ## an invalid number keeps the default, with a warning
+  withr::local_envvar(R_REQUIRE_VERBOSE = "loud")
+  testthat::expect_warning(ro <- RequireOptions(), "R_REQUIRE_VERBOSE")
+  testthat::expect_identical(ro[["Require.verbose"]], 1)
+})
+
 test_that("message helper functions", {
   # msgStripColor
   coloured <- "\033[31mred text\033[0m"

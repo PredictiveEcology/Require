@@ -28,6 +28,15 @@ where \code{xxx} is one of the values below, and \code{newValue} is a new value 
 the option. Sometimes these options can be placed in the user's \code{.Rprofile}
 file so they persist between sessions.
 
+Each option can also be given a startup value with an environment variable:
+\code{R_REQUIRE_} followed by the option name in upper case with words separated
+by \verb{_}, e.g. \code{R_REQUIRE_CLONE_FROM=FALSE} for \code{Require.cloneFrom} or
+\code{R_REQUIRE_USE_PAK=FALSE} for \code{Require.usePak}. \code{TRUE} and \code{FALSE} are read
+as logical, a number as a number when the option is numeric, and anything
+else as a comma-separated character vector. An option already set when
+\code{Require} loads (e.g., in \code{.Rprofile}) takes precedence. The exception is
+\code{cachePkgDir}, which uses \code{R_REQUIRE_PKG_CACHE}.
+
 The following options are likely of interest to most users:
 \describe{
 \item{\code{install}}{ Default: \code{TRUE}. This is the default argument to \code{Require},
@@ -71,17 +80,26 @@ the relevant repository (e.g., \code{predictiveecology.r-universe.dev}) is in
 by \code{Require} will be deleted and rebuilt. This should not generally be
 necessary as it will automatically be deleted after (by default) 1 hour (set
 via \code{R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE} environment variable in seconds).}
-\item{\code{cloneFrom}}{ Default: \code{NULL}. A path to an existing package library.
-When set, any package that is already installed there at the version being
-requested is copied or hard-linked into the destination library instead of
-being downloaded and installed, which is much faster when populating a new
-project library on a machine that already has the packages. Only packages
-that need no compilation and were built under a compatible R version are
-cloned; the rest go through the normal install machinery, as do \code{pak},
-\code{callr}, \code{processx} and \code{cli}, whose native helper executables do not
-survive a file-by-file copy. Has no effect under \code{Require.usePak = TRUE}
-(the default): cloning lives in the legacy (non-pak) install path, so this
-option is consulted only when \code{Require.usePak = FALSE}.}
+\item{\code{cloneFrom}}{ Default: \code{TRUE}. Libraries to clone packages from: any
+package that is to be installed and is already in one of them, in a usable
+form, is hard-linked (or, across file systems, copied) into the
+destination library instead of being downloaded and installed, which is
+much faster when populating a new project library. \code{TRUE} means the
+libraries R starts a session from (\code{R_LIBS}, \code{R_LIBS_USER}, \code{R_LIBS_SITE});
+a character vector names the libraries; \code{FALSE} or \code{NULL} turns cloning
+off. The destination library and R's own \code{.Library} are never used.
+Only packages that need no compilation and were built under the same R
+minor version are cloned, never \code{pak}, \code{callr}, \code{processx} or \code{cli}, whose
+native helper executables do not survive a file-by-file copy, and never a
+copy that is mid-install or unreadable. A package already in the
+destination library is never overwritten. A GitHub package is cloned
+only from a copy of the same commit; a CRAN package never from a
+development (GitHub) build. Under \code{Require.usePak = TRUE} (the default) a
+copy is used when its version meets the user's requirement and those of
+every package pak plans to install; of several copies, the version pak
+resolved is preferred, then the highest. Under \code{Require.usePak = FALSE} the
+copy must be exactly the version that would be installed, and GitHub
+packages are not cloned.}
 \item{\code{downloadTimeout}}{Default: \code{300L} (seconds). Used as the floor for
 \code{options("timeout")} during GitHub source-archive downloads in the legacy
 (non-pak) install path. R's stock 60-second timeout is too short for
@@ -137,8 +155,8 @@ writes the library path into the project \code{.Rprofile}, so it persists
 across sessions.}
 \item{\code{usePak}}{ Default: \code{TRUE}. Use pak to resolve and install packages.
 \code{FALSE} selects the pre-pak path. Several options apply only to that path
-and do nothing under the default: \code{cachePkgDir}, \code{cloneFrom},
-\code{downloadTimeout} and \code{installPackagesSys}.}
+and do nothing under the default: \code{cachePkgDir}, \code{downloadTimeout} and
+\code{installPackagesSys}.}
 \item{\code{verbose}}{ Default: \code{1}. See ?Require. }
 }
 }

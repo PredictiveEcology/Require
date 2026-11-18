@@ -2926,6 +2926,10 @@ pakDepsToPkgDT <- function(packages, which, libPaths, standAlone, verbose,
            pakVersionMap(pak_result, shaPinRefs),
            envir = pakEnv())
     assign("pakDepGraph", pakHardDepGraph(pak_result), envir = pakEnv())
+    if (!is.null(getOption("Require.cloneFrom")) && !isFALSE(getOption("Require.cloneFrom"))) {
+      assign("pakDepEdges", pakHardDepEdges(pak_result), envir = pakEnv())
+      assign("pakResolvedShaMap", pakResolvedShaMap(pak_result), envir = pakEnv())
+    }
     assign("pakRefPkgMap", pakRefPkgMap(pak_result), envir = pakEnv())
     if (isTRUE(get0("pakPinnedInstall", envir = pakEnv(), inherits = FALSE)))
       pkgDT <- pakPinnedResolve(pkgDT, pak_result, extractPkgName(packages), verbose)
@@ -2967,6 +2971,134 @@ pakHardDepGraph <- function(pak_result) {
   })
   names(graph) <- all
   graph
+}
+
+# The hard-dep edges of the global solve, with their version requirements:
+# one row per (from, package, op, version). pakClonePackages() checks a cloned
+# version against these, so a clone never breaks a package that pak resolved
+# to need something newer.
+pakHardDepEdges <- function(pak_result) {
+  hard <- c("depends", "imports", "linkingto")
+  rbindlist(Map(from = pak_result$package, deps = pak_result$deps, function(from, deps) {
+    if (is.null(deps) || !NROW(deps)) return(NULL)
+    deps <- deps[tolower(deps$type) %in% hard & deps$package != "R", , drop = FALSE]
+    data.table(from = rep(from, NROW(deps)), package = deps$package,
+               op = deps$op, version = deps$version)
+  }))
+}
+
+# The commit pak resolved for each GitHub package: package -> RemoteSha. A
+# package resolved to more than one commit (per-package fallback) is left out.
+pakResolvedShaMap <- function(pak_result) {
+  sha <- vapply(pak_result$metadata, function(m)
+    if ("RemoteSha" %in% names(m)) unname(m[["RemoteSha"]]) else NA_character_,
+    character(1))
+  keep <- pak_result$type %in% "github" & !is.na(sha)
+  sha <- unique(data.table(package = pak_result$package[keep], sha = sha[keep]))
+  sha <- sha[!package %in% package[duplicated(package)]]
+  setNames(sha$sha, sha$package)
+}
+
+# Require.cloneFrom under pak: hard-link (or copy) packages that are to be
+# installed from a cloneFrom library (see cloneSources()) into libPaths[1]
+# instead. A GitHub package is cloned only from a copy of the commit pak
+# resolved; a CRAN-style one only from a copy that is not a development
+# build. The copy must meet every version requirement: the user's (pkgDT) and
+# those in pak's resolved dep graph; and the plan must meet the copy's own.
+# Of several copies, pak's resolved version wins, else the highest. A package
+# already in libPaths[1] is never overwritten. Cloned rows leave the install
+# plan; pak then installs the rest and, with upgrade = FALSE, keeps the clones.
+pakClonePackages <- function(pkgDT, libPaths, verbose = getOption("Require.verbose")) {
+  env <- pakEnv()
+  edges <- get0("pakDepEdges", envir = env, inherits = FALSE)
+  shas <- get0("pakResolvedShaMap", envir = env, inherits = FALSE)
+  resolved <- get0("pakResolvedVersionMap", envir = env, inherits = FALSE)
+  # Consume them: without a fresh solve there is nothing to check a clone against.
+  suppressWarnings(rm(list = c("pakDepEdges", "pakResolvedShaMap"), envir = env))
+  libs <- cloneSources(toLib = libPaths[1])
+  if (!length(libs) || is.null(edges) || is.null(resolved)) return(pkgDT)
+
+  inst <- pkgDT[needInstall %in% .txtInstall]
+  refs <- inst$packageFullName
+  gh <- isGH(refs)
+  ghPkgs <- unique(inst$Package[gh])
+  # url:: archives and pkg@version pins are left to pak, as is a package asked
+  # for both from GitHub and CRAN (dedupInstallRefs() picks the ref later).
+  skip <- c(inst$Package[!gh & grepl("::|@", refs)],
+            intersect(ghPkgs, inst$Package[!gh]), dir(libPaths[1]))
+  cands <- setdiff(unique(inst$Package), skip)
+  if (!length(cands)) return(pkgDT)
+  cp <- clonablePackages(libs, cands)
+  if (!NROW(cp)) return(pkgDT)
+
+  sha <- ifelse(is.na(cp$RemoteSha), cp$GithubSHA1, cp$RemoteSha)
+  wantSha <- if (is.null(shas)) rep(NA_character_, NROW(cp)) else unname(shas[cp$Package])
+  cp <- cp[ifelse(cp$Package %in% ghPkgs, (sha == wantSha) %in% TRUE, !cloneIsDevBuild(cp))]
+
+  # The user's own requirements, per copy
+  req <- pkgDT[Package %in% cp$Package & !is.na(versionSpec) & nzchar(versionSpec)]
+  for (i in seq_len(NROW(req))) {
+    wh <- which(cp$Package == req$Package[i])
+    bad <- wh[!compareVersion2(cp$Version[wh], req$versionSpec[i], req$inequality[i]) %in% TRUE]
+    if (length(bad)) cp <- cp[-bad]
+  }
+  if (!NROW(cp)) return(pkgDT)
+  # One copy per package: pak's version, else the highest; ties by library order.
+  exact <- (cp$Version == resolved[cp$Package]) %in% TRUE
+  cp <- cp[order(cp$Package, !exact, -xtfrm(package_version(cp$Version)))]
+  cp <- cp[!duplicated(Package)]
+  vers <- setNames(cp$Version, cp$Package)
+
+  cloneEdges <- rbindlist(lapply(seq_len(NROW(cp)), function(i) {
+    d <- DESCRIPTIONFileDeps(file.path(cp$LibPath[i], cp$Package[i], "DESCRIPTION"))
+    d <- d[!extractPkgName(d) %in% "R"]
+    data.table(from = rep(cp$Package[i], length(d)), package = extractPkgName(d),
+               op = extractInequality(d), version = extractVersionNumber(d))
+  }))
+  # Drop clones until every edge touching one is met. A failing edge into a
+  # clone means the clone is too old for its dependent; a failing edge out of
+  # a clone means the plan lacks what the clone needs.
+  # Base and recommended packages are not in pak's plan: use R's own copies.
+  basePkgs <- intersect(unique(c(edges$package, cloneEdges$package)), .basePkgs)
+  baseVers <- vapply(basePkgs, function(p)
+    tryCatch(as.character(packageVersion(p, lib.loc = .Library)), error = function(e) NA_character_),
+    character(1))
+  repeat {
+    final <- c(resolved, baseVers[!names(baseVers) %in% names(resolved)])
+    final[names(vers)] <- vers
+    e <- rbindlist(list(edges[!from %in% names(vers)],
+                        cloneEdges[from %in% names(vers)]), use.names = TRUE)
+    e <- e[package %in% names(vers) | from %in% names(vers)]
+    v <- unname(final[e$package])
+    hasReq <- !is.na(e$version) & nzchar(e$version)
+    ok <- !is.na(v)
+    ok[hasReq] <- ok[hasReq] &
+      compareVersion2(v[hasReq], e$version[hasReq], e$op[hasReq]) %in% TRUE
+    bad <- e[!ok]
+    if (!NROW(bad)) break
+    drop <- unique(ifelse(bad$package %in% names(vers), bad$package, bad$from))
+    vers <- vers[!names(vers) %in% drop]
+    if (!length(vers)) return(pkgDT)
+  }
+  cp <- cp[Package %in% names(vers)]
+
+  messageVerbose(green(paste0WithLineFeed(paste0(
+    "  -- Cloning (", NROW(cp), " of ", length(unique(inst$Package)),
+    ") from ", paste(unique(cp$LibPath), collapse = comma), " instead of installing: ",
+    paste(cp$Package, collapse = comma)))), verbose = verbose)
+  cloneCopies(cp, toLib = libPaths[1])
+
+  for (p in cp$Package) {
+    if (!file.exists(file.path(libPaths[1], p, "DESCRIPTION"))) next
+    wh <- which(pkgDT$Package == p)
+    set(pkgDT, wh, "needInstall",        .txtDontInstall)
+    set(pkgDT, wh, "installed",          TRUE)
+    set(pkgDT, wh, "installedVersionOK", TRUE)
+    set(pkgDT, wh, "Version",            unname(vers[p]))
+    set(pkgDT, wh, "LibPath",            libPaths[1])
+    set(pkgDT, wh, "installResult",      "OK")
+  }
+  pkgDT
 }
 
 # Install levels: refs whose hard deps (within the set) are all in earlier
