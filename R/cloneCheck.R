@@ -58,21 +58,6 @@ cloneCheckExcluded <- function(lib) {
   }))
 }
 
-# The script the fresh R process runs: base R only (Require may not be on its
-# library paths). Arguments: the status file, then the library paths.
-cloneCheckScript <- function() {
-  c('args <- commandArgs(TRUE); f <- args[1]; .libPaths(args[-1])',
-    'st <- utils::read.delim(f, colClasses = "character", quote = "", na.strings = character())',
-    'for (i in which(st$Status == "untested")) {',
-    '  res <- tryCatch({ loadNamespace(st$Package[i]); "" }, error = function(e) conditionMessage(e))',
-    '  st$Status[i] <- if (identical(res, "")) "ok" else "fail"',
-    '  st$Reason[i] <- gsub("[\\t\\r\\n]+", " ", res)',
-    '  tmp <- paste0(f, ".tmp")',
-    '  utils::write.table(st, tmp, sep = "\\t", quote = FALSE, row.names = FALSE)',
-    '  file.rename(tmp, f)',
-    '}')
-}
-
 # After the install: start the load check on this call's clones. Returns the
 # status file, invisibly; with `wait`, after the check has finished.
 cloneCheckStart <- function(libPaths, wait = !interactive(), verbose = getOption("Require.verbose")) {
@@ -86,8 +71,7 @@ cloneCheckStart <- function(libPaths, wait = !interactive(), verbose = getOption
                   sample.int(1e6, 1))
   f <- file.path(lib, paste0(.txtCloneCheckFile, "_", stamp))
   cloneCheckWrite(rec, f)
-  script <- paste0(f, ".R")
-  writeLines(c(cloneCheckScript(), paste0('unlink("', gsub("\\\\", "/", script), '")')), script)
+  script <- system.file("cloneCheck.R", package = "Require", mustWork = TRUE)
   messageVerbose("  -- Checking that the ", NROW(rec), " cloned package", if (NROW(rec) > 1) "s",
                  " load", if (!wait) " (in the background; any that fail are reinstalled by the next Require()/Install() here)",
                  verbose = verbose)

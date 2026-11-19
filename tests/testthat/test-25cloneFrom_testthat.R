@@ -486,7 +486,8 @@ test_that("in the background the check returns at once and finishes on its own",
     Sys.sleep(0.5)
   }
   expect_setequal(st$Status, "ok")
-  expect_false(file.exists(paste0(f, ".R")))              # the script removes itself
+  # the check leaves nothing in the library but its status file
+  expect_identical(grep("RequireCloneCheck", dir(to, all.files = TRUE), value = TRUE), basename(f))
 })
 
 test_that("compiled copies are not cloned from a library that is not on a local disk", {
