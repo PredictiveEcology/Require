@@ -300,6 +300,8 @@ Require <- function(packages,
 
   libPaths <- doLibPaths(libPaths, standAlone = standAlone)
   libPaths <- checkLibPaths(libPaths = libPaths, exact = TRUE, ...)
+  # Clones that failed an earlier load check: delete them so they are installed
+  cloneCheckRepair(libPaths[1], verbose = verbose)
 
   # Make sure pak is reachable on .libPaths() BEFORE any downstream code path
   # calls pak; if it is not, install it fresh into the project lib. pak runs
@@ -568,6 +570,17 @@ Require <- function(packages,
         }
       } else {
         messageVerbose("No packages to install/update", verbose = verbose)
+      }
+      # Load-check this call's clones. Interactive: in the background, acted on
+      # by the next call. Otherwise: wait, and install any that failed now.
+      if (!is.null(cloneCheckStart(libPaths, verbose = verbose)) && !interactive()) {
+        failed <- cloneCheckRepair(libPaths[1], verbose = verbose)
+        if (length(failed)) {
+          refs <- unique(pkgDT[["packageFullName"]][pkgDT[["Package"]] %in% failed])
+          refs <- c(refs, setdiff(failed, extractPkgName(refs)))
+          Require(refs, libPaths = libPaths, standAlone = standAlone, install = TRUE,
+                  require = FALSE, repos = repos, type = type, verbose = verbose)
+        }
       }
     }
     if (length(basePkgsToLoad) && !isFALSE(require)) {
@@ -3774,7 +3787,7 @@ cloneSources <- function(rcf = getOption("Require.cloneFrom"), toLib) {
 # callr / processx / cli are never cloned -- they bundle native helper
 # executables that don't survive a file-by-file copy (see .pakNoCopyPkgs()).
 # One row per copy, in the order of `libs`.
-clonablePackages <- function(libs, pkgs) {
+clonablePackages <- function(libs, pkgs, toLib = NULL) {
   fields <- c("Built", "NeedsCompilation", "RemoteType", "RemoteSha", "GithubSHA1")
   ip <- do.call(rbind, lapply(libs, function(lib) {
     if (dir.exists(file.path(lib, "00LOCK"))) return(NULL)
@@ -3794,6 +3807,8 @@ clonablePackages <- function(libs, pkgs) {
                                      Version = character()))
   ip <- canClone(ip)
   ip <- ip[!ip[, "Package"] %in% .pakNoCopyPkgs(), , drop = FALSE]
+  # a package + version that failed the load check in toLib (cloneCheck.R)
+  ip <- ip[!paste(ip[, "Package"], ip[, "Version"]) %in% cloneCheckExcluded(toLib), , drop = FALSE]
   as.data.table(ip)
 }
 
@@ -3808,6 +3823,7 @@ cloneIsDevBuild <- function(cp) {
 cloneCopies <- function(cp, toLib) {
   for (lib in unique(cp[["LibPath"]]))
     linkOrCopyPackageFilesInner(cp[["Package"]][cp[["LibPath"]] == lib], fromLib = lib, toLib = toLib)
+  cloneCheckRecord(cp, toLib) # loaded after the install; see cloneCheckStart()
 }
 
 # Legacy path: clone a package when a copy is at exactly the version that
@@ -3816,7 +3832,7 @@ cloneCopies <- function(cp, toLib) {
 clonePackages <- function(rcf, ipa, libPaths, skip = character(),
                           verbose = getOption("Require.verbose")) {
   wantToInstall <- ipa[["available"]][, "Version"]
-  cp <- clonablePackages(rcf, setdiff(names(wantToInstall), c(skip, sourcePkgs())))
+  cp <- clonablePackages(rcf, setdiff(names(wantToInstall), c(skip, sourcePkgs())), toLib = libPaths[1])
   cp <- cp[!cloneIsDevBuild(cp) & Version == wantToInstall[Package]]
   cp <- cp[!duplicated(Package)]
   if (NROW(cp)) {
@@ -4035,6 +4051,10 @@ canClone <- function(ip) {
   if (isWindows()) {
     keep <- keep & !compiled
   } else {
+    # ... and only from a library on a local disk (isLocalLib())
+    libs <- unique(ip[keep & compiled, "LibPath"])
+    local <- setNames(isLocalLib(libs), libs)
+    keep[keep & compiled] <- local[ip[keep & compiled, "LibPath"]]
     sameBuild <- vapply(pkgDir[keep & compiled], function(d) {
       built <- read.dcf(file.path(d, "DESCRIPTION"), fields = "Built")[1, 1]
       sub("^[^;]*; *([^;]*);.*$", "\\1", built) %in% R.version$platform

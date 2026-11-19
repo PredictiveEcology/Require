@@ -89,8 +89,13 @@ libraries R starts a session from (\code{R_LIBS}, \code{R_LIBS_USER}, \code{R_LI
 a character vector names the libraries; \code{FALSE} or \code{NULL} turns cloning
 off. The destination library and R's own \code{.Library} are never used.
 Only copies built under the same R minor version are cloned; a copy with
-compiled code also has to have been built for this platform, and is never
-cloned on Windows. Never cloned: \code{pak}, \code{callr}, \code{processx} or \code{cli}, whose
+compiled code also has to have been built for this platform and be in a
+library on a local disk, and is never cloned on Windows. After the
+install, every clone is loaded in a fresh R process; one that fails is
+deleted, installed normally, and never cloned into that library again. In
+an interactive session this check runs in the background and the next
+\code{Require()}/\code{Install()} on that library acts on it; otherwise the call
+waits for it. Never cloned: \code{pak}, \code{callr}, \code{processx} or \code{cli}, whose
 native helper executables do not survive a file-by-file copy, and never a
 copy that is mid-install or unreadable. A package already in the
 destination library is never overwritten. A GitHub package is cloned

@@ -3014,7 +3014,7 @@ pakClonePackages <- function(pkgDT, libPaths, verbose = getOption("Require.verbo
             intersect(ghPkgs, inst[["Package"]][!gh]), dir(libPaths[1]))
   cands <- setdiff(unique(inst[["Package"]]), skip)
   if (!length(cands)) return(pkgDT)
-  cp <- clonablePackages(libs, cands)
+  cp <- clonablePackages(libs, cands, toLib = libPaths[1])
   if (!NROW(cp)) return(pkgDT)
 
   sha <- ifelse(is.na(cp[["RemoteSha"]]), cp[["GithubSHA1"]], cp[["RemoteSha"]])

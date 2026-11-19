@@ -37,8 +37,10 @@ setSolve <- function(resolved = c(tinyCloneA = "0.0.1", tinyCloneB = "0.0.1"),
   env <- Require:::pakEnv()
   assign("pakResolvedVersionMap", resolved, envir = env)
   assign("pakResolvedShaMap", shas, envir = env)
-  withr::defer(suppressWarnings(rm(list = c("pakResolvedVersionMap", "pakResolvedShaMap"),
-                                   envir = env)), envir = envir)
+  withr::defer({
+    suppressWarnings(rm(list = c("pakResolvedVersionMap", "pakResolvedShaMap"), envir = env))
+    suppressWarnings(rm(list = "cloneCheckPending", envir = Require:::pkgEnv()))
+  }, envir = envir)
 }
 
 test_that("pakClonePackages hard-links packages that meet every requirement", {
@@ -380,4 +382,148 @@ test_that("Install() under pak clones what it can and pak installs the rest arou
   expect_identical(ver("tinyIntB"), "1.0")     # cloned
   expect_identical(ver("tinyIntC"), "1.0")     # installed by pak
   expect_identical(ver("tinyIntD"), "1.5")     # cloned, and pak did not upgrade it
+})
+
+## ---- load check of clones (cloneCheck.R) ----
+
+## A package whose .onLoad fails when loaded from the library named by TINY_BROKEN_LIB: it loads
+## from its source library but not as a clone there.
+tinyBrokenPkg <- function(lib, name, version = "0.0.1") {
+  src <- withr::local_tempdir()
+  p <- file.path(src, name)
+  dir.create(file.path(p, "R"), recursive = TRUE)
+  writeLines(c(paste0("Package: ", name), paste0("Version: ", version), "Title: t", "Description: t.",
+               "License: MIT", "Encoding: UTF-8", "NeedsCompilation: no"), file.path(p, "DESCRIPTION"))
+  writeLines("export(f)", file.path(p, "NAMESPACE"))
+  writeLines(c("f <- function() 1",
+               ".onLoad <- function(libname, pkgname)",
+               "  if (identical(normalizePath(libname), normalizePath(Sys.getenv('TINY_BROKEN_LIB', '/none'), mustWork = FALSE)))",
+               "    stop('cannot load from here')"), file.path(p, "R", "f.R"))
+  system2(file.path(R.home("bin"), "R"), c("CMD", "INSTALL", "--no-test-load", "-l", shQuote(lib), shQuote(p)),
+          stdout = TRUE, stderr = TRUE)
+  invisible(lib)
+}
+
+checkFiles <- function(lib) Require:::cloneCheckFiles(lib)
+
+test_that("a clone that loads passes the load check and leaves no file behind", {
+  from <- cloneFromLib()
+  to <- withr::local_tempdir()
+  withr::local_options(Require.cloneFrom = from)
+  setSolve()
+  Require:::pakClonePackages(planDT(), libPaths = to, verbose = 0)
+  f <- Require:::cloneCheckStart(to, wait = TRUE, verbose = 0)
+  expect_setequal(Require:::cloneCheckRead(f)$Status, "ok")
+  expect_identical(Require:::cloneCheckRepair(to, verbose = 0), character())
+  expect_length(checkFiles(to), 0)
+  expect_true(dir.exists(file.path(to, "tinyCloneA")))
+})
+
+test_that("a clone that fails to load is deleted, never cloned again, and its source is untouched", {
+  from <- withr::local_tempdir()
+  tinyBrokenPkg(from, "tinyBroken")
+  to <- withr::local_tempdir()
+  withr::local_envvar(TINY_BROKEN_LIB = to)
+  withr::local_options(Require.cloneFrom = from)
+  setSolve(resolved = c(tinyBroken = "0.0.1"))
+  Require:::pakClonePackages(planDT("tinyBroken"), libPaths = to, verbose = 0)
+  expect_true(dir.exists(file.path(to, "tinyBroken")))
+  f <- Require:::cloneCheckStart(to, wait = TRUE, verbose = 0)
+  st <- Require:::cloneCheckRead(f)
+  expect_identical(st$Status, "fail")
+  expect_match(st$Reason, "cannot load from here")
+  expect_message(removed <- Require:::cloneCheckRepair(to, verbose = 0), "failed to load")
+  expect_identical(removed, "tinyBroken")
+  expect_false(dir.exists(file.path(to, "tinyBroken")))
+  expect_true(file.exists(file.path(from, "tinyBroken", "R", "tinyBroken.rdb")))
+  ## the failed version is not offered for cloning into that library again; elsewhere it still is
+  expect_identical(nrow(Require:::clonablePackages(from, "tinyBroken", toLib = to)), 0L)
+  expect_identical(nrow(Require:::clonablePackages(from, "tinyBroken", toLib = withr::local_tempdir())), 1L)
+  expect_identical(nrow(Require:::clonablePackages(from, "tinyBroken")), 1L)
+})
+
+test_that("a check still running is left alone; one that died counts as failed", {
+  from <- cloneFromLib()
+  to <- withr::local_tempdir()
+  withr::local_options(Require.cloneFrom = from)
+  setSolve()
+  Require:::pakClonePackages(planDT(), libPaths = to, verbose = 0)
+  rec <- Require:::pkgEnv()$cloneCheckPending[[to]]
+  f <- file.path(to, "._RequireCloneCheck_test")
+  Require:::cloneCheckWrite(rec, f)                       # all "untested", as when the check starts
+  expect_identical(Require:::cloneCheckRepair(to, verbose = 0), character())
+  expect_true(file.exists(f))
+  Sys.setFileTime(f, Sys.time() - 2 * Require:::cloneCheckStaleSecs)
+  expect_message(removed <- Require:::cloneCheckRepair(to, verbose = 0), "stopped before")
+  expect_setequal(removed, c("tinyCloneA", "tinyCloneB"))
+})
+
+test_that("a failed clone that was reinstalled since its check is not deleted", {
+  from <- cloneFromLib()
+  to <- withr::local_tempdir()
+  withr::local_options(Require.cloneFrom = from)
+  setSolve(resolved = c(tinyCloneA = "0.0.1"))
+  Require:::pakClonePackages(planDT("tinyCloneA"), libPaths = to, verbose = 0)
+  rec <- Require:::pkgEnv()$cloneCheckPending[[to]]
+  rec$Status <- "fail"
+  rec$Mtime <- "1"                                        # not the DESCRIPTION now in `to`
+  Require:::cloneCheckWrite(rec, file.path(to, "._RequireCloneCheck_test"))
+  expect_identical(Require:::cloneCheckRepair(to, verbose = 0), character())
+  expect_true(dir.exists(file.path(to, "tinyCloneA")))
+  expect_identical(Require:::cloneCheckExcluded(to), "tinyCloneA 0.0.1")
+})
+
+test_that("in the background the check returns at once and finishes on its own", {
+  from <- cloneFromLib()
+  to <- withr::local_tempdir()
+  withr::local_options(Require.cloneFrom = from)
+  setSolve()
+  Require:::pakClonePackages(planDT(), libPaths = to, verbose = 0)
+  f <- Require:::cloneCheckStart(to, wait = FALSE, verbose = 0)
+  for (i in 1:120) {
+    st <- Require:::cloneCheckRead(f)
+    if (!is.null(st) && !any(st$Status == "untested")) break
+    Sys.sleep(0.5)
+  }
+  expect_setequal(st$Status, "ok")
+  # the check leaves nothing in the library but its status file
+  expect_identical(grep("RequireCloneCheck", dir(to, all.files = TRUE), value = TRUE), basename(f))
+})
+
+test_that("compiled copies are not cloned from a library that is not on a local disk", {
+  skip_on_os("windows")
+  expect_true(Require:::isLocalLib(tempdir()))
+  lib <- withr::local_tempdir()
+  tinyPkg(lib, "pure")
+  tinyPkg(lib, "comp")
+  dir.create(file.path(lib, "comp", "libs"))
+  d <- file.path(lib, "comp", "DESCRIPTION")
+  desc <- read.dcf(d)
+  desc[, "Built"] <- sub("^(R [^;]*); *[^;]*;", paste0("\\1; ", R.version$platform, ";"), desc[, "Built"])
+  write.dcf(desc, d)
+  ip <- installed.packages(lib, fields = c("Built", "NeedsCompilation"), noCache = TRUE)
+  expect_setequal(rownames(Require:::canClone(ip)), c("comp", "pure"))
+  local_mocked_bindings(isLocalLib = function(libs) rep(FALSE, length(libs)), .package = "Require")
+  expect_identical(rownames(Require:::canClone(ip)), "pure")
+})
+
+test_that("Install() outside an interactive session load-checks clones and installs any that fail", {
+  skip_on_cran()
+  skip_if_not_installed("pak")
+  repo <- tinyRepo(list(list(name = "tinyIntE", version = "2.0"),
+                        list(name = "tinyIntF", version = "0.0.1")))
+  from <- withr::local_tempdir()
+  tinyBrokenPkg(from, "tinyIntE", version = "1.0")      # meets the request, but fails as a clone
+  tinyPkg(from, "tinyIntF")
+  to <- withr::local_tempdir()
+  withr::local_envvar(TINY_BROKEN_LIB = to)
+  withr::local_options(Require.cloneFrom = from, Require.usePak = TRUE,
+                       repos = c(tiny = repo, getOption("repos")))
+  msgs <- capture_messages(Install(c("tinyIntE", "tinyIntF"), libPaths = to, standAlone = TRUE, verbose = 1))
+  expect_true(any(grepl("Cloning.*tinyIntE", msgs)))
+  expect_true(any(grepl("failed to load", msgs)))
+  ver <- function(p) read.dcf(file.path(to, p, "DESCRIPTION"), "Version")[[1]]
+  expect_identical(ver("tinyIntE"), "2.0")               # installed from the repository instead
+  expect_identical(ver("tinyIntF"), "0.0.1")             # the clone that loaded stays
+  expect_identical(Require:::cloneCheckExcluded(to), "tinyIntE 1.0")
 })
