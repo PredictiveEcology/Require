@@ -79,7 +79,9 @@ utils::globalVariables(c(
 #'   branch and reinstalled if it differs, as if each were written
 #'   `"account/repo@branch (HEAD)"`. A minimum version (`>=`, `>`) is replaced
 #'   by the HEAD check; exact or maximum versions (`==`, `<=`, `<`) are kept, and
-#'   GitHub packages that are only dependencies follow the usual rules. If `TRUE`, the
+#'   GitHub packages that are only dependencies follow the usual rules. A package
+#'   already loaded in the session is not checked (reinstalling it would corrupt
+#'   it in that session); a message names them. If `TRUE`, the
 #'   default, then this function will try to install any missing packages or
 #'   dependencies. Defaults to `getOption("Require.install")`; `Install()`
 #'   takes only `"force"` or `"HEAD"` from the option.
@@ -364,8 +366,15 @@ Require <- function(packages,
 
   # install = "HEAD": check every requested GitHub package against the latest
   # commit of its branch, as if written "account/repo@branch (HEAD)".
+  # A package already loaded is left as requested: reinstalling a loaded
+  # package corrupts it in this session (its lazy-load database is replaced).
   if (identical(install, "HEAD")) {
-    packages <- addHEAD(packages)
+    loaded <- setdiff(intersect(extractPkgName(packages[isGH(packages)]), loadedNamespaces()), .basePkgs)
+    if (length(loaded))
+      messageVerbose("install = \"HEAD\": not checking ", paste(sort(unique(loaded)), collapse = ", "),
+                     " against GitHub: already loaded in this session. To update, set the option ",
+                     "in a new R session before they are loaded.", verbose = verbose, verboseLevel = 1)
+    packages <- addHEAD(packages, skip = loaded)
     install <- TRUE
   }
 
@@ -3551,9 +3560,11 @@ getArchiveURL <- function(repo, pkg, type = getOption("pkgType")) {
 
 # Flag each GitHub ref " (HEAD)": those with no version requirement, and those
 # with a minimum version (">=", ">"), which the branch's latest commit meets.
-# Exact or maximum pins ("==", "<=", "<") and refs already flagged are kept.
-addHEAD <- function(pkgs) {
-  add <- isGH(pkgs) & (!grepl("\\(", pkgs) | extractInequality(pkgs) %in% c(">=", ">"))
+# Exact or maximum pins ("==", "<=", "<"), refs already flagged, and packages
+# in `skip` are kept.
+addHEAD <- function(pkgs, skip = character()) {
+  add <- isGH(pkgs) & (!grepl("\\(", pkgs) | extractInequality(pkgs) %in% c(">=", ">")) &
+    !extractPkgName(pkgs) %in% skip
   pkgs[add] <- paste0(trimVersionNumber(pkgs[add]), " (HEAD)")
   pkgs
 }

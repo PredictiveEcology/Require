@@ -1476,6 +1476,25 @@ test_that("addHEAD() flags GitHub refs with no version or a minimum version", {
                      "PredictiveEcology/fireSenseUtils@development (HEAD)",
                      "PredictiveEcology/SpaDES.tools@development (HEAD)",
                      refs[6:10]))
+  # packages in `skip` (loaded ones, from Require()) keep their ref
+  expect_identical(Require:::addHEAD(refs[c(1, 3)], skip = "SpaDES.core"),
+                   c("PredictiveEcology/fpCompare@development (HEAD)", refs[3]))
+})
+
+test_that("install = \"HEAD\" leaves a loaded package alone and says so", {
+  # Reinstalling a loaded package replaced its lazy-load database under the
+  # session: SpaDES.core, loaded by simInit(), became "corrupt" (LandRCBM).
+  # testthat is loaded here; notAPkgHEAD never is. addHEAD() is mocked to stop
+  # Require() right after it decides what to skip.
+  passed <- NULL
+  testthat::local_mocked_bindings(addHEAD = function(pkgs, skip = character()) {
+    passed <<- list(pkgs = pkgs, skip = skip)
+    stop("stop here")
+  }, .package = "Require")
+  mess <- capture_messages(try(Require::Require(c("r-lib/testthat@main (>= 3.0)", "PredictiveEcology/notAPkgHEAD@development"),
+                                                install = "HEAD", require = FALSE, verbose = 1), silent = TRUE))
+  expect_identical(passed$skip, "testthat")
+  expect_true(any(grepl("not checking testthat against GitHub: already loaded", mess)))
 })
 
 test_that("install = \"HEAD\" (argument or option) updates a GitHub package to its branch's latest commit", {

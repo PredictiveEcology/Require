@@ -2,7 +2,7 @@
 
 ## New features
 
-* `install = "HEAD"`, or `options(Require.install = "HEAD")`, checks every requested GitHub package against the latest commit of its branch and reinstalls it if it differs, as if each were written `"account/repo@branch (HEAD)"`. This replaces a minimum version (`>=`), as modules usually write; exact or maximum versions are kept. Set the option before `setupProject()` to update all of a project's GitHub packages. `Install()` now also takes `"force"` and `"HEAD"` from `Require.install`.
+* `install = "HEAD"`, or `options(Require.install = "HEAD")`, checks every requested GitHub package against the latest commit of its branch and reinstalls it if it differs, as if each were written `"account/repo@branch (HEAD)"`. This replaces a minimum version (`>=`), as modules usually write; exact or maximum versions are kept. Packages already loaded in the session are not checked, because reinstalling a loaded package corrupts it in that session. Set the option before `setupProject()` to update all of a project's GitHub packages. `Install()` now also takes `"force"` and `"HEAD"` from `Require.install`.
 
 * Every package cloned by `Require.cloneFrom` is now loaded in a fresh R process after the install. A clone that fails to load is deleted (the source copy is untouched), installed normally instead, and never cloned into that library again. In an interactive session the check runs in the background and the next `Require()`/`Install()` on that library acts on it; in scripts and CI the call waits for it and repairs at once. Compiled packages are no longer cloned from a library on a network drive.
 

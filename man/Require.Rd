@@ -115,7 +115,9 @@ requested GitHub package is checked against the latest commit of its
 branch and reinstalled if it differs, as if each were written
 \code{"account/repo@branch (HEAD)"}. A minimum version (\code{>=}, \code{>}) is replaced
 by the HEAD check; exact or maximum versions (\code{==}, \code{<=}, \code{<}) are kept, and
-GitHub packages that are only dependencies follow the usual rules. If \code{TRUE}, the
+GitHub packages that are only dependencies follow the usual rules. A package
+already loaded in the session is not checked (reinstalling it would corrupt
+it in that session); a message names them. If \code{TRUE}, the
 default, then this function will try to install any missing packages or
 dependencies. Defaults to \code{getOption("Require.install")}; \code{Install()}
 takes only \code{"force"} or \code{"HEAD"} from the option.}
