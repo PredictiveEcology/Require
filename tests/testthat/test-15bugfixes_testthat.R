@@ -1476,7 +1476,9 @@ test_that("install = \"HEAD\" (argument or option) updates a GitHub package to i
   skip_if_offline2()
   lib <- withr::local_tempdir()
   withr::local_options(Require.cloneFrom = FALSE)
-  if ("fpCompare" %in% loadedNamespaces()) unloadNamespace("fpCompare")
+  # try(): an earlier test may have loaded fpCompare from a library since deleted,
+  # so its .onUnload hook cannot find its files
+  if ("fpCompare" %in% loadedNamespaces()) try(unloadNamespace("fpCompare"), silent = TRUE)
   installedSha <- function()
     unname(read.dcf(file.path(lib, "fpCompare", "DESCRIPTION"), fields = "RemoteSha")[1, 1])
   old <- "f10ce1cdce350387d5cb6eee4a1ed3a7c774c77a" # one commit behind development
