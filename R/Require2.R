@@ -78,7 +78,9 @@ utils::globalVariables(c(
 #'   requested GitHub package is checked against the latest commit of its
 #'   branch and reinstalled if it differs, as if each were written
 #'   `"account/repo@branch (HEAD)"`. A minimum version (`>=`, `>`) is replaced
-#'   by the HEAD check; exact or maximum versions (`==`, `<=`, `<`) are kept, and
+#'   by the HEAD check, and other requests for the same package (e.g. from CRAN)
+#'   are dropped; a package with an exact or maximum version (`==`, `<=`, `<`) is
+#'   kept as requested, and
 #'   GitHub packages that are only dependencies follow the usual rules. A package
 #'   already loaded in the session is not checked (reinstalling it would corrupt
 #'   it in that session); a message names them. If `TRUE`, the
@@ -3558,15 +3560,29 @@ getArchiveURL <- function(repo, pkg, type = getOption("pkgType")) {
   file.path(contrib.url(repo, type), .txtArchive, pkg)
 }
 
-# Flag each GitHub ref " (HEAD)": those with no version requirement, and those
-# with a minimum version (">=", ">"), which the branch's latest commit meets.
-# Exact or maximum pins ("==", "<=", "<"), refs already flagged, and packages
-# in `skip` are kept.
+# For each package requested from GitHub, replace all its requests with one
+# "account/repo@branch (HEAD)". The GitHub ref kept is the one that wins without
+# HEAD: a ref naming a branch over one without, then the highest minimum version.
+# Its other requests (GitHub or CRAN) go if they have no version or a minimum
+# version (">=", ">"), which the branch's latest commit meets. A package with an
+# exact or maximum pin ("==", "<=", "<") in any request, or in `skip`, is kept
+# as requested.
 addHEAD <- function(pkgs, skip = character()) {
-  add <- isGH(pkgs) & (!grepl("\\(", pkgs) | extractInequality(pkgs) %in% c(">=", ">")) &
-    !extractPkgName(pkgs) %in% skip
-  pkgs[add] <- paste0(trimVersionNumber(pkgs[add]), " (HEAD)")
-  pkgs
+  nm <- extractPkgName(pkgs)
+  gh <- isGH(pkgs)
+  minOrNone <- !grepl("\\(", pkgs) | grepl(HEADgrepWithParentheses, pkgs) |
+    extractInequality(pkgs) %in% c(">=", ">")
+  heads <- setdiff(unique(nm[gh & minOrNone]), c(skip, nm[!minOrNone]))
+  for (p in heads) {
+    wh <- which(nm == p)
+    cand <- wh[gh[wh]]
+    ver <- extractVersionNumber(pkgs[cand])
+    ver[!grepl("^[0-9]+[.-][0-9.-]*$", ver)] <- "0.0"
+    best <- cand[order(!grepl("@", pkgs[cand]), -xtfrm(package_version(ver)))[1]]
+    pkgs[wh[1]] <- paste0(trimVersionNumber(pkgs[best]), " (HEAD)")
+    pkgs[wh[-1]] <- NA
+  }
+  pkgs[!is.na(pkgs)]
 }
 
 isGitHub <- function(pkg, filenames) {

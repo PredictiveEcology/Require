@@ -1476,6 +1476,19 @@ test_that("addHEAD() flags GitHub refs with no version or a minimum version", {
                      "PredictiveEcology/fireSenseUtils@development (HEAD)",
                      "PredictiveEcology/SpaDES.tools@development (HEAD)",
                      refs[6:10]))
+  # one request per package: the GitHub ref that wins without HEAD (a named
+  # branch, then the highest minimum), replacing its CRAN and other GitHub
+  # requests; a package with an exact or maximum pin anywhere is kept as is
+  # (LandRCBM: "PredictiveEcology/SpaDES.core" + "...@development (>= ...)" +
+  # "SpaDES.core (>= 3.0.4)", where the CRAN ref won and HEAD never ran)
+  expect_identical(
+    Require:::addHEAD(c("PredictiveEcology/SpaDES.core", "SpaDES.core (>= 3.0.4)",
+                        "PredictiveEcology/SpaDES.core@development (>= 3.2.1.9073)",
+                        "PredictiveEcology/SpaDES.core@development (>= 2.1.5)",
+                        "PredictiveEcology/x@main (>= 2.0)", "PredictiveEcology/x@dev (>= 1.0)",
+                        "x (>= 3.0)", "PredictiveEcology/q@development", "q (== 1.0)", "terra")),
+    c("PredictiveEcology/SpaDES.core@development (HEAD)", "PredictiveEcology/x@main (HEAD)",
+      "PredictiveEcology/q@development", "q (== 1.0)", "terra"))
   # packages in `skip` (loaded ones, from Require()) keep their ref
   expect_identical(Require:::addHEAD(refs[c(1, 3)], skip = "SpaDES.core"),
                    c("PredictiveEcology/fpCompare@development (HEAD)", refs[3]))

@@ -114,7 +114,9 @@ packages, mimicking a call to e.g., \code{install.packages}. If \code{"HEAD"}, e
 requested GitHub package is checked against the latest commit of its
 branch and reinstalled if it differs, as if each were written
 \code{"account/repo@branch (HEAD)"}. A minimum version (\code{>=}, \code{>}) is replaced
-by the HEAD check; exact or maximum versions (\code{==}, \code{<=}, \code{<}) are kept, and
+by the HEAD check, and other requests for the same package (e.g. from CRAN)
+are dropped; a package with an exact or maximum version (\code{==}, \code{<=}, \code{<}) is
+kept as requested, and
 GitHub packages that are only dependencies follow the usual rules. A package
 already loaded in the session is not checked (reinstalling it would corrupt
 it in that session); a message names them. If \code{TRUE}, the
