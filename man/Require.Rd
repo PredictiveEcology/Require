@@ -113,9 +113,9 @@ anything. If \code{"force"}, then it will force installation of requested
 packages, mimicking a call to e.g., \code{install.packages}. If \code{"HEAD"}, every
 requested GitHub package is checked against the latest commit of its
 branch and reinstalled if it differs, as if each were written
-\code{"account/repo@branch (HEAD)"}; refs with a version requirement are left
-as they are, and GitHub packages that are only dependencies follow the
-usual rules. If \code{TRUE}, the
+\code{"account/repo@branch (HEAD)"}. A minimum version (\code{>=}, \code{>}) is replaced
+by the HEAD check; exact or maximum versions (\code{==}, \code{<=}, \code{<}) are kept, and
+GitHub packages that are only dependencies follow the usual rules. If \code{TRUE}, the
 default, then this function will try to install any missing packages or
 dependencies. Defaults to \code{getOption("Require.install")}; \code{Install()}
 takes only \code{"force"} or \code{"HEAD"} from the option.}

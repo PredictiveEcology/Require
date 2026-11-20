@@ -34,7 +34,8 @@
 #'   will be attempted, and missing packages will result in an error.
 #'   `"force"` reinstalls the requested packages. `"HEAD"` checks every
 #'   requested GitHub package against the latest commit of its branch and
-#'   reinstalls it if it differs, as if written `"account/repo@branch (HEAD)"`;
+#'   reinstalls it if it differs, as if written `"account/repo@branch (HEAD)"`
+#'   (this replaces a minimum version, `>=`; exact or maximum versions are kept);
 #'   e.g. `options(Require.install = "HEAD")` before `setupProject()` to update
 #'   all the project's GitHub packages. `Install` ignores `TRUE`/`FALSE` here
 #'   (it always installs) but uses `"force"` and `"HEAD"`.}

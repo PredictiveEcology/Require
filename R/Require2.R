@@ -77,9 +77,9 @@ utils::globalVariables(c(
 #'   packages, mimicking a call to e.g., `install.packages`. If `"HEAD"`, every
 #'   requested GitHub package is checked against the latest commit of its
 #'   branch and reinstalled if it differs, as if each were written
-#'   `"account/repo@branch (HEAD)"`; refs with a version requirement are left
-#'   as they are, and GitHub packages that are only dependencies follow the
-#'   usual rules. If `TRUE`, the
+#'   `"account/repo@branch (HEAD)"`. A minimum version (`>=`, `>`) is replaced
+#'   by the HEAD check; exact or maximum versions (`==`, `<=`, `<`) are kept, and
+#'   GitHub packages that are only dependencies follow the usual rules. If `TRUE`, the
 #'   default, then this function will try to install any missing packages or
 #'   dependencies. Defaults to `getOption("Require.install")`; `Install()`
 #'   takes only `"force"` or `"HEAD"` from the option.
@@ -3549,10 +3549,12 @@ getArchiveURL <- function(repo, pkg, type = getOption("pkgType")) {
   file.path(contrib.url(repo, type), .txtArchive, pkg)
 }
 
-# Add " (HEAD)" to each GitHub ref that has no version requirement or HEAD flag
+# Flag each GitHub ref " (HEAD)": those with no version requirement, and those
+# with a minimum version (">=", ">"), which the branch's latest commit meets.
+# Exact or maximum pins ("==", "<=", "<") and refs already flagged are kept.
 addHEAD <- function(pkgs) {
-  add <- isGH(pkgs) & !grepl("\\(", pkgs)
-  pkgs[add] <- paste0(pkgs[add], " (HEAD)")
+  add <- isGH(pkgs) & (!grepl("\\(", pkgs) | extractInequality(pkgs) %in% c(">=", ">"))
+  pkgs[add] <- paste0(trimVersionNumber(pkgs[add]), " (HEAD)")
   pkgs
 }
 

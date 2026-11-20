@@ -44,7 +44,8 @@ If this is \code{FALSE}, then no installations
 will be attempted, and missing packages will result in an error.
 \code{"force"} reinstalls the requested packages. \code{"HEAD"} checks every
 requested GitHub package against the latest commit of its branch and
-reinstalls it if it differs, as if written \code{"account/repo@branch (HEAD)"};
+reinstalls it if it differs, as if written \code{"account/repo@branch (HEAD)"}
+(this replaces a minimum version, \code{>=}; exact or maximum versions are kept);
 e.g. \code{options(Require.install = "HEAD")} before \code{setupProject()} to update
 all the project's GitHub packages. \code{Install} ignores \code{TRUE}/\code{FALSE} here
 (it always installs) but uses \code{"force"} and \code{"HEAD"}.}

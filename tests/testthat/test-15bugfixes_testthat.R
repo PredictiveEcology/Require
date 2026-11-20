@@ -1462,13 +1462,20 @@ test_that("Require() with no packages returns without error", {
   }
 })
 
-test_that("addHEAD() flags only GitHub refs with no version requirement or HEAD flag", {
+test_that("addHEAD() flags GitHub refs with no version or a minimum version", {
   refs <- c("PredictiveEcology/fpCompare@development", "PredictiveEcology/LandR",
+            "PredictiveEcology/SpaDES.core@development (>= 2.0)",
+            "PredictiveEcology/fireSenseUtils@development (>=0.2.3.9181)",
+            "PredictiveEcology/SpaDES.tools@development (> 1.0)",
             "PredictiveEcology/reproducible@development (HEAD)",
-            "PredictiveEcology/SpaDES.core@development (>= 2.0)", "data.table", "terra (>= 1.7)")
+            "PredictiveEcology/quickPlot@development (== 1.0.2)",
+            "PredictiveEcology/LandR.CS@development (<= 2.0)", "data.table", "terra (>= 1.7)")
   expect_identical(Require:::addHEAD(refs),
                    c("PredictiveEcology/fpCompare@development (HEAD)", "PredictiveEcology/LandR (HEAD)",
-                     refs[3:6]))
+                     "PredictiveEcology/SpaDES.core@development (HEAD)",
+                     "PredictiveEcology/fireSenseUtils@development (HEAD)",
+                     "PredictiveEcology/SpaDES.tools@development (HEAD)",
+                     refs[6:10]))
 })
 
 test_that("install = \"HEAD\" (argument or option) updates a GitHub package to its branch's latest commit", {
@@ -1495,6 +1502,13 @@ test_that("install = \"HEAD\" (argument or option) updates a GitHub package to i
   expect_identical(installedSha(), old)            # without HEAD, any installed copy is enough
 
   Install(ref, libPaths = lib, standAlone = TRUE, install = "HEAD", verbose = -2)
+  expect_identical(installedSha(), unname(head))
+
+  # a minimum version the old commit already meets: HEAD still updates it
+  oldInstall()
+  Install(paste(ref, "(>= 0.2.5)"), libPaths = lib, standAlone = TRUE, verbose = -2)
+  expect_identical(installedSha(), old)
+  Install(paste(ref, "(>= 0.2.5)"), libPaths = lib, standAlone = TRUE, install = "HEAD", verbose = -2)
   expect_identical(installedSha(), unname(head))
 
   oldInstall()
