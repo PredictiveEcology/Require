@@ -72,11 +72,17 @@ utils::globalVariables(c(
 #' `1` or `2` (or via `options("Require.verbose")`). This will attach an
 #' attribute `attr(obj, "Require")` to the output of this function.
 #'
-#' @param install Logical or "force". If `FALSE`, this will not try to install
+#' @param install Logical, `"force"` or `"HEAD"`. If `FALSE`, this will not try to install
 #'   anything. If `"force"`, then it will force installation of requested
-#'   packages, mimicking a call to e.g., `install.packages`. If `TRUE`, the
+#'   packages, mimicking a call to e.g., `install.packages`. If `"HEAD"`, every
+#'   requested GitHub package is checked against the latest commit of its
+#'   branch and reinstalled if it differs, as if each were written
+#'   `"account/repo@branch (HEAD)"`; refs with a version requirement are left
+#'   as they are, and GitHub packages that are only dependencies follow the
+#'   usual rules. If `TRUE`, the
 #'   default, then this function will try to install any missing packages or
-#'   dependencies.
+#'   dependencies. Defaults to `getOption("Require.install")`; `Install()`
+#'   takes only `"force"` or `"HEAD"` from the option.
 #' @param require Logical or character string. If `TRUE`, the default, then the
 #'   function will attempt to call `require` on all requested `packages`,
 #'   possibly after they are installed. If a character string, then it will only
@@ -355,6 +361,13 @@ Require <- function(packages,
   # version satisfying them. See ?RequireOptions.
   if (isTRUE(getOption("Require.noRemotes", FALSE)))
     packages <- stripGitHubToRepos(packages, verbose = verbose)
+
+  # install = "HEAD": check every requested GitHub package against the latest
+  # commit of its branch, as if written "account/repo@branch (HEAD)".
+  if (identical(install, "HEAD")) {
+    packages <- addHEAD(packages)
+    install <- TRUE
+  }
 
   # Proceed to evaluate install and load need if there are any packages
   packagesOrig <- packages
@@ -3536,6 +3549,13 @@ getArchiveURL <- function(repo, pkg, type = getOption("pkgType")) {
   file.path(contrib.url(repo, type), .txtArchive, pkg)
 }
 
+# Add " (HEAD)" to each GitHub ref that has no version requirement or HEAD flag
+addHEAD <- function(pkgs) {
+  add <- isGH(pkgs) & !grepl("\\(", pkgs)
+  pkgs[add] <- paste0(pkgs[add], " (HEAD)")
+  pkgs
+}
+
 isGitHub <- function(pkg, filenames) {
   if (!missing(filenames)) {
     isGH <- grepl("-[[:alnum:]]{40}_", basename(filenames))
@@ -3568,6 +3588,9 @@ Install <- function(packages, packageVersionFile,
     packagesSubstituted <- substitute(packages)
     packages <- substitutePackages(packagesSubstituted, parent.frame())
   }
+  # Install() always installs, but takes "force" or "HEAD" from the option
+  if (missing(install) && getOption("Require.install", TRUE) %in% c("force", "HEAD"))
+    install <- getOption("Require.install")
 
   Require(packages,
           packageVersionFile,

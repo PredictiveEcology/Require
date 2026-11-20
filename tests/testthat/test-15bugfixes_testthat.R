@@ -1461,3 +1461,42 @@ test_that("Require() with no packages returns without error", {
     expect_identical(Require::Require(list(), require = require, verbose = -2), logical())
   }
 })
+
+test_that("addHEAD() flags only GitHub refs with no version requirement or HEAD flag", {
+  refs <- c("PredictiveEcology/fpCompare@development", "PredictiveEcology/LandR",
+            "PredictiveEcology/reproducible@development (HEAD)",
+            "PredictiveEcology/SpaDES.core@development (>= 2.0)", "data.table", "terra (>= 1.7)")
+  expect_identical(Require:::addHEAD(refs),
+                   c("PredictiveEcology/fpCompare@development (HEAD)", "PredictiveEcology/LandR (HEAD)",
+                     refs[3:6]))
+})
+
+test_that("install = \"HEAD\" (argument or option) updates a GitHub package to its branch's latest commit", {
+  skip_on_cran()
+  skip_if_offline2()
+  lib <- withr::local_tempdir()
+  withr::local_options(Require.cloneFrom = FALSE)
+  if ("fpCompare" %in% loadedNamespaces()) unloadNamespace("fpCompare")
+  installedSha <- function()
+    unname(read.dcf(file.path(lib, "fpCompare", "DESCRIPTION"), fields = "RemoteSha")[1, 1])
+  old <- "f10ce1cdce350387d5cb6eee4a1ed3a7c774c77a" # one commit behind development
+  ref <- "PredictiveEcology/fpCompare@development"
+  head <- Require:::getSHAfromGitHub(repo = "fpCompare", acct = "PredictiveEcology", br = "development")
+  skip_if(identical(head, old))
+  oldInstall <- function() {
+    Install(paste0("PredictiveEcology/fpCompare@", old), libPaths = lib, standAlone = TRUE, verbose = -2)
+    expect_identical(installedSha(), old)
+  }
+
+  oldInstall()
+  Install(ref, libPaths = lib, standAlone = TRUE, verbose = -2)
+  expect_identical(installedSha(), old)            # without HEAD, any installed copy is enough
+
+  Install(ref, libPaths = lib, standAlone = TRUE, install = "HEAD", verbose = -2)
+  expect_identical(installedSha(), unname(head))
+
+  oldInstall()
+  withr::local_options(Require.install = "HEAD")
+  Install(ref, libPaths = lib, standAlone = TRUE, verbose = -2)
+  expect_identical(installedSha(), unname(head))
+})
