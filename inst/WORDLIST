@@ -16,6 +16,7 @@
 8s
 ABI
 BLIS
+BioSimClient
 Bioc
 Bugfixes
 CMD
@@ -33,6 +34,7 @@ GithubUsername
 HPC
 Homebrew
 INSTALL's
+J4R
 LandR
 LandR's
 LinkingTo
@@ -139,11 +141,13 @@ redirectable
 reinstallation
 replanned
 reprexes
+reqdPkgs
 respawn
 retryable
 rstudio
 rversion
 sha
+snapshotted
 snapshotting
 sppEquivalencies
 stderr
@@ -158,4 +162,5 @@ ulimit
 unbuildable
 unbuilt
 unlinks
+unversioned
 yaml
