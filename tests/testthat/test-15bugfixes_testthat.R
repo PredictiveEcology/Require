@@ -1518,6 +1518,14 @@ test_that("install = \"HEAD\" (argument or option) updates a GitHub package to i
   # try(): an earlier test may have loaded fpCompare from a library since deleted,
   # so its .onUnload hook cannot find its files
   if ("fpCompare" %in% loadedNamespaces()) try(unloadNamespace("fpCompare"), silent = TRUE)
+  if ("fpCompare" %in% loadedNamespaces()) {
+    # still loaded: HEAD must leave it alone (reinstalling a loaded package
+    # corrupts it in this session) and say so
+    mess <- capture_messages(Install("PredictiveEcology/fpCompare@development", libPaths = lib,
+                                     standAlone = TRUE, install = "HEAD", verbose = 1))
+    expect_true(any(grepl("not checking .*fpCompare.* already loaded", mess)))
+    skip("fpCompare could not be unloaded; the update itself is not tested here")
+  }
   installedSha <- function()
     unname(read.dcf(file.path(lib, "fpCompare", "DESCRIPTION"), fields = "RemoteSha")[1, 1])
   old <- "f10ce1cdce350387d5cb6eee4a1ed3a7c774c77a" # one commit behind development
