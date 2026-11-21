@@ -108,11 +108,21 @@ user's default package folder(s). This can be create dramatically faster
 installs if the user has a substantial number of the packages already in
 their personal library. Default \code{FALSE} to minimize package installing.}
 
-\item{install}{Logical or "force". If \code{FALSE}, this will not try to install
+\item{install}{Logical, \code{"force"} or \code{"HEAD"}. If \code{FALSE}, this will not try to install
 anything. If \code{"force"}, then it will force installation of requested
-packages, mimicking a call to e.g., \code{install.packages}. If \code{TRUE}, the
+packages, mimicking a call to e.g., \code{install.packages}. If \code{"HEAD"}, every
+requested GitHub package is checked against the latest commit of its
+branch and reinstalled if it differs, as if each were written
+\code{"account/repo@branch (HEAD)"}. A minimum version (\code{>=}, \code{>}) is replaced
+by the HEAD check, and other requests for the same package (e.g. from CRAN)
+are dropped; a package with an exact or maximum version (\code{==}, \code{<=}, \code{<}) is
+kept as requested, and
+GitHub packages that are only dependencies follow the usual rules. A package
+already loaded in the session is not checked (reinstalling it would corrupt
+it in that session); a message names them. If \code{TRUE}, the
 default, then this function will try to install any missing packages or
-dependencies.}
+dependencies. Defaults to \code{getOption("Require.install")}; \code{Install()}
+takes only \code{"force"} or \code{"HEAD"} from the option.}
 
 \item{require}{Logical or character string. If \code{TRUE}, the default, then the
 function will attempt to call \code{require} on all requested \code{packages},

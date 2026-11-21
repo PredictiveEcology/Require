@@ -72,11 +72,21 @@ utils::globalVariables(c(
 #' `1` or `2` (or via `options("Require.verbose")`). This will attach an
 #' attribute `attr(obj, "Require")` to the output of this function.
 #'
-#' @param install Logical or "force". If `FALSE`, this will not try to install
+#' @param install Logical, `"force"` or `"HEAD"`. If `FALSE`, this will not try to install
 #'   anything. If `"force"`, then it will force installation of requested
-#'   packages, mimicking a call to e.g., `install.packages`. If `TRUE`, the
+#'   packages, mimicking a call to e.g., `install.packages`. If `"HEAD"`, every
+#'   requested GitHub package is checked against the latest commit of its
+#'   branch and reinstalled if it differs, as if each were written
+#'   `"account/repo@branch (HEAD)"`. A minimum version (`>=`, `>`) is replaced
+#'   by the HEAD check, and other requests for the same package (e.g. from CRAN)
+#'   are dropped; a package with an exact or maximum version (`==`, `<=`, `<`) is
+#'   kept as requested, and
+#'   GitHub packages that are only dependencies follow the usual rules. A package
+#'   already loaded in the session is not checked (reinstalling it would corrupt
+#'   it in that session); a message names them. If `TRUE`, the
 #'   default, then this function will try to install any missing packages or
-#'   dependencies.
+#'   dependencies. Defaults to `getOption("Require.install")`; `Install()`
+#'   takes only `"force"` or `"HEAD"` from the option.
 #' @param require Logical or character string. If `TRUE`, the default, then the
 #'   function will attempt to call `require` on all requested `packages`,
 #'   possibly after they are installed. If a character string, then it will only
@@ -355,6 +365,20 @@ Require <- function(packages,
   # version satisfying them. See ?RequireOptions.
   if (isTRUE(getOption("Require.noRemotes", FALSE)))
     packages <- stripGitHubToRepos(packages, verbose = verbose)
+
+  # install = "HEAD": check every requested GitHub package against the latest
+  # commit of its branch, as if written "account/repo@branch (HEAD)".
+  # A package already loaded is left as requested: reinstalling a loaded
+  # package corrupts it in this session (its lazy-load database is replaced).
+  if (identical(install, "HEAD")) {
+    loaded <- setdiff(intersect(extractPkgName(packages[isGH(packages)]), loadedNamespaces()), .basePkgs)
+    if (length(loaded))
+      messageVerbose("install = \"HEAD\": not checking ", paste(sort(unique(loaded)), collapse = ", "),
+                     " against GitHub: already loaded in this session. To update, set the option ",
+                     "in a new R session before they are loaded.", verbose = verbose, verboseLevel = 1)
+    packages <- addHEAD(packages, skip = loaded)
+    install <- TRUE
+  }
 
   # Proceed to evaluate install and load need if there are any packages
   packagesOrig <- packages
@@ -3536,6 +3560,31 @@ getArchiveURL <- function(repo, pkg, type = getOption("pkgType")) {
   file.path(contrib.url(repo, type), .txtArchive, pkg)
 }
 
+# For each package requested from GitHub, replace all its requests with one
+# "account/repo@branch (HEAD)". The GitHub ref kept is the one that wins without
+# HEAD: a ref naming a branch over one without, then the highest minimum version.
+# Its other requests (GitHub or CRAN) go if they have no version or a minimum
+# version (">=", ">"), which the branch's latest commit meets. A package with an
+# exact or maximum pin ("==", "<=", "<") in any request, or in `skip`, is kept
+# as requested.
+addHEAD <- function(pkgs, skip = character()) {
+  nm <- extractPkgName(pkgs)
+  gh <- isGH(pkgs)
+  minOrNone <- !grepl("\\(", pkgs) | grepl(HEADgrepWithParentheses, pkgs) |
+    extractInequality(pkgs) %in% c(">=", ">")
+  heads <- setdiff(unique(nm[gh & minOrNone]), c(skip, nm[!minOrNone]))
+  for (p in heads) {
+    wh <- which(nm == p)
+    cand <- wh[gh[wh]]
+    ver <- extractVersionNumber(pkgs[cand])
+    ver[!grepl("^[0-9]+[.-][0-9.-]*$", ver)] <- "0.0"
+    best <- cand[order(!grepl("@", pkgs[cand]), -xtfrm(package_version(ver)))[1]]
+    pkgs[wh[1]] <- paste0(trimVersionNumber(pkgs[best]), " (HEAD)")
+    pkgs[wh[-1]] <- NA
+  }
+  pkgs[!is.na(pkgs)]
+}
+
 isGitHub <- function(pkg, filenames) {
   if (!missing(filenames)) {
     isGH <- grepl("-[[:alnum:]]{40}_", basename(filenames))
@@ -3568,6 +3617,9 @@ Install <- function(packages, packageVersionFile,
     packagesSubstituted <- substitute(packages)
     packages <- substitutePackages(packagesSubstituted, parent.frame())
   }
+  # Install() always installs, but takes "force" or "HEAD" from the option
+  if (missing(install) && getOption("Require.install", TRUE) %in% c("force", "HEAD"))
+    install <- getOption("Require.install")
 
   Require(packages,
           packageVersionFile,

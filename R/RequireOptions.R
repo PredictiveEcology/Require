@@ -29,9 +29,17 @@
 #'
 #' The following options are likely of interest to most users:
 #' \describe{
-#' \item{`install`}{ Default: `TRUE`. This is the default argument to `Require`,
-#'   but does not affect `Install`. If this is `FALSE`, then no installations
-#'   will be attempted, and missing packages will result in an error.}
+#' \item{`install`}{ Default: `TRUE`. This is the default argument to `Require`.
+#'   If this is `FALSE`, then no installations
+#'   will be attempted, and missing packages will result in an error.
+#'   `"force"` reinstalls the requested packages. `"HEAD"` checks every
+#'   requested GitHub package against the latest commit of its branch and
+#'   reinstalls it if it differs, as if written `"account/repo@branch (HEAD)"`
+#'   (this replaces a minimum version, `>=`; exact or maximum versions are kept;
+#'   packages already loaded in the session are not checked);
+#'   e.g. `options(Require.install = "HEAD")` before `setupProject()` to update
+#'   all the project's GitHub packages. `Install` ignores `TRUE`/`FALSE` here
+#'   (it always installs) but uses `"force"` and `"HEAD"`.}
 #' \item{`cachePkgDir`}{ Deprecated, and ignored under `Require.usePak = TRUE`
 #'   (the default): redirect pak's package cache with the `R_USER_CACHE_DIR`
 #'   environment variable instead. `R_REQUIRE_PKG_CACHE` is deprecated for the

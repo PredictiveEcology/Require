@@ -39,9 +39,17 @@ else as a comma-separated character vector. An option already set when
 
 The following options are likely of interest to most users:
 \describe{
-\item{\code{install}}{ Default: \code{TRUE}. This is the default argument to \code{Require},
-but does not affect \code{Install}. If this is \code{FALSE}, then no installations
-will be attempted, and missing packages will result in an error.}
+\item{\code{install}}{ Default: \code{TRUE}. This is the default argument to \code{Require}.
+If this is \code{FALSE}, then no installations
+will be attempted, and missing packages will result in an error.
+\code{"force"} reinstalls the requested packages. \code{"HEAD"} checks every
+requested GitHub package against the latest commit of its branch and
+reinstalls it if it differs, as if written \code{"account/repo@branch (HEAD)"}
+(this replaces a minimum version, \code{>=}; exact or maximum versions are kept;
+packages already loaded in the session are not checked);
+e.g. \code{options(Require.install = "HEAD")} before \code{setupProject()} to update
+all the project's GitHub packages. \code{Install} ignores \code{TRUE}/\code{FALSE} here
+(it always installs) but uses \code{"force"} and \code{"HEAD"}.}
 \item{\code{cachePkgDir}}{ Deprecated, and ignored under \code{Require.usePak = TRUE}
 (the default): redirect pak's package cache with the \code{R_USER_CACHE_DIR}
 environment variable instead. \code{R_REQUIRE_PKG_CACHE} is deprecated for the
