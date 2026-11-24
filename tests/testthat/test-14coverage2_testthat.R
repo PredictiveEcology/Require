@@ -472,3 +472,46 @@ test_that("pakPinnedResolve keeps the graph and drops what the snapshot did not 
   graph <- Require:::pakHardDepGraph(pak_result)
   expect_identical(graph, list(a = "b", b = "c", c = character()))   # Suggests excluded
 })
+
+test_that("setLibPaths(updateRprofile) replaces a block that names a different library", {
+  td <- tempdir2("setLibPathsReplaceRprof")
+  origDir <- setwd(td)
+  origLibs <- .libPaths()
+  on.exit({setwd(origDir); .libPaths(origLibs); unlink(td, recursive = TRUE)}, add = TRUE)
+
+  libA <- file.path(td, "libA")
+  libB <- file.path(td, "libB")
+  ## existing user content must survive
+  writeLines("options(someUserOption = 1)", ".Rprofile")
+
+  suppressMessages(setLibPaths(libA, updateRprofile = TRUE))
+  # same call again: file unchanged
+  before <- readLines(".Rprofile")
+  suppressMessages(setLibPaths(libA, updateRprofile = TRUE))
+  testthat::expect_identical(readLines(".Rprofile"), before)
+
+  # different library: old block replaced, user content kept
+  msgs <- capture_messages(setLibPaths(libB, updateRprofile = TRUE, verbose = 0))
+  testthat::expect_true(any(grepl("replacing", msgs)))
+  ll <- readLines(".Rprofile")
+  testthat::expect_identical(sum(grepl(Require:::setLibPathsStartText, ll)), 1L)
+  testthat::expect_identical(sum(grepl(Require:::setLibPathsEndText, ll)), 1L)
+  libLine <- grep("^\\._libPaths <-", ll, value = TRUE)
+  testthat::expect_true(grepl("libB", libLine))
+  testthat::expect_false(any(grepl("libA", ll)))
+  testthat::expect_true("options(someUserOption = 1)" %in% ll)
+
+  # a change of standAlone alone also counts
+  suppressMessages(setLibPaths(libB, standAlone = FALSE, updateRprofile = TRUE))
+  ll <- readLines(".Rprofile")
+  testthat::expect_identical(sum(grepl(Require:::setLibPathsStartText, ll)), 1L)
+  testthat::expect_true("._standAlone <- FALSE" %in% ll)
+
+  # the Rprofile file given is the one read, not ./.Rprofile
+  other <- file.path(td, "other.Rprofile")
+  suppressMessages(Require:::setLibPathsUpdateRprofile(checkLibPaths(libA), TRUE, other))
+  suppressMessages(Require:::setLibPathsUpdateRprofile(checkLibPaths(libB), TRUE, other))
+  ll <- readLines(other)
+  testthat::expect_identical(sum(grepl(Require:::setLibPathsStartText, ll)), 1L)
+  testthat::expect_false(any(grepl("libA", ll)))
+})

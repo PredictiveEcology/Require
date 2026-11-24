@@ -71,7 +71,7 @@ setLibPaths <- function(libPaths, standAlone = TRUE,
   libPaths <- checkLibPaths(libPaths, exact = exact)
 
   if (!is.null(updateRprofile)) {
-    setLibPathsUpdateRprofile(libPaths, standAlone, updateRprofile)
+    setLibPathsUpdateRprofile(libPaths, standAlone, updateRprofile, verbose = verbose)
   }
   gte4.1 <- isTRUE(getRversion() >= "4.1")
   if (gte4.1) { # now correct behaviour; remaining parts unnecessary
@@ -113,7 +113,31 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
         }
       }
     }
-    if (any(grepl(setLibPathsStartText, readLines(".Rprofile")))) {
+    libPathsLine <- paste0("._libPaths <- c('", paste(libPaths, collapse = "', '"), "')")
+    standAloneLine <- paste0("._standAlone <- ", standAlone)
+    rproflines <- readLines(updateRprofile)
+    start <- grep(setLibPathsStartText, rproflines)
+    prevLibPathsLine <- NULL
+    sameBlock <- FALSE
+    if (length(start)) {
+      end <- grep(setLibPathsEndText, rproflines)
+      oldBlock <- rproflines[start[1]:end[1]]
+      sameBlock <- libPathsLine %in% oldBlock && standAloneLine %in% oldBlock
+      if (!sameBlock) {
+        ## the project's library changed (e.g. a new folder or R version): replace the old block,
+        ## keeping what it recorded as the libPaths to go back to
+        prevLibPathsLine <- grep(prevLibPathsText, oldBlock, value = TRUE)[1]
+        newFile <- newFile || any(grepl(paste0(newFileTrigger, "TRUE"), oldBlock))
+        if (start[1] > 1 && identical("", rproflines[start[1] - 1])) start[1] <- start[1] - 1
+        rproflines <- rproflines[-(start[1]:end[1])]
+        if (any(nzchar(rproflines))) newFile <- FALSE
+        writeLines(rproflines, con = updateRprofile)
+        messageVerbose("The .Rprofile already had a different setLibPaths; replacing it with ",
+                       paste(libPaths, collapse = ", "),
+                       verbose = verbose, verboseLevel = 0)
+      }
+    }
+    if (sameBlock) {
       messageVerbose(alreadyInRprofileMessage, verbose = verbose, verboseLevel = 1)
     } else {
       bodyFn <- format(body(Require::setLibPaths))
@@ -139,9 +163,13 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
           " # DO NOT EDIT BETWEEN THESE LINES"
         ),
         "### DELETE THESE LINES BELOW TO RESTORE STANDARD R Package LIBRARY",
-        paste0("### ", prevLibPathsText, paste(.libPaths(), collapse = ", ")),
-        paste0("._libPaths <- c('", paste(libPaths, collapse = "', '"), "')"),
-        paste0("._standAlone <- ", standAlone),
+        if (is.null(prevLibPathsLine) || is.na(prevLibPathsLine)) {
+          paste0("### ", prevLibPathsText, paste(.libPaths(), collapse = ", "))
+        } else {
+          prevLibPathsLine
+        },
+        libPathsLine,
+        standAloneLine,
         bodyFn,
         if (verbose >= 1) {
           resetRprofileMessage(updateRprofile)
