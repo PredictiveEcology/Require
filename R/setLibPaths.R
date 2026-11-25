@@ -115,23 +115,17 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
     }
     libPathsLine <- paste0("._libPaths <- c('", paste(libPaths, collapse = "', '"), "')")
     standAloneLine <- paste0("._standAlone <- ", standAlone)
-    rproflines <- readLines(updateRprofile)
-    start <- grep(setLibPathsStartText, rproflines)
+    old <- removeSetLibPathsBlock(updateRprofile)
     prevLibPathsLine <- NULL
     sameBlock <- FALSE
-    if (length(start)) {
-      end <- grep(setLibPathsEndText, rproflines)
-      oldBlock <- rproflines[start[1]:end[1]]
-      sameBlock <- libPathsLine %in% oldBlock && standAloneLine %in% oldBlock
+    if (old$found) {
+      sameBlock <- libPathsLine %in% old$block && standAloneLine %in% old$block
       if (!sameBlock) {
         ## the project's library changed (e.g. a new folder or R version): replace the old block,
         ## keeping what it recorded as the libPaths to go back to
-        prevLibPathsLine <- grep(prevLibPathsText, oldBlock, value = TRUE)[1]
-        newFile <- newFile || any(grepl(paste0(newFileTrigger, "TRUE"), oldBlock))
-        if (start[1] > 1 && identical("", rproflines[start[1] - 1])) start[1] <- start[1] - 1
-        rproflines <- rproflines[-(start[1]:end[1])]
-        if (any(nzchar(rproflines))) newFile <- FALSE
-        writeLines(rproflines, con = updateRprofile)
+        prevLibPathsLine <- old$prevLibPathsLine
+        newFile <- newFile || old$newFile
+        writeLines(old$lines, con = updateRprofile)
         messageVerbose("The .Rprofile already had a different setLibPaths; replacing it with ",
                        paste(libPaths, collapse = ", "),
                        verbose = verbose, verboseLevel = 0)
@@ -194,28 +188,19 @@ checkMissingLibPaths <- function(libPaths, updateRprofile = NULL, verbose = getO
     noChange <- FALSE
     if (is.character(updateRprofile)) {
       if (file.exists(updateRprofile)) {
-        ll <- readLines(updateRprofile)
-        bounds <- which(grepl("#### setLibPaths", ll))
-        if (length(bounds)) {
+        old <- removeSetLibPathsBlock(updateRprofile)
+        if (old$found) {
           messageVerbose("removing custom libPaths in .Rprofile",
             verbose = verbose, verboseLevel = 1
           )
-          if (identical("", ll[bounds[1] - 1])) {
-            bounds[1] <- bounds[1] - 1
-          }
-          newFileLine <- grepl(newFileTrigger, ll)
-          newFile <- gsub(paste0(".*", newFileTrigger, "([[:alpha:]]+) .*"), "\\1", ll[newFileLine])
-          wasNew <- as.logical(newFile)
-          prevLines <- grepl(prevLibPathsText, ll)
-          prevLibPaths <- strsplit(gsub(paste0(".*", prevLibPathsText), "", ll[prevLines]), split = ", ")[[1]]
+          prevLibPaths <- strsplit(sub(paste0(".*", prevLibPathsText), "", old$prevLibPathsLine),
+                                   split = ", ")[[1]]
           .libPaths(prevLibPaths)
 
-          # needs to be NEW and starts on 2nd line
-          if (isTRUE(wasNew) && which(newFileLine) == 2) {
+          if (old$newFile) {
             file.remove(updateRprofile)
           } else {
-            ll <- ll[-(bounds[1]:bounds[2])]
-            writeLines(ll, con = updateRprofile)
+            writeLines(old$lines, con = updateRprofile)
           }
         } else {
           noChange <- TRUE
@@ -234,6 +219,25 @@ checkMissingLibPaths <- function(libPaths, updateRprofile = NULL, verbose = getO
   }
   stop("libPaths cannot be missing; please supply a folder to install R packages to")
   return(invisible())
+}
+
+## Finds the setLibPaths block in an .Rprofile file and returns the file's lines without it
+## (and without the blank line written before it). `newFile` is TRUE if the block's own
+## "New File:" flag says setLibPaths created the file and nothing else is left in it.
+removeSetLibPathsBlock <- function(updateRprofile) {
+  ll <- readLines(updateRprofile)
+  start <- grep(setLibPathsStartText, ll)[1]
+  out <- list(found = !is.na(start), lines = ll, block = character(), prevLibPathsLine = NA_character_,
+              newFile = FALSE)
+  if (!out$found) return(out)
+  end <- grep(setLibPathsEndText, ll)
+  end <- c(end[end >= start], start)[1]
+  out$block <- ll[start:end]
+  if (start > 1 && identical("", ll[start - 1])) start <- start - 1
+  out$lines <- ll[-(start:end)]
+  out$prevLibPathsLine <- grep(prevLibPathsText, out$block, value = TRUE)[1]
+  out$newFile <- any(grepl(paste0(newFileTrigger, "TRUE"), out$block)) && !any(nzchar(out$lines))
+  out
 }
 
 resetRprofileMessage <- function(updateRprofile = ".Rprofile") {

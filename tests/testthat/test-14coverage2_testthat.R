@@ -515,3 +515,24 @@ test_that("setLibPaths(updateRprofile) replaces a block that names a different l
   testthat::expect_identical(sum(grepl(Require:::setLibPathsStartText, ll)), 1L)
   testthat::expect_false(any(grepl("libA", ll)))
 })
+
+test_that("setupOff() keeps the user's .Rprofile lines intact, each on its own line", {
+  td <- tempdir2("setupOffUserLines")
+  origDir <- setwd(td)
+  origLibs <- .libPaths()
+  on.exit({setwd(origDir); .libPaths(origLibs); unlink(td, recursive = TRUE)}, add = TRUE)
+
+  userLines <- c("options(userOne = 1)", "options(userTwo = 2)")
+  writeLines(userLines, ".Rprofile")
+  suppressMessages(setLibPaths(file.path(td, "libA"), updateRprofile = TRUE))
+  testthat::expect_true(any(grepl(Require:::setLibPathsStartText, readLines(".Rprofile"))))
+
+  suppressMessages(setupOff())
+  testthat::expect_identical(readLines(".Rprofile"), userLines)
+
+  # a file that setLibPaths itself created is removed
+  unlink(".Rprofile")
+  suppressMessages(setLibPaths(file.path(td, "libA"), updateRprofile = TRUE))
+  suppressMessages(setupOff())
+  testthat::expect_false(file.exists(".Rprofile"))
+})

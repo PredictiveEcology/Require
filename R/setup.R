@@ -360,18 +360,14 @@ setupOff <- function(removePackages = FALSE, verbose = getOption("Require.verbos
   }
 
   if (file.exists(updateRprofile)) {
-    rproflines <- readLines(updateRprofile)
-    start <- grep(setLibPathsStartText, rproflines)
-    end <- grep(setLibPathsEndText, rproflines)
-    newFile <- any(grepl(paste0(setLibPathsStartText, ".+New File:TRUE"), rproflines))
-    if (length(start)) {
-      rproflines <- rproflines[-(start:end)]
-      if (length(rproflines) <= 1 && all(nchar(rproflines) == 0) && isTRUE(newFile)) {
+    old <- removeSetLibPathsBlock(updateRprofile)
+    if (old$found) {
+      if (old$newFile) {
         unlink(updateRprofile)
         messageVerbose("removing the .Rprofile file, which had been created with ",
                        "setLibPaths(updateRprofile = TRUE)")
       } else {
-        cat(rproflines, file = updateRprofile)
+        writeLines(old$lines, con = updateRprofile)
         messageVerbose("Setting .libPaths() has been removed from the .Rprofile file")
       }
 
