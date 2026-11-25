@@ -28,7 +28,7 @@ test_that("test 10", {
               'tidymodels')
     if (isUbuntuOrDebian()) {
       origRepos2 <- setLinuxBinaryRepo()
-      on.exit(options(origRepos2))
+      on.exit(options(origRepos2), add = TRUE)
     }
 
     Install(pkgs) |>
