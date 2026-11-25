@@ -5,6 +5,7 @@
 \alias{Require-package}
 \alias{Require}
 \alias{Install}
+\alias{UpdateOrInstall}
 \title{Require: Installing and Loading R Packages for Reproducible Workflows}
 \usage{
 Require(
@@ -42,6 +43,8 @@ Install(
   upgrade = FALSE,
   ...
 )
+
+UpdateOrInstall(packages, ...)
 }
 \arguments{
 \item{packages}{Either a character vector of packages to install via
@@ -111,15 +114,18 @@ their personal library. Default \code{FALSE} to minimize package installing.}
 \item{install}{Logical, \code{"force"} or \code{"HEAD"}. If \code{FALSE}, this will not try to install
 anything. If \code{"force"}, then it will force installation of requested
 packages, mimicking a call to e.g., \code{install.packages}. If \code{"HEAD"}, every
-requested GitHub package is checked against the latest commit of its
-branch and reinstalled if it differs, as if each were written
-\code{"account/repo@branch (HEAD)"}. A minimum version (\code{>=}, \code{>}) is replaced
-by the HEAD check, and other requests for the same package (e.g. from CRAN)
-are dropped; a package with an exact or maximum version (\code{==}, \code{<=}, \code{<}) is
-kept as requested, and
-GitHub packages that are only dependencies follow the usual rules. A package
-already loaded in the session is not checked (reinstalling it would corrupt
-it in that session); a message names them. If \code{TRUE}, the
+requested package, GitHub or CRAN, is installed if missing and updated if
+not current: GitHub packages are checked against the latest commit of their
+branch, CRAN packages against the newest release, as if each were written
+\code{"pkg (HEAD)"} (\code{"account/repo@branch (HEAD)"} for GitHub). A minimum version
+(\code{>=}, \code{>}) is replaced by the HEAD check, and other requests for the same
+package are dropped; a package with an exact or maximum version (\code{==}, \code{<=},
+\code{<}) is kept as requested. Dependencies follow the usual rules: one is updated
+only when its installed version fails a version floor, including a floor in
+the HEAD version of a requested package (like \code{pak::pak(upgrade = FALSE)}).
+A package already loaded is installed too, and Require warns to restart R.
+\code{UpdateOrInstall()} is the synonym of \code{Install(..., install = "HEAD")}. If
+\code{TRUE}, the
 default, then this function will try to install any missing packages or
 dependencies. Defaults to \code{getOption("Require.install")}; \code{Install()}
 takes only \code{"force"} or \code{"HEAD"} from the option.}
@@ -218,6 +224,13 @@ output). Declaring them in Require's Imports guarantees they're present
 wherever Require is installed.
 
 \code{Install} is the same as \code{Require(..., require = FALSE)}, for convenience.
+
+\code{UpdateOrInstall} is exactly \code{Install(packages, install = "HEAD", ...)}: every
+package named is installed if missing, or updated to the latest commit of its
+GitHub branch or the newest CRAN release if it is not current.
+Dependencies are updated only when they fail a version floor, like
+\code{pak::pak(upgrade = FALSE)}. To update the named packages and \emph{all} their
+dependencies, use \code{\link[=updatePackages]{updatePackages()}} with its \code{packages} argument.
 }
 \note{
 For advanced use and diagnosis, the user can set \code{verbose = TRUE} or

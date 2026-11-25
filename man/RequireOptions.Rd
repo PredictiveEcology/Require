@@ -42,13 +42,15 @@ The following options are likely of interest to most users:
 \item{\code{install}}{ Default: \code{TRUE}. This is the default argument to \code{Require}.
 If this is \code{FALSE}, then no installations
 will be attempted, and missing packages will result in an error.
-\code{"force"} reinstalls the requested packages. \code{"HEAD"} checks every
-requested GitHub package against the latest commit of its branch and
-reinstalls it if it differs, as if written \code{"account/repo@branch (HEAD)"}
-(this replaces a minimum version, \code{>=}; exact or maximum versions are kept;
-packages already loaded in the session are not checked);
+\code{"force"} reinstalls the requested packages. \code{"HEAD"} installs every
+requested package, GitHub or CRAN, if missing, and updates it if not
+current: to the latest commit of its branch (GitHub, as if written
+\code{"account/repo@branch (HEAD)"}) or the newest release (CRAN). This replaces a
+minimum version, \code{>=}; exact or maximum versions are kept. Dependencies are
+updated only when they fail a version floor. Loaded packages are installed
+too, with a warning to restart R. \code{UpdateOrInstall()} is the synonym;
 e.g. \code{options(Require.install = "HEAD")} before \code{setupProject()} to update
-all the project's GitHub packages. \code{Install} ignores \code{TRUE}/\code{FALSE} here
+all the project's packages. \code{Install} ignores \code{TRUE}/\code{FALSE} here
 (it always installs) but uses \code{"force"} and \code{"HEAD"}.}
 \item{\code{cachePkgDir}}{ Deprecated, and ignored under \code{Require.usePak = TRUE}
 (the default): redirect pak's package cache with the \code{R_USER_CACHE_DIR}

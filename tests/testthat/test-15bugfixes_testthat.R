@@ -1475,7 +1475,7 @@ test_that("addHEAD() flags GitHub refs with no version or a minimum version", {
                      "PredictiveEcology/SpaDES.core@development (HEAD)",
                      "PredictiveEcology/fireSenseUtils@development (HEAD)",
                      "PredictiveEcology/SpaDES.tools@development (HEAD)",
-                     refs[6:10]))
+                     refs[6:8], "data.table (HEAD)", "terra (HEAD)"))
   # one request per package: the GitHub ref that wins without HEAD (a named
   # branch, then the highest minimum), replacing its CRAN and other GitHub
   # requests; a package with an exact or maximum pin anywhere is kept as is
@@ -1488,26 +1488,113 @@ test_that("addHEAD() flags GitHub refs with no version or a minimum version", {
                         "PredictiveEcology/x@main (>= 2.0)", "PredictiveEcology/x@dev (>= 1.0)",
                         "x (>= 3.0)", "PredictiveEcology/q@development", "q (== 1.0)", "terra")),
     c("PredictiveEcology/SpaDES.core@development (HEAD)", "PredictiveEcology/x@main (HEAD)",
-      "PredictiveEcology/q@development", "q (== 1.0)", "terra"))
-  # packages in `skip` (loaded ones, from Require()) keep their ref
-  expect_identical(Require:::addHEAD(refs[c(1, 3)], skip = "SpaDES.core"),
-                   c("PredictiveEcology/fpCompare@development (HEAD)", refs[3]))
+      "PredictiveEcology/q@development", "q (== 1.0)", "terra (HEAD)"))
+  # CRAN names too: no version or a minimum becomes "pkg (HEAD)"; pins and base packages stay
+  expect_identical(Require:::addHEAD(c("terra (>= 1.7)", "R6", "R6 (>= 2.5)", "data.table (== 1.15.0)", "stats")),
+                   c("terra (HEAD)", "R6 (HEAD)", "data.table (== 1.15.0)", "stats"))
 })
 
-test_that("install = \"HEAD\" leaves a loaded package alone and says so", {
-  # Reinstalling a loaded package replaced its lazy-load database under the
-  # session: SpaDES.core, loaded by simInit(), became "corrupt" (LandRCBM).
-  # testthat is loaded here; notAPkgHEAD never is. addHEAD() is mocked to stop
-  # Require() right after it decides what to skip.
+test_that("install = \"HEAD\" does not skip a loaded package", {
+  # Reinstalling a loaded package is done, and Require then warns to restart R
+  # (the usual path for a loaded package that is out of date).
+  # testthat is loaded here. addHEAD() is mocked to stop Require() right after it.
   passed <- NULL
-  testthat::local_mocked_bindings(addHEAD = function(pkgs, skip = character()) {
-    passed <<- list(pkgs = pkgs, skip = skip)
+  testthat::local_mocked_bindings(addHEAD = function(pkgs) {
+    passed <<- pkgs
     stop("stop here")
   }, .package = "Require")
-  mess <- capture_messages(try(Require::Require(c("r-lib/testthat@main (>= 3.0)", "PredictiveEcology/notAPkgHEAD@development"),
+  mess <- capture_messages(try(Require::Require(c("r-lib/testthat@main (>= 3.0)", "R6"),
                                                 install = "HEAD", require = FALSE, verbose = 1), silent = TRUE))
-  expect_identical(passed$skip, "testthat")
-  expect_true(any(grepl("not checking testthat against GitHub: already loaded", mess)))
+  expect_identical(passed, c("r-lib/testthat@main (>= 3.0)", "R6"))
+  expect_false(any(grepl("not checking", mess)))
+})
+
+test_that("a loaded package installed under (HEAD) gets the restart warning", {
+  pkgDT <- data.table::data.table(Package = "testthat", versionSpec = "HEAD", inequality = "",
+                                  Version = "0.0.1", hasHEAD = TRUE, needInstall = Require:::.txtInstall,
+                                  installResult = "OK")
+  out <- Require:::flagRestartForLoadedInsufficient(data.table::copy(pkgDT))
+  expect_match(out$installResult, "restart")
+  pkgDT[, installResult := NA_character_]  # not installed this call: no warning
+  expect_false(grepl("restart", Require:::flagRestartForLoadedInsufficient(pkgDT)$installResult))
+})
+
+test_that("UpdateOrInstall() is Install(install = \"HEAD\")", {
+  expect_true("UpdateOrInstall" %in% getNamespaceExports("Require"))
+  got <- list()
+  testthat::local_mocked_bindings(Install = function(packages, ...) {
+    got[[length(got) + 1]] <<- list(packages = packages, ...)
+    invisible(NULL)
+  }, .package = "Require")
+  Require::UpdateOrInstall(c("R6", "fpCompare"), verbose = -2)
+  Require::Install(c("R6", "fpCompare"), install = "HEAD", verbose = -2)
+  expect_identical(got[[1]], got[[2]])
+})
+
+test_that("install = \"HEAD\" updates a CRAN package; dependencies only when a floor fails", {
+  skip_on_cran()
+  skip_if_offline2()
+  withr::local_options(Require.cloneFrom = FALSE)
+  lib <- withr::local_tempdir()
+  src <- withr::local_tempdir()
+  repo <- withr::local_tempdir()
+  cran <- "https://cloud.r-project.org"
+  r6Ver <- function() as.character(utils::packageVersion("R6", lib.loc = lib))
+  oldR6 <- function() {
+    unlink(file.path(lib, "R6"), recursive = TRUE)
+    utils::install.packages("https://cran.r-project.org/src/contrib/Archive/R6/R6_2.5.1.tar.gz",
+                            repos = NULL, type = "source", lib = lib, quiet = TRUE)
+    expect_identical(r6Ver(), "2.5.1")
+  }
+  # a package whose DESCRIPTION declares a floor on R6; its floor is read at install
+  mkPkg <- function(name, floor) {
+    d <- file.path(src, name)
+    unlink(d, recursive = TRUE)
+    dir.create(file.path(d, "R"), recursive = TRUE)
+    writeLines(c(paste0("Package: ", name), "Version: 1.0.0", "Title: x", "Description: x.",
+                 "License: GPL-3", paste0("Imports: R6 (>= ", floor, ")"),
+                 "Authors@R: person('a', 'b', email = 'a@b.c', role = c('aut', 'cre'))"),
+               file.path(d, "DESCRIPTION"))
+    writeLines("f <- function() 1", file.path(d, "R", "f.R"))
+    writeLines("export(f)", file.path(d, "NAMESPACE"))
+    tb <- withr::with_dir(src, utils::tail(system2(file.path(R.home("bin"), "R"),
+                                                    c("CMD", "build", "--no-build-vignettes", name),
+                                                    stdout = TRUE, stderr = TRUE), 1))
+    contrib <- file.path(repo, "src", "contrib")
+    dir.create(contrib, recursive = TRUE, showWarnings = FALSE)
+    file.copy(dir(src, pattern = paste0(name, ".*tar.gz$"), full.names = TRUE), contrib)
+  }
+  # both built before the first call: pak caches a repository's metadata per session
+  mkPkg("headFixtureOK", "2.5.0")
+  mkPkg("headFixtureNew", "2.6.0")
+  tools::write_PACKAGES(file.path(repo, "src", "contrib"), type = "source")
+  repos <- c(CRAN = cran, local = paste0("file://", repo))
+
+  # named CRAN package out of date: updated, by both spellings
+  oldR6()
+  Install("R6", libPaths = lib, standAlone = TRUE, repos = repos, verbose = -2)
+  expect_identical(r6Ver(), "2.5.1")                       # without HEAD, any installed copy is enough
+  expect_warning(Install("R6", libPaths = lib, standAlone = TRUE, repos = repos, install = "HEAD", verbose = -2), "Please restart R; R6")
+  expect_false(identical(r6Ver(), "2.5.1"))
+  oldR6()
+  expect_warning(UpdateOrInstall("R6", libPaths = lib, standAlone = TRUE, repos = repos, verbose = -2), "Please restart R; R6")
+  expect_false(identical(r6Ver(), "2.5.1"))
+
+  # dependency meeting the named package's floor is left alone
+  oldR6()
+  UpdateOrInstall("headFixtureOK", libPaths = lib, standAlone = TRUE, repos = repos, verbose = -2)
+  expect_true(dir.exists(file.path(lib, "headFixtureOK")))
+  expect_identical(r6Ver(), "2.5.1")
+
+  # the contrast: updatePackages(packages) updates a dependency that meets its floor
+  oldR6()
+  withr::local_options(repos = repos)
+  expect_warning(updatePackages(libPaths = lib, packages = "headFixtureOK", verbose = -2), "Please restart R; R6")
+  expect_false(identical(r6Ver(), "2.5.1"))
+
+  # dependency failing the floor of the named package's newest version is updated
+  UpdateOrInstall("headFixtureNew", libPaths = lib, standAlone = TRUE, repos = repos, verbose = -2)
+  expect_false(identical(r6Ver(), "2.5.1"))
 })
 
 test_that("install = \"HEAD\" (argument or option) updates a GitHub package to its branch's latest commit", {
@@ -1518,14 +1605,6 @@ test_that("install = \"HEAD\" (argument or option) updates a GitHub package to i
   # try(): an earlier test may have loaded fpCompare from a library since deleted,
   # so its .onUnload hook cannot find its files
   if ("fpCompare" %in% loadedNamespaces()) try(unloadNamespace("fpCompare"), silent = TRUE)
-  if ("fpCompare" %in% loadedNamespaces()) {
-    # still loaded: HEAD must leave it alone (reinstalling a loaded package
-    # corrupts it in this session) and say so
-    mess <- capture_messages(Install("PredictiveEcology/fpCompare@development", libPaths = lib,
-                                     standAlone = TRUE, install = "HEAD", verbose = 1))
-    expect_true(any(grepl("not checking .*fpCompare.* already loaded", mess)))
-    skip("fpCompare could not be unloaded; the update itself is not tested here")
-  }
   installedSha <- function()
     unname(read.dcf(file.path(lib, "fpCompare", "DESCRIPTION"), fields = "RemoteSha")[1, 1])
   old <- "f10ce1cdce350387d5cb6eee4a1ed3a7c774c77a" # one commit behind development
@@ -1555,4 +1634,35 @@ test_that("install = \"HEAD\" (argument or option) updates a GitHub package to i
   withr::local_options(Require.install = "HEAD")
   Install(ref, libPaths = lib, standAlone = TRUE, verbose = -2)
   expect_identical(installedSha(), unname(head))
+})
+
+test_that("updatePackages(packages) updates the named packages and all their dependencies only", {
+  ip <- data.table::data.table(
+    Package = c("pkgA", "depB", "other", "ghDep"),
+    GithubRepo = c(NA, NA, NA, "ghDep"), GithubUsername = c(NA, NA, NA, "acct"),
+    GithubRef = c(NA, NA, NA, "main"), GithubSubFolder = NA_character_)
+  asked <- NULL
+  testthat::local_mocked_bindings(
+    doInstalledPackages = function(...) data.table::copy(ip),
+    pkgDep = function(packages, ...) {
+      setNames(list(c("pkgA (HEAD)", "depB (>= 0.0.1)", "acct/ghDep (>= 1.0)", "newDep", "stats")), packages)
+    },
+    Install = function(packages, ...) asked <<- packages,
+    .package = "Require")
+  # NULL: every installed package, as before
+  Require::updatePackages(verbose = -2)
+  expect_identical(asked, c("pkgA (HEAD)", "depB (HEAD)", "other (HEAD)", "acct/ghDep@main (HEAD)"))
+  # named: the package and its dependencies, a satisfied floor included (the
+  # contrast with UpdateOrInstall); not "other", not base packages; a missing one is added
+  Require::updatePackages(packages = "pkgA", verbose = -2)
+  expect_setequal(asked, c("pkgA (HEAD)", "depB (HEAD)", "acct/ghDep@main (HEAD)", "newDep (HEAD)"))
+})
+
+test_that("installedHEADspecs() keeps the subfolder of a GitHub package", {
+  ip <- data.table::data.table(
+    Package = c("sub", "plain", "cranPkg"),
+    GithubRepo = c("mono", "plain", NA), GithubUsername = c("acct", "acct", NA),
+    GithubRef = c("main", "dev", NA), GithubSubFolder = c("sub", NA, NA))
+  expect_identical(Require:::installedHEADspecs(ip),
+                   c("acct/mono/sub@main (HEAD)", "acct/plain@dev (HEAD)", "cranPkg (HEAD)"))
 })

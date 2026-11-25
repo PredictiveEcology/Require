@@ -7,7 +7,8 @@
 updatePackages(
   libPaths = .libPaths()[1],
   purge = FALSE,
-  verbose = getOption("Require.verbose")
+  verbose = getOption("Require.verbose"),
+  packages = NULL
 )
 }
 \arguments{
@@ -21,6 +22,14 @@ be. If -1 or -2, then as little verbosity as possible. If 0 or FALSE,
 then minimal outputs; if \code{1} or TRUE, more outputs; \code{2} even more. NOTE: in
 \code{Require} function, when \code{verbose >= 2}, also returns details as if
 \code{returnDetails = TRUE} (for backwards compatibility).}
+
+\item{packages}{\code{NULL}, the default, updates every package installed in \code{libPaths}.
+Otherwise, a character vector of packages (as for \code{\link[=Require]{Require()}}): these are
+updated, or installed if missing, together with all of their dependencies
+(recursively), each to the latest GitHub commit of its branch or the latest CRAN
+release, like \code{pak::pak(packages, upgrade = TRUE)}. To update only the named
+packages, and a dependency only when it fails a version floor, use
+\code{\link[=UpdateOrInstall]{UpdateOrInstall()}}.}
 }
 \value{
 Run for its side effect, namely, updating installed packages to their latest

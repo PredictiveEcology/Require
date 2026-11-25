@@ -75,15 +75,18 @@ utils::globalVariables(c(
 #' @param install Logical, `"force"` or `"HEAD"`. If `FALSE`, this will not try to install
 #'   anything. If `"force"`, then it will force installation of requested
 #'   packages, mimicking a call to e.g., `install.packages`. If `"HEAD"`, every
-#'   requested GitHub package is checked against the latest commit of its
-#'   branch and reinstalled if it differs, as if each were written
-#'   `"account/repo@branch (HEAD)"`. A minimum version (`>=`, `>`) is replaced
-#'   by the HEAD check, and other requests for the same package (e.g. from CRAN)
-#'   are dropped; a package with an exact or maximum version (`==`, `<=`, `<`) is
-#'   kept as requested, and
-#'   GitHub packages that are only dependencies follow the usual rules. A package
-#'   already loaded in the session is not checked (reinstalling it would corrupt
-#'   it in that session); a message names them. If `TRUE`, the
+#'   requested package, GitHub or CRAN, is installed if missing and updated if
+#'   not current: GitHub packages are checked against the latest commit of their
+#'   branch, CRAN packages against the newest release, as if each were written
+#'   `"pkg (HEAD)"` (`"account/repo@branch (HEAD)"` for GitHub). A minimum version
+#'   (`>=`, `>`) is replaced by the HEAD check, and other requests for the same
+#'   package are dropped; a package with an exact or maximum version (`==`, `<=`,
+#'   `<`) is kept as requested. Dependencies follow the usual rules: one is updated
+#'   only when its installed version fails a version floor, including a floor in
+#'   the HEAD version of a requested package (like `pak::pak(upgrade = FALSE)`).
+#'   A package already loaded is installed too, and Require warns to restart R.
+#'   `UpdateOrInstall()` is the synonym of `Install(..., install = "HEAD")`. If
+#'   `TRUE`, the
 #'   default, then this function will try to install any missing packages or
 #'   dependencies. Defaults to `getOption("Require.install")`; `Install()`
 #'   takes only `"force"` or `"HEAD"` from the option.
@@ -366,17 +369,12 @@ Require <- function(packages,
   if (isTRUE(getOption("Require.noRemotes", FALSE)))
     packages <- stripGitHubToRepos(packages, verbose = verbose)
 
-  # install = "HEAD": check every requested GitHub package against the latest
-  # commit of its branch, as if written "account/repo@branch (HEAD)".
-  # A package already loaded is left as requested: reinstalling a loaded
-  # package corrupts it in this session (its lazy-load database is replaced).
+  # install = "HEAD": check every requested package against the latest commit of
+  # its branch (GitHub) or the newest release (CRAN), as if written "pkg (HEAD)".
+  # A package already loaded is checked too: it is installed, and the usual
+  # "Please restart R" warning follows (flagRestartForLoadedInsufficient).
   if (identical(install, "HEAD")) {
-    loaded <- setdiff(intersect(extractPkgName(packages[isGH(packages)]), loadedNamespaces()), .basePkgs)
-    if (length(loaded))
-      messageVerbose("install = \"HEAD\": not checking ", paste(sort(unique(loaded)), collapse = ", "),
-                     " against GitHub: already loaded in this session. To update, set the option ",
-                     "in a new R session before they are loaded.", verbose = verbose, verboseLevel = 1)
-    packages <- addHEAD(packages, skip = loaded)
+    packages <- addHEAD(packages)
     install <- TRUE
   }
 
@@ -3215,30 +3213,39 @@ packageFullNameFromSnapshot <- function(snapshot) {
 #' @param libPaths The library to update; defaults to `.libPaths()[1]`
 #' @param purge Logical. Should the assessment of `installed.packages` purge the cached
 #'   version. Default is `FALSE`
+#' @param packages `NULL`, the default, updates every package installed in `libPaths`.
+#'   Otherwise, a character vector of packages (as for [Require()]): these are
+#'   updated, or installed if missing, together with all of their dependencies
+#'   (recursively), each to the latest GitHub commit of its branch or the latest CRAN
+#'   release, like `pak::pak(packages, upgrade = TRUE)`. To update only the named
+#'   packages, and a dependency only when it fails a version floor, use
+#'   [UpdateOrInstall()].
 #' @inheritParams Require
 #' @return Run for its side effect, namely, updating installed packages to their latest
 #' possible state, whether they are on CRAN currently, archived, or on GitHub.
 #' @export
 #'
 updatePackages <- function(libPaths = .libPaths()[1], purge = FALSE,
-                           verbose = getOption("Require.verbose")) {
+                           verbose = getOption("Require.verbose"), packages = NULL) {
 
   libPaths <- doLibPaths(libPaths, standAlone = FALSE)
 
   ip <- doInstalledPackages(libPaths, purge, includeBase = FALSE)
 
-  ref <- ip$GithubRef
-  ineq <- "HEAD"
-  head <- paste0(" (", ineq, ")")
-  gsf <- !is.na(ip$GithubSubFolder) | nzchar(ip$GithubSubFolder) | ip$GithubSubFolder != "NA"
-  pkgs <- paste0(ifelse(
-    !is.na(ip$GithubRepo),
-    paste0(ip$GithubUsername, "/", ip$GithubRepo,
-           ifelse(gsf, "", paste0("/", ip$GithubSubFolder)),
-           "@", ref, head),
-    # github
-    paste0(ip[["Package"]], head) # cran
-  ))
+  if (is.null(packages)) {
+    pkgs <- installedHEADspecs(ip)
+  } else {
+    # named packages and their whole dependency tree, each as one (HEAD) request;
+    # one that is installed keeps the GitHub ref (or CRAN) it was installed from
+    packages <- parseMultiLinePackages(packages)
+    req <- addHEAD(packages)
+    deps <- unlist(pkgDep(req, libPaths = libPaths, recursive = TRUE, purge = purge,
+                          verbose = verbose), use.names = FALSE)
+    pkgs <- addHEAD(c(req, deps[!extractPkgName(deps) %in% .basePkgs]))
+    userGH <- extractPkgName(packages[isGH(packages)])
+    fromIP <- extractPkgName(pkgs) %in% setdiff(ip[["Package"]], userGH)
+    pkgs <- c(installedHEADspecs(ip[ip[["Package"]] %in% extractPkgName(pkgs[fromIP]), ]), pkgs[!fromIP])
+  }
 
   # check for SHAs that need user input to update:
   pkgsSplit <- strsplit(pkgs, split = "@")
@@ -3269,7 +3276,24 @@ updatePackages <- function(libPaths = .libPaths()[1], purge = FALSE,
     }
   }
 
-  Install(pkgs, purge = purge, verbose = verbose)
+  Install(pkgs, libPaths = libPaths, purge = purge, verbose = verbose)
+}
+
+# One "(HEAD)" request per installed package: "account/repo@branch (HEAD)" for
+# GitHub packages, "pkg (HEAD)" for the rest.
+installedHEADspecs <- function(ip) {
+  ref <- ip$GithubRef
+  ineq <- "HEAD"
+  head <- paste0(" (", ineq, ")")
+  noSubFolder <- is.na(ip$GithubSubFolder) | !nzchar(ip$GithubSubFolder) | ip$GithubSubFolder == "NA"
+  paste0(ifelse(
+    !is.na(ip$GithubRepo),
+    paste0(ip$GithubUsername, "/", ip$GithubRepo,
+           ifelse(noSubFolder, "", paste0("/", ip$GithubSubFolder)),
+           "@", ref, head),
+    # github
+    paste0(ip[["Package"]], head) # cran
+  ))
 }
 
 getVersionOnReposLocal <- function(pkgDT) {
@@ -3560,22 +3584,22 @@ getArchiveURL <- function(repo, pkg, type = getOption("pkgType")) {
   file.path(contrib.url(repo, type), .txtArchive, pkg)
 }
 
-# For each package requested from GitHub, replace all its requests with one
-# "account/repo@branch (HEAD)". The GitHub ref kept is the one that wins without
-# HEAD: a ref naming a branch over one without, then the highest minimum version.
-# Its other requests (GitHub or CRAN) go if they have no version or a minimum
-# version (">=", ">"), which the branch's latest commit meets. A package with an
-# exact or maximum pin ("==", "<=", "<") in any request, or in `skip`, is kept
-# as requested.
-addHEAD <- function(pkgs, skip = character()) {
+# For each requested package (GitHub or CRAN), replace all its requests with one
+# "pkg (HEAD)", written "account/repo@branch (HEAD)" for GitHub. The ref kept is
+# the one that wins without HEAD: a GitHub ref over a CRAN one, a ref naming a
+# branch over one without, then the highest minimum version. Its other requests
+# go if they have no version or a minimum version (">=", ">"), which the latest
+# commit or release meets. A package with an exact or maximum pin ("==", "<=",
+# "<") in any request is kept as requested, as are base packages.
+addHEAD <- function(pkgs) {
   nm <- extractPkgName(pkgs)
   gh <- isGH(pkgs)
   minOrNone <- !grepl("\\(", pkgs) | grepl(HEADgrepWithParentheses, pkgs) |
     extractInequality(pkgs) %in% c(">=", ">")
-  heads <- setdiff(unique(nm[gh & minOrNone]), c(skip, nm[!minOrNone]))
+  heads <- setdiff(unique(nm[minOrNone]), c(nm[!minOrNone], .basePkgs))
   for (p in heads) {
     wh <- which(nm == p)
-    cand <- wh[gh[wh]]
+    cand <- if (any(gh[wh])) wh[gh[wh]] else wh
     ver <- extractVersionNumber(pkgs[cand])
     ver[!grepl("^[0-9]+[.-][0-9.-]*$", ver)] <- "0.0"
     best <- cand[order(!grepl("@", pkgs[cand]), -xtfrm(package_version(ver)))[1]]
@@ -3640,6 +3664,22 @@ Install <- function(packages, packageVersionFile,
           upgrade,
           ...
   )
+}
+
+#' @rdname Require
+#' @export
+#' @details
+#' `UpdateOrInstall` is exactly `Install(packages, install = "HEAD", ...)`: every
+#' package named is installed if missing, or updated to the latest commit of its
+#' GitHub branch or the newest CRAN release if it is not current.
+#' Dependencies are updated only when they fail a version floor, like
+#' `pak::pak(upgrade = FALSE)`. To update the named packages and *all* their
+#' dependencies, use [updatePackages()] with its `packages` argument.
+UpdateOrInstall <- function(packages, ...) {
+  if (!missing(packages)) {
+    packages <- substitutePackages(substitute(packages), parent.frame())
+  }
+  Install(packages, install = "HEAD", ...)
 }
 
 rmPackageFirst <- function(toInstall, libPaths, verbose) {
@@ -4792,6 +4832,15 @@ flagRestartForLoadedInsufficient <- function(pkgDT) {
   for (i in seq_len(NROW(pkgDT))) {
     pkg <- pkgDT[["Package"]][i]
     if (!pkg %in% loaded) next
+    ## A `(HEAD)` row installed in this call (install = "HEAD") has no version
+    ## constraint to test: the loaded copy is stale whenever the install ran.
+    if (all(c(hasHEADtxt, "needInstall", "installResult") %in% names(pkgDT)) &&
+        isTRUE(pkgDT[[hasHEADtxt]][i]) && pkgDT[["needInstall"]][i] %in% .txtInstall &&
+        pkgDT[["installResult"]][i] %in% "OK") {
+      set(pkgDT, i, "installResult",
+          paste0("Need to restart R (loaded ", getNamespaceVersion(pkg), "; HEAD installed)"))
+      next
+    }
     vSpec <- pkgDT[["versionSpec"]][i]
     ineq  <- pkgDT[["inequality"]][i]
     if (is.na(vSpec) || !nzchar(vSpec) || is.na(ineq) || !nzchar(ineq)) next

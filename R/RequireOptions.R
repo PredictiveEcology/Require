@@ -32,13 +32,15 @@
 #' \item{`install`}{ Default: `TRUE`. This is the default argument to `Require`.
 #'   If this is `FALSE`, then no installations
 #'   will be attempted, and missing packages will result in an error.
-#'   `"force"` reinstalls the requested packages. `"HEAD"` checks every
-#'   requested GitHub package against the latest commit of its branch and
-#'   reinstalls it if it differs, as if written `"account/repo@branch (HEAD)"`
-#'   (this replaces a minimum version, `>=`; exact or maximum versions are kept;
-#'   packages already loaded in the session are not checked);
+#'   `"force"` reinstalls the requested packages. `"HEAD"` installs every
+#'   requested package, GitHub or CRAN, if missing, and updates it if not
+#'   current: to the latest commit of its branch (GitHub, as if written
+#'   `"account/repo@branch (HEAD)"`) or the newest release (CRAN). This replaces a
+#'   minimum version, `>=`; exact or maximum versions are kept. Dependencies are
+#'   updated only when they fail a version floor. Loaded packages are installed
+#'   too, with a warning to restart R. `UpdateOrInstall()` is the synonym;
 #'   e.g. `options(Require.install = "HEAD")` before `setupProject()` to update
-#'   all the project's GitHub packages. `Install` ignores `TRUE`/`FALSE` here
+#'   all the project's packages. `Install` ignores `TRUE`/`FALSE` here
 #'   (it always installs) but uses `"force"` and `"HEAD"`.}
 #' \item{`cachePkgDir`}{ Deprecated, and ignored under `Require.usePak = TRUE`
 #'   (the default): redirect pak's package cache with the `R_USER_CACHE_DIR`
