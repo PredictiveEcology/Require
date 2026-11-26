@@ -45,7 +45,7 @@ test_that("small snapshot install pins each package to the requested version", {
   dir.create(testlib, recursive = TRUE)
   on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
   origLibPaths <- setLibPaths(testlib, standAlone = TRUE)
-  on.exit(setLibPaths(origLibPaths), add = TRUE)
+  withr::defer(setLibPaths(origLibPaths))
 
   warns <- capture_warnings(
     out <- Require(packageVersionFile = snf, require = FALSE,

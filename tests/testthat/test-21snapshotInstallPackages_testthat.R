@@ -225,7 +225,7 @@ test_that("a small snapshot installs through the install.packages chain", {
   dir.create(testlib, recursive = TRUE)
   on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
   origLibPaths <- setLibPaths(testlib, standAlone = TRUE)
-  on.exit(setLibPaths(origLibPaths), add = TRUE)
+  withr::defer(setLibPaths(origLibPaths))
 
   withr::local_options(
     Require.snapshotInstaller = "install.packages",

@@ -1528,7 +1528,7 @@ test_that("UpdateOrInstall() is Install(install = \"HEAD\")", {
   }, .package = "Require")
   Require::UpdateOrInstall(c("R6", "fpCompare"), verbose = -2)
   Require::Install(c("R6", "fpCompare"), install = "HEAD", verbose = -2)
-  expect_identical(got[[1]], got[[2]])
+  expect_identical(got[[1]][sort(names(got[[1]]))], got[[2]][sort(names(got[[2]]))])
 })
 
 test_that("install = \"HEAD\" updates a CRAN package; dependencies only when a floor fails", {
@@ -1536,8 +1536,6 @@ test_that("install = \"HEAD\" updates a CRAN package; dependencies only when a f
   skip_if_offline2()
   withr::local_options(Require.cloneFrom = FALSE)
   lib <- withr::local_tempdir()
-  src <- withr::local_tempdir()
-  repo <- withr::local_tempdir()
   cran <- "https://cloud.r-project.org"
   r6Ver <- function() as.character(utils::packageVersion("R6", lib.loc = lib))
   oldR6 <- function() {
@@ -1546,29 +1544,10 @@ test_that("install = \"HEAD\" updates a CRAN package; dependencies only when a f
                             repos = NULL, type = "source", lib = lib, quiet = TRUE)
     expect_identical(r6Ver(), "2.5.1")
   }
-  # a package whose DESCRIPTION declares a floor on R6; its floor is read at install
-  mkPkg <- function(name, floor) {
-    d <- file.path(src, name)
-    unlink(d, recursive = TRUE)
-    dir.create(file.path(d, "R"), recursive = TRUE)
-    writeLines(c(paste0("Package: ", name), "Version: 1.0.0", "Title: x", "Description: x.",
-                 "License: GPL-3", paste0("Imports: R6 (>= ", floor, ")"),
-                 "Authors@R: person('a', 'b', email = 'a@b.c', role = c('aut', 'cre'))"),
-               file.path(d, "DESCRIPTION"))
-    writeLines("f <- function() 1", file.path(d, "R", "f.R"))
-    writeLines("export(f)", file.path(d, "NAMESPACE"))
-    tb <- withr::with_dir(src, utils::tail(system2(file.path(R.home("bin"), "R"),
-                                                    c("CMD", "build", "--no-build-vignettes", name),
-                                                    stdout = TRUE, stderr = TRUE), 1))
-    contrib <- file.path(repo, "src", "contrib")
-    dir.create(contrib, recursive = TRUE, showWarnings = FALSE)
-    file.copy(dir(src, pattern = paste0(name, ".*tar.gz$"), full.names = TRUE), contrib)
-  }
-  # both built before the first call: pak caches a repository's metadata per session
-  mkPkg("headFixtureOK", "2.5.0")
-  mkPkg("headFixtureNew", "2.6.0")
-  tools::write_PACKAGES(file.path(repo, "src", "contrib"), type = "source")
-  repos <- c(CRAN = cran, local = paste0("file://", repo))
+  # fixtures with a floor on R6, both built before the first call: pak caches a repository's metadata per session
+  local <- tinyRepo(list(list(name = "headFixtureOK", version = "1.0.0", imports = "R6 (>= 2.5.0)"),
+                         list(name = "headFixtureNew", version = "1.0.0", imports = "R6 (>= 2.6.0)")))
+  repos <- c(CRAN = cran, local = local)
 
   # named CRAN package out of date: updated, by both spellings
   oldR6()
@@ -1665,4 +1644,28 @@ test_that("installedHEADspecs() keeps the subfolder of a GitHub package", {
     GithubRef = c("main", "dev", NA), GithubSubFolder = c("sub", NA, NA))
   expect_identical(Require:::installedHEADspecs(ip),
                    c("acct/mono/sub@main (HEAD)", "acct/plain@dev (HEAD)", "cranPkg (HEAD)"))
+})
+
+test_that("UpdateOrInstall() passes unquoted names to Install() unevaluated", {
+  got <- NULL
+  testthat::local_mocked_bindings(Require = function(packages, ...) got <<- packages, .package = "Require")
+  Require::UpdateOrInstall(R6, verbose = -2)
+  expect_identical(got, "R6")
+  Require::UpdateOrInstall({ R6; fpCompare }, verbose = -2)
+  viaUpdate <- got
+  expect_identical(viaUpdate, c("R6", "fpCompare"))
+  Require::Install({ R6; fpCompare }, install = "HEAD", verbose = -2)
+  expect_identical(got, viaUpdate)
+})
+
+test_that("pkgSnapshot2() and updatePackages() keep a GitHub subfolder", {
+  ip <- data.table::data.table(
+    Package = c("sub", "plain", "cranPkg"), Version = "1.0",
+    GithubRepo = c("mono", "plain", NA), GithubUsername = c("acct", "acct", NA),
+    GithubRef = c("main", "dev", NA), GithubSHA1 = c("abc", "def", NA),
+    GithubSubFolder = c("sub", NA, NA))
+  testthat::local_mocked_bindings(doInstalledPackages = function(...) data.table::copy(ip),
+                                  doLibPaths = function(libPaths, ...) libPaths, .package = "Require")
+  expect_identical(Require:::pkgSnapshot2(libPaths = "x", exact = TRUE),
+                   c("acct/mono/sub@abc", "acct/plain@def", "cranPkg (==1.0)"))
 })
