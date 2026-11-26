@@ -394,6 +394,10 @@ modifyList3 <- function(..., keep.null = TRUE) {
 #' link (symlink) before falling back to copying the file. "File" here can mean
 #' a file or a directory.
 #'
+#' Hard links make two paths share one file, so a write to either changes both. Require
+#' no longer uses `linkOrCopy()` (clones are copies); it stays because other packages
+#' import it. Do not use it for files that are later written in place.
+#'
 #' @rdname linkOrCopy
 #' @param from,to character vectors, containing file names or paths.
 #' @param allowSymlink Logical. If `FALSE`, the default, then it will try
@@ -659,8 +663,9 @@ doCranCacheCheck <- function(localFiles, verbose = getOption("Require.verbose"))
           ## directory lives next to Require's other bookkeeping rather
           ## than in pak's cache (pak doesn't index files dropped here).
           toFiles <- file.path(.requirePkgInfoDir(create = TRUE), basename(ccFiles))
-          linked <- linkOrCopy(ccFiles, toFiles)
-          messageVerbose(blue("crancache had some packages; creating link or copy in Require Cache"),
+          ## a copy, not a hard link: a later in-place write to either file would empty both
+          file.copy(ccFiles, toFiles)
+          messageVerbose(blue("crancache had some packages; creating copy in Require Cache"),
                          verbose = verbose, verboseLevel = 1
           )
           localFiles <- dir(.requirePkgInfoDir(), full.names = TRUE)

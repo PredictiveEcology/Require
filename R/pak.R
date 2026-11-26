@@ -2984,7 +2984,7 @@ pakResolvedShaMap <- function(pak_result) {
   setNames(sha[["sha"]], sha[["package"]])
 }
 
-# Require.cloneFrom under pak: hard-link (or copy) packages that are to be
+# Require.cloneFrom under pak: copy packages that are to be
 # installed from a cloneFrom library (see cloneSources()) into libPaths[1]
 # instead. A GitHub package is cloned only from a copy of the commit pak
 # resolved; a CRAN-style one only from a copy that is not a development
@@ -3440,7 +3440,7 @@ reportInstallFailures <- function(failures, missingPkgNames = character(0),
 
 # ---------------------------------------------------------------------------
 # Packages that must NEVER be installed by file-level copy/symlink across
-# libs (i.e. excluded from clonePackages / linkOrCopyPackageFiles).
+# libs (i.e. excluded from clonePackages / copyPackageFilesInner).
 #
 # pak ships native binaries + an embedded library of helper packages
 # (callr, processx, cli, ...) with platform-specific executables that do
@@ -3565,10 +3565,10 @@ reportInstallFailures <- function(failures, missingPkgNames = character(0),
 # install.packages() (NOT pak::pak -- chicken-and-egg if pak is broken).
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
-# .pakLinkSource: a real, complete pak installation to symlink from, or NULL.
+# .pakLinkSource: a real, complete pak installation to copy from, or NULL.
 #
-# Resolves symlinks, so linking never chains through another project lib's
-# link and cannot end up pointing at a directory that has since been removed.
+# Resolves symlinks, so the copy is of the real folder, not of another project
+# lib's link to it.
 # ---------------------------------------------------------------------------
 .pakLinkSource <- function() {
   ## lib.loc = NULL deliberately, and FIRST: with NULL, find.package() consults
@@ -3648,7 +3648,7 @@ ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
     }
   }
 
-  ## Symlink rather than download+install where the platform allows it.
+  ## Copy rather than download+install where the platform allows it.
   ##
   ## pak has to end up in projLib -- that is what re-binds pak's namespace to a
   ## live directory each time a caller moves to a new project library, and it is
@@ -3656,22 +3656,20 @@ ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
   ## it does not have to be a fresh 12 MB install: measured at ~5.6s a time, and
   ## the test suite does it once per project lib.
   ##
-  ## A symlink is not the file-by-file copy .pakNoCopyPkgs() forbids. That
-  ## exclusion exists because pak's embedded callr/processx helper executables
-  ## do not survive being copied on Windows; a symlink leaves every one of those
-  ## files at its original path. Windows is excluded anyway, since symlinks
-  ## there need privileges R cannot assume.
+  ## A copy, never a symlink or hard link: a write into projLib/pak (a reinstall)
+  ## would otherwise go through to the library pak was taken from. This is the
+  ## whole-folder copy .pakNoCopyPkgs() forbids on Windows, where pak's embedded
+  ## callr/processx helper executables do not survive a copy; Windows installs
+  ## pak fresh, below.
   linked <- FALSE
   if (!isWindows()) {
     src <- .pakLinkSource()
     projLibNorm <- tryCatch(normalizePath(projLib, mustWork = FALSE),
                             error = function(e) projLib)
     if (!is.null(src) && !identical(dirname(src), projLibNorm)) {
-      dest <- file.path(projLib, "pak")
-      unlink(dest, recursive = TRUE, force = TRUE)
-      linked <- isTRUE(tryCatch(file.symlink(src, dest), error = function(e) FALSE))
+      linked <- all(unlist(copyPackageFilesInner("pak", dirname(src), projLib)))
       if (linked)
-        messageVerbose("  Linked pak from ", src, " (no reinstall needed)",
+        messageVerbose("  Copied pak from ", src, " (no reinstall needed)",
                        verbose = verbose, verboseLevel = 1)
     }
   }

@@ -1,4 +1,4 @@
-## Require.cloneFrom: hard-link (or copy) packages from the cloneFrom libraries instead of installing
+## Require.cloneFrom: copy packages from the cloneFrom libraries instead of installing
 ## them. Under pak (pakClonePackages()) a copy is used when it meets every version requirement; a
 ## GitHub ref needs the commit pak resolved, and a CRAN-style ref never takes a development build.
 
@@ -43,7 +43,19 @@ setSolve <- function(resolved = c(tinyCloneA = "0.0.1", tinyCloneB = "0.0.1"),
   }, envir = envir)
 }
 
-test_that("pakClonePackages hard-links packages that meet every requirement", {
+## `stat` columns "inode links size" for each file (GNU stat on Linux; BSD stat on macOS).
+statFiles <- function(f) {
+  fmt <- if (Sys.info()[["sysname"]] == "Darwin") c("-f", shQuote("%i %l %z")) else c("-c", shQuote("%i %h %s"))
+  out <- system2("stat", c(fmt, shQuote(f)), stdout = TRUE)
+  stopifnot(length(out) == length(f))
+  m <- do.call(rbind, strsplit(out, " "))
+  data.frame(file = f, inode = m[, 1], links = as.integer(m[, 2]), size = as.numeric(m[, 3]))
+}
+pkgFiles <- function(lib, pkgs) {
+  unlist(lapply(pkgs, function(p) dir(file.path(lib, p), recursive = TRUE, all.files = TRUE, full.names = TRUE)))
+}
+
+test_that("pakClonePackages copies packages that meet every requirement, never hard-links them", {
   from <- cloneFromLib()
   to <- withr::local_tempdir()
   withr::local_options(Require.cloneFrom = from)
@@ -53,9 +65,12 @@ test_that("pakClonePackages hard-links packages that meet every requirement", {
   expect_true(all(out$installResult == "OK"))
   expect_true(all(file.exists(file.path(to, c("tinyCloneA", "tinyCloneB"), "DESCRIPTION"))))
   if (!isWindows()) {
-    f <- file.path(c(from, to), "tinyCloneA", "DESCRIPTION")
-    inodes <- system2("stat", c("-c", "%i", shQuote(f)), stdout = TRUE)
-    expect_identical(inodes[1], inodes[2])
+    ## (statFiles() uses the stat syntax of the platform: BSD stat on macOS has no `-c`, and an
+    ## empty result there made the two inodes look identical)
+    st <- statFiles(file.path(c(from, to), "tinyCloneA", "DESCRIPTION"))
+    expect_identical(nrow(st), 2L)
+    expect_false(identical(st$inode[1], st$inode[2]))
+    expect_true(all(st$links == 1L))
   }
   ## the solve is consumed: a later call without a fresh one clones nothing
   expect_false(exists("pakResolvedShaMap", envir = Require:::pakEnv(), inherits = FALSE))
@@ -526,4 +541,198 @@ test_that("Install() outside an interactive session load-checks clones and insta
   expect_identical(ver("tinyIntE"), "2.0")               # installed from the repository instead
   expect_identical(ver("tinyIntF"), "0.0.1")             # the clone that loaded stays
   expect_identical(Require:::cloneCheckExcluded(to), "tinyIntE 1.0")
+})
+
+## ---- clones are copies, never hard links; concurrent clones cannot damage each other ----
+
+test_that("every file of a clone is its own copy: link count 1, new inode", {
+  skip_on_os("windows")
+  from <- cloneFromLib()
+  to <- withr::local_tempdir()
+  withr::local_options(Require.cloneFrom = from)
+  setSolve()
+  Require:::pakClonePackages(planDT(), libPaths = to, verbose = 0)
+  pk <- c("tinyCloneA", "tinyCloneB")
+  src <- statFiles(pkgFiles(from, pk))
+  dst <- statFiles(pkgFiles(to, pk))
+  expect_gt(nrow(dst), 0)
+  expect_identical(nrow(dst), nrow(src))
+  expect_true(all(dst$links == 1L))
+  expect_true(all(src$links == 1L))
+  expect_length(intersect(src$inode, dst$inode), 0)
+  expect_identical(dst$size, src$size)
+  ## nothing of the clone's own working is left in the library
+  expect_setequal(dir(to, all.files = TRUE, no.. = TRUE), pk)
+})
+
+test_that("cloning over an existing clone replaces it and leaves the source alone", {
+  skip_on_os("windows")
+  from <- cloneFromLib()
+  to <- withr::local_tempdir()
+  cp <- Require:::clonablePackages(from, c("tinyCloneA", "tinyCloneB"))
+  Require:::cloneCopies(cp, toLib = to)
+  before <- statFiles(pkgFiles(from, c("tinyCloneA", "tinyCloneB")))
+  md5Before <- tools::md5sum(before$file)
+  ## damage the clone, as a later in-place write would
+  rdb <- file.path(to, "tinyCloneA", "R", "tinyCloneA.rdb")
+  writeLines("damaged", rdb)
+  Require:::cloneCopies(cp, toLib = to)
+  after <- statFiles(before$file)
+  expect_identical(after, before)
+  expect_identical(tools::md5sum(before$file), md5Before)
+  expect_identical(unname(tools::md5sum(rdb)), unname(md5Before[file.path(from, "tinyCloneA", "R", "tinyCloneA.rdb")]))
+  expect_true(all(statFiles(pkgFiles(to, c("tinyCloneA", "tinyCloneB")))$links == 1L))
+  expect_setequal(dir(to, all.files = TRUE, no.. = TRUE), c("tinyCloneA", "tinyCloneB"))
+})
+
+test_that("two processes cloning the same packages into one library at once damage nothing", {
+  skip_on_os("windows")
+  skip_if_not_installed("callr")
+  skip_if_not_installed("pkgload")
+  pkgs <- paste0("tinyRace", LETTERS[1:6])
+  from <- withr::local_tempdir()
+  for (p in pkgs) tinyPkg(from, p)
+  to <- withr::local_tempdir()
+  sync <- withr::local_tempdir()
+  before <- statFiles(pkgFiles(from, pkgs))
+  md5Before <- tools::md5sum(before$file)
+  ## the source of the code under test: the package being tested, installed or loaded with pkgload
+  reqPath <- if (pkgload::is_dev_package("Require")) pkgload::pkg_path(system.file(package = "Require")) else NULL
+  ## earlier tests may have switched .libPaths(); the worker needs wherever the loaded packages are
+  libs <- unique(c(.libPaths(), dirname(vapply(loadedNamespaces(), function(n)
+    tryCatch(getNamespaceInfo(n, "path"), error = function(e) NA_character_), ""))))
+  libs <- libs[!is.na(libs) & dir.exists(libs)]
+  worker <- function(reqPath, from, to, pkgs, sync, id) {
+    if (is.null(reqPath)) loadNamespace("Require") else pkgload::load_all(reqPath, quiet = TRUE)
+    file.create(file.path(sync, paste0("ready", id)))
+    while (!file.exists(file.path(sync, "go"))) Sys.sleep(0.005)
+    for (i in 1:8) {
+      cp <- Require:::clonablePackages(from, pkgs)
+      Require:::cloneCopies(cp, toLib = to)
+    }
+    "done"
+  }
+  procs <- lapply(1:2, function(id)
+    callr::r_bg(worker, args = list(reqPath, from, to, pkgs, sync, id), stderr = "2>&1", libpath = libs))
+  while (length(dir(sync, pattern = "^ready")) < 2 && all(vapply(procs, function(p) p$is_alive(), logical(1))))
+    Sys.sleep(0.05)
+  file.create(file.path(sync, "go"))
+  for (p in procs) p$wait(120000)
+  for (p in procs) expect_identical(p$get_result(), "done")
+  ## the sources are untouched
+  after <- statFiles(before$file)
+  expect_identical(after, before)
+  expect_identical(tools::md5sum(before$file), md5Before)
+  ## the clones are whole, loadable, and no file is empty unless its source is
+  dst <- statFiles(pkgFiles(to, pkgs))
+  expect_identical(sort(sub(paste0("^", to), "", dst$file)), sort(sub(paste0("^", from), "", before$file)))
+  expect_false(any(dst$size == 0 & !sub(paste0("^", to), "", dst$file) %in% sub(paste0("^", from), "", before$file[before$size == 0])))
+  expect_true(all(dst$links == 1L))
+  res <- system2(file.path(R.home("bin"), "Rscript"),
+                 c("-e", shQuote(paste0("cat(vapply(c(", paste0("'", pkgs, "'", collapse = ","),
+                                        "), function(p) as.character(requireNamespace(p)), ''))"))),
+                 env = paste0("R_LIBS=", to), stdout = TRUE, stderr = FALSE)
+  expect_identical(res, paste(rep("TRUE", length(pkgs)), collapse = " "))
+  expect_setequal(dir(to, all.files = TRUE, no.. = TRUE), pkgs)
+})
+
+## A lock folder as withCloneLock() makes it, held by `pid` on `host`, last refreshed `ageSecs` ago.
+makeLock <- function(lib, pid, host = Sys.info()[["nodename"]], ageSecs = 0) {
+  lock <- file.path(lib, "00LOCK-RequireClone")
+  dir.create(lock)
+  writeLines(paste(pid, host, "1 1"), file.path(lock, "owner"))
+  Sys.setFileTime(lock, Sys.time() - ageSecs)
+  lock
+}
+## The pid of a process that has finished.
+deadPid <- function() callr::r(function() Sys.getpid())
+
+test_that("a lock whose owner is still running is kept, however long it has been held", {
+  skip_on_os("windows")
+  lib <- withr::local_tempdir()
+  lock <- makeLock(lib, Sys.getpid(), ageSecs = 3600)        # an hour: well past the old 5-minute limit
+  expect_error(Require:::withCloneLock(lib, function(refresh) "ran", wait = 1), "Another process")
+  expect_true(dir.exists(lock))
+  expect_identical(readLines(file.path(lock, "owner")), paste(Sys.getpid(), Sys.info()[["nodename"]], "1 1"))
+})
+
+test_that("a lock whose owner has died is taken over and released afterwards", {
+  skip_on_os("windows")
+  lib <- withr::local_tempdir()
+  lock <- makeLock(lib, deadPid(), ageSecs = 1)
+  dir.create(file.path(lib, "00CLONE-leftover")); dir.create(file.path(lib, "00OLD-leftover"))
+  dir.create(file.path(lib, "somePkg"))
+  expect_identical(Require:::withCloneLock(lib, function(refresh) "ran", wait = 5), "ran")
+  expect_false(dir.exists(lock))
+  ## leftovers of an interrupted clone are removed, packages are not
+  expect_identical(dir(lib, all.files = TRUE, no.. = TRUE), "somePkg")
+})
+
+test_that("a lock from another host is kept until it has not been refreshed for staleOtherHost seconds", {
+  lib <- withr::local_tempdir()
+  lock <- makeLock(lib, 1, host = "some-other-host", ageSecs = 100)
+  expect_error(Require:::withCloneLock(lib, function(refresh) "ran", wait = 1, staleOtherHost = 3600), "Another process")
+  expect_true(dir.exists(lock))
+  expect_identical(Require:::withCloneLock(lib, function(refresh) "ran", wait = 5, staleOtherHost = 10), "ran")
+})
+
+test_that("a clone refreshes its lock; if the lock is lost the clone goes back to acquire it and runs again", {
+  skip_on_os("windows")
+  lib <- withr::local_tempdir()
+  lock <- file.path(lib, "00LOCK-RequireClone")
+  runs <- 0L
+  out <- Require:::withCloneLock(lib, function(refresh) {
+    runs <<- runs + 1L
+    if (runs == 1L) {
+      Sys.setFileTime(lock, Sys.time() - 1000)
+      refresh()
+      expect_lt(as.numeric(difftime(Sys.time(), file.mtime(lock), units = "secs")), 100)
+      ## the lock is taken over by another process (here: replaced by a dead process's)
+      writeLines(paste(deadPid(), Sys.info()[["nodename"]], "1 1"), file.path(lock, "owner"))
+      refresh()                                              # finds it is no longer ours
+      stop("not reached")
+    } else if (runs == 2L) {
+      unlink(lock, recursive = TRUE)                         # or: the folder is gone
+      refresh()
+      stop("not reached")
+    }
+    "finished"
+  }, wait = 10)
+  expect_identical(out, "finished")
+  expect_identical(runs, 3L)
+  expect_identical(dir(lib, all.files = TRUE, no.. = TRUE), character())
+})
+
+test_that("two processes taking over one abandoned lock never hold it together", {
+  skip_on_os("windows")
+  skip_if_not_installed("callr")
+  skip_if_not_installed("pkgload")
+  lib <- withr::local_tempdir()
+  sync <- withr::local_tempdir()
+  makeLock(lib, deadPid(), ageSecs = 1)
+  reqPath <- if (pkgload::is_dev_package("Require")) pkgload::pkg_path(system.file(package = "Require")) else NULL
+  libs <- unique(c(.libPaths(), dirname(vapply(loadedNamespaces(), function(n)
+    tryCatch(getNamespaceInfo(n, "path"), error = function(e) NA_character_), ""))))
+  libs <- libs[!is.na(libs) & dir.exists(libs)]
+  worker <- function(reqPath, lib, sync, id) {
+    if (is.null(reqPath)) loadNamespace("Require") else pkgload::load_all(reqPath, quiet = TRUE)
+    file.create(file.path(sync, paste0("ready", id)))
+    while (!file.exists(file.path(sync, "go"))) Sys.sleep(0.002)
+    both <- 0L
+    for (i in 1:15) Require:::withCloneLock(lib, function(refresh) {
+      if (!dir.create(file.path(sync, "inside"), showWarnings = FALSE)) both <<- both + 1L
+      Sys.sleep(0.05)
+      unlink(file.path(sync, "inside"), recursive = TRUE)
+    }, wait = 60)
+    both
+  }
+  procs <- lapply(1:2, function(id)
+    callr::r_bg(worker, args = list(reqPath, lib, sync, id), stderr = "2>&1", libpath = libs))
+  while (length(dir(sync, pattern = "^ready")) < 2 && all(vapply(procs, function(p) p$is_alive(), logical(1))))
+    Sys.sleep(0.05)
+  file.create(file.path(sync, "go"))
+  for (p in procs) p$wait(120000)
+  for (p in procs) expect_identical(p$get_result(), 0L)
+  expect_false(dir.exists(file.path(lib, "00LOCK-RequireClone")))
+  expect_identical(dir(lib, all.files = TRUE, no.. = TRUE), character())
 })

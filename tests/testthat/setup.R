@@ -198,7 +198,7 @@ withr::defer(.libPaths(lp), envir = teardown_env())
 ## R CMD check makes the `.Rcheck` directory itself `.libPaths()[1]`, so any
 ## `Require()`/`Install()` in the suite that does not pass its own `libPaths`
 ## treats it as the project library and -- correctly, for a real project lib --
-## symlinks pak into it (`ensurePakInProjectLib()`). What is left behind is
+## copies pak into it (`ensurePakInProjectLib()`). What is left behind is
 ## `<pkg>.Rcheck/pak`, which "checking for non-standard things in the check
 ## directory" reports as a NOTE. It is the suite's detritus, not something a
 ## user would ever end up with, so clear it on the way out. Guarded on pak not
