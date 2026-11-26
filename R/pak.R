@@ -3998,7 +3998,10 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   # Convert Require's package specs to pak format
   pkgs <- toInstall$packageFullName
 
-  # Strip HEAD flags (Require already decided to install HEAD packages)
+  # Strip HEAD flags (Require already decided to install HEAD packages). Keep
+  # which rows were CRAN `pkg (HEAD)`: they mean "the newest release", pinned
+  # below like a `>=` row, as bare `pkg` with upgrade = FALSE keeps the installed copy.
+  isHEADcran <- (toInstall[[hasHEADtxt]] %in% TRUE | grepl(HEADgrepWithParentheses, pkgs)) & !isGH(pkgs)
   pkgs <- HEADtoNone(pkgs)
 
   # Translate == / <= constraints to pak's @version exact-pin form -- but skip
@@ -4031,7 +4034,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
   # plain strip when no resolved version is known (e.g. per-package fallback).
   pakResolvedVerMap <- get0("pakResolvedVersionMap", envir = pakEnv(), inherits = FALSE)
   if (!is.null(pakResolvedVerMap)) {
-    whGE <- grepl("\\([[:space:]]*>=?[[:space:]]*[^)]+\\)", pkgs) &
+    whGE <- (grepl("\\([[:space:]]*>=?[[:space:]]*[^)]+\\)", pkgs) | isHEADcran) &
             !grepl("@", pkgs) & !isGH(pkgs)
     for (.k in which(whGE)) {
       .nm <- extractPkgName(pkgs[.k])
