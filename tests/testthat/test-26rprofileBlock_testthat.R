@@ -38,10 +38,12 @@ oldFormatBlock <- function(lib, prev = "/prev/lib") {
 freshLibPath1 <- function(dir) {
   ## processx, not system2(): system2(env = ) is ignored on Windows, and the child must see
   ## R_PROFILE_USER and start in `dir` whatever R CMD check set for this session
-  ## the environment of this session without R_PROFILE_USER (callr sets one for its sessions,
-  ## and R CMD check runs the tests in one), so R reads dir/.Rprofile as it does for a user
+  ## the environment of this session without R_PROFILE_USER, R_ENVIRON_USER and R_LIBS: callr sets
+  ## them for its sessions (R CMD check runs the tests in one), and the child R then re-reads them
+  ## from the R_ENVIRON_USER file and loads callr's profile instead of dir/.Rprofile. Without them
+  ## R reads dir/.Rprofile as it does for a user.
   childEnv <- Sys.getenv()
-  childEnv <- childEnv[!toupper(names(childEnv)) %in% c("R_PROFILE_USER", "R_PROFILE", "R_LIBS", "R_LIBS_USER")]
+  childEnv <- childEnv[!toupper(names(childEnv)) %in% c("R_PROFILE_USER", "R_PROFILE", "R_ENVIRON_USER", "R_ENVIRON", "R_LIBS", "R_LIBS_USER")]
   res <- processx::run(
     file.path(R.home("bin"), "Rscript"),
     c("-e", paste0("cat('PROFILE_RAN=', exists('._libPaths'), '\\n', ",
