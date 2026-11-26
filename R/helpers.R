@@ -388,34 +388,8 @@ modifyList3 <- function(..., keep.null = TRUE) {
   do.call(Reduce, alist(modifyList, dots)) # can't keep nulls with this approach
 }
 
-#' Create link to file, falling back to making a copy if linking fails.
-#'
-#' First try to create a hardlink to the file. If that fails, try a symbolic
-#' link (symlink) before falling back to copying the file. "File" here can mean
-#' a file or a directory.
-#'
-#' @rdname linkOrCopy
-#' @param from,to character vectors, containing file names or paths.
-#' @param allowSymlink Logical. If `FALSE`, the default, then it will try
-#'   `file.link` first, then `file.copy`, omitting the `file.symlink` step
-#'
-linkOrCopy <- function(from, to, allowSymlink = FALSE) {
-  res <- suppressWarnings(file.link(from, to)) ## try hardlink
-  if (any(!res)) {
-    if (allowSymlink) {
-      res[!res] <- suppressWarnings(file.symlink(from[!res], to[!res]))
-    }
-    if (any(!res)) {
-      ## finally, copy the file
-      res[!res] <-
-        suppressWarnings(file.copy(from[!res], to[!res], recursive = TRUE))
-    }
-  }
-  return(invisible(res))
-}
-
 #' `fileRenameOrMove` is like `file.rename`, but will work across disks.
-#' @rdname linkOrCopy
+#' @param from,to character vectors, containing file names or paths.
 fileRenameOrMove <- function(from, to) {
   tryCatch({
     du <- unique(dirname(to))
@@ -659,8 +633,9 @@ doCranCacheCheck <- function(localFiles, verbose = getOption("Require.verbose"))
           ## directory lives next to Require's other bookkeeping rather
           ## than in pak's cache (pak doesn't index files dropped here).
           toFiles <- file.path(.requirePkgInfoDir(create = TRUE), basename(ccFiles))
-          linked <- linkOrCopy(ccFiles, toFiles)
-          messageVerbose(blue("crancache had some packages; creating link or copy in Require Cache"),
+          ## a copy, not a hard link: a later in-place write to either file would empty both
+          file.copy(ccFiles, toFiles)
+          messageVerbose(blue("crancache had some packages; creating copy in Require Cache"),
                          verbose = verbose, verboseLevel = 1
           )
           localFiles <- dir(.requirePkgInfoDir(), full.names = TRUE)

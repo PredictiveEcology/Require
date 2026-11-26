@@ -134,23 +134,6 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
     if (sameBlock) {
       messageVerbose(alreadyInRprofileMessage, verbose = verbose, verboseLevel = 1)
     } else {
-      bodyFn <- format(body(Require::setLibPaths))
-      lineWCheckPath <- grepl("checkPath.normPath|checkLibPaths", bodyFn)
-      bodyFn[lineWCheckPath] <- "    if (!dir.exists(libPaths[1])) dir.create(libPaths[1], recursive = TRUE)"
-      lineWReturn <- grepl("return.*oldLibPaths", bodyFn)
-      bodyFn <- bodyFn[!lineWReturn]
-      bodyFn <- gsub("tail", "utils::tail", bodyFn)
-      bodyFn <- gsub("shim_env", ".shim_env", bodyFn)
-      bodyFn <- gsub("shim_fun", ".shim_fun", bodyFn)
-      bodyFn <- gsub("oldLibPaths", ".oldLibPaths", bodyFn)
-      lineWMissing <- which(grepl("missing.libPaths", bodyFn))
-      bodyFn <- bodyFn[-(lineWMissing:(lineWMissing + 2))]
-      lineWRprofileToUpdate <- which(grepl("is\\.null\\(updateRprofile\\)", bodyFn))
-      bodyFn <- bodyFn[-(lineWRprofileToUpdate:(lineWRprofileToUpdate + 2))]
-      bodyFn <- gsub("\\<standAlone\\>", "._standAlone", bodyFn)
-      bodyFn <- gsub("\\.libPaths", "origDotlibPaths", bodyFn)
-      bodyFn <- gsub("\\<libPaths\\>", "._libPaths", bodyFn)
-      bodyFn <- gsub("origDotlibPaths", ".libPaths", bodyFn)
       bodyFn <- c(
         paste0(
           "\n", setLibPathsStartText, " #### ", newFileTrigger, newFile,
@@ -164,7 +147,7 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
         },
         libPathsLine,
         standAloneLine,
-        bodyFn,
+        setLibPathsBlockCode,
         if (verbose >= 1) {
           resetRprofileMessage(updateRprofile)
         },
@@ -248,6 +231,31 @@ checkTRUERprofile <- function(updateRprofile) {
   if (isTRUE(updateRprofile)) updateRprofile <- ".Rprofile"
   updateRprofile
 }
+
+## The code in the .Rprofile block that sets the library, after the `._libPaths` and `._standAlone`
+## lines. A fixed template, not deparsed from setLibPaths(): a block cut out of deparsed source by
+## line counts broke whenever setLibPaths() changed (#234 left a stray `}` and R failed to start).
+setLibPathsBlockCode <- c(
+  "{",
+  "    .oldLibPaths <- .libPaths()",
+  "    if (!dir.exists(._libPaths[1])) dir.create(._libPaths[1], recursive = TRUE)",
+  "    gte4.1 <- isTRUE(getRversion() >= \"4.1\")",
+  "    if (gte4.1) {",
+  "        do.call(.libPaths, list(new = ._libPaths, include.site = !._standAlone))",
+  "    }",
+  "    .shim_fun <- .libPaths",
+  "    .shim_env <- new.env(parent = environment(.shim_fun))",
+  "    if (isTRUE(._standAlone)) {",
+  "        .shim_env$.Library <- utils::tail(.libPaths(), 1)",
+  "    } else {",
+  "        .shim_env$.Library <- .libPaths()",
+  "    }",
+  "    .shim_env$.Library.site <- character()",
+  "    environment(.shim_fun) <- .shim_env",
+  "    .shim_fun(unique(._libPaths))",
+  "    message(\".libPaths() is now: \", paste(.libPaths(), collapse = \", \"))",
+  "}"
+)
 
 prevLibPathsText <- "Previous .libPaths: "
 commentCharsForSetLibPaths <- "#### setLibPaths "

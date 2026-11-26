@@ -173,8 +173,11 @@ test_that("test 1", {
     # This next one is correct version, but it was installed from CRAN, so it fails
     #   the GH SHA test (i.e., one has the SHA the other does not); so
     #   installs from source
-    Require:::linkOrCopyPackageFilesInner(c("Require", "sys", "data.table", "gitcreds"),
-                                     Sys.getenv("R_LIBS_USER"),toLib = dir3)
+    ## The source is a library this test builds (plain copies of the installed packages), never
+    ## the user's own library: clones are copies, and nothing here may touch the user's files.
+    srcLib <- tempdir2("cloneSrc")
+    file.copy(find.package(c("Require", "sys", "data.table", "gitcreds")), srcLib, recursive = TRUE)
+    Require:::copyPackageFilesInner(c("Require", "sys", "data.table", "gitcreds"), srcLib, toLib = dir3)
     warns <- capture_warnings(
       inst <- suppressMessages(
         Require::Require("PredictiveEcology/fpCompare",

@@ -2984,7 +2984,7 @@ pakResolvedShaMap <- function(pak_result) {
   setNames(sha[["sha"]], sha[["package"]])
 }
 
-# Require.cloneFrom under pak: hard-link (or copy) packages that are to be
+# Require.cloneFrom under pak: copy packages that are to be
 # installed from a cloneFrom library (see cloneSources()) into libPaths[1]
 # instead. A GitHub package is cloned only from a copy of the commit pak
 # resolved; a CRAN-style one only from a copy that is not a development
@@ -3440,7 +3440,7 @@ reportInstallFailures <- function(failures, missingPkgNames = character(0),
 
 # ---------------------------------------------------------------------------
 # Packages that must NEVER be installed by file-level copy/symlink across
-# libs (i.e. excluded from clonePackages / linkOrCopyPackageFiles).
+# libs (i.e. excluded from clonePackages / copyPackageFilesInner).
 #
 # pak ships native binaries + an embedded library of helper packages
 # (callr, processx, cli, ...) with platform-specific executables that do

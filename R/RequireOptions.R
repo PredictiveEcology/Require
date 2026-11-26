@@ -80,8 +80,8 @@
 #'   via `R_AVAILABLE_PACKAGES_CACHE_CONTROL_MAX_AGE` environment variable in seconds).}
 #' \item{`cloneFrom`}{ Default: `TRUE`. Libraries to clone packages from: any
 #'   package that is to be installed and is already in one of them, in a usable
-#'   form, is hard-linked (or, across file systems, copied) into the
-#'   destination library instead of being downloaded and installed, which is
+#'   form, is copied (never hard-linked, so a write to one library cannot change
+#'   another) into the destination library instead of being downloaded and installed, which is
 #'   much faster when populating a new project library. `TRUE` means the
 #'   libraries R starts a session from (`R_LIBS`, `R_LIBS_USER`, `R_LIBS_SITE`);
 #'   a character vector names the libraries; `FALSE` or `NULL` turns cloning

@@ -1,4 +1,4 @@
-## Require.cloneFrom: hard-link (or copy) packages from the cloneFrom libraries instead of installing
+## Require.cloneFrom: copy packages from the cloneFrom libraries instead of installing
 ## them. Under pak (pakClonePackages()) a copy is used when it meets every version requirement; a
 ## GitHub ref needs the commit pak resolved, and a CRAN-style ref never takes a development build.
 
@@ -43,7 +43,7 @@ setSolve <- function(resolved = c(tinyCloneA = "0.0.1", tinyCloneB = "0.0.1"),
   }, envir = envir)
 }
 
-test_that("pakClonePackages hard-links packages that meet every requirement", {
+test_that("pakClonePackages copies packages that meet every requirement, never hard-links them", {
   from <- cloneFromLib()
   to <- withr::local_tempdir()
   withr::local_options(Require.cloneFrom = from)
@@ -55,7 +55,7 @@ test_that("pakClonePackages hard-links packages that meet every requirement", {
   if (!isWindows()) {
     f <- file.path(c(from, to), "tinyCloneA", "DESCRIPTION")
     inodes <- system2("stat", c("-c", "%i", shQuote(f)), stdout = TRUE)
-    expect_identical(inodes[1], inodes[2])
+    expect_false(identical(inodes[1], inodes[2]))
   }
   ## the solve is consumed: a later call without a fresh one clones nothing
   expect_false(exists("pakResolvedShaMap", envir = Require:::pakEnv(), inherits = FALSE))
@@ -526,4 +526,116 @@ test_that("Install() outside an interactive session load-checks clones and insta
   expect_identical(ver("tinyIntE"), "2.0")               # installed from the repository instead
   expect_identical(ver("tinyIntF"), "0.0.1")             # the clone that loaded stays
   expect_identical(Require:::cloneCheckExcluded(to), "tinyIntE 1.0")
+})
+
+## ---- clones are copies, never hard links; concurrent clones cannot damage each other ----
+
+## `stat` columns "inode links size" for each file (GNU stat on Linux; BSD stat on macOS).
+statFiles <- function(f) {
+  fmt <- if (Sys.info()[["sysname"]] == "Darwin") c("-f", shQuote("%i %l %z")) else c("-c", shQuote("%i %h %s"))
+  out <- system2("stat", c(fmt, shQuote(f)), stdout = TRUE)
+  m <- do.call(rbind, strsplit(out, " "))
+  data.frame(file = f, inode = m[, 1], links = as.integer(m[, 2]), size = as.numeric(m[, 3]))
+}
+pkgFiles <- function(lib, pkgs) {
+  unlist(lapply(pkgs, function(p) dir(file.path(lib, p), recursive = TRUE, all.files = TRUE, full.names = TRUE)))
+}
+
+test_that("every file of a clone is its own copy: link count 1, new inode", {
+  skip_on_os("windows")
+  from <- cloneFromLib()
+  to <- withr::local_tempdir()
+  withr::local_options(Require.cloneFrom = from)
+  setSolve()
+  Require:::pakClonePackages(planDT(), libPaths = to, verbose = 0)
+  pk <- c("tinyCloneA", "tinyCloneB")
+  src <- statFiles(pkgFiles(from, pk))
+  dst <- statFiles(pkgFiles(to, pk))
+  expect_gt(nrow(dst), 0)
+  expect_identical(nrow(dst), nrow(src))
+  expect_true(all(dst$links == 1L))
+  expect_true(all(src$links == 1L))
+  expect_length(intersect(src$inode, dst$inode), 0)
+  expect_identical(dst$size, src$size)
+  ## nothing of the clone's own working is left in the library
+  expect_setequal(dir(to, all.files = TRUE, no.. = TRUE), pk)
+})
+
+test_that("cloning over an existing clone replaces it and leaves the source alone", {
+  skip_on_os("windows")
+  from <- cloneFromLib()
+  to <- withr::local_tempdir()
+  cp <- Require:::clonablePackages(from, c("tinyCloneA", "tinyCloneB"))
+  Require:::cloneCopies(cp, toLib = to)
+  before <- statFiles(pkgFiles(from, c("tinyCloneA", "tinyCloneB")))
+  md5Before <- tools::md5sum(before$file)
+  ## damage the clone, as a later in-place write would
+  rdb <- file.path(to, "tinyCloneA", "R", "tinyCloneA.rdb")
+  writeLines("damaged", rdb)
+  Require:::cloneCopies(cp, toLib = to)
+  after <- statFiles(before$file)
+  expect_identical(after, before)
+  expect_identical(tools::md5sum(before$file), md5Before)
+  expect_identical(unname(tools::md5sum(rdb)), unname(md5Before[file.path(from, "tinyCloneA", "R", "tinyCloneA.rdb")]))
+  expect_true(all(statFiles(pkgFiles(to, c("tinyCloneA", "tinyCloneB")))$links == 1L))
+  expect_setequal(dir(to, all.files = TRUE, no.. = TRUE), c("tinyCloneA", "tinyCloneB"))
+})
+
+test_that("two processes cloning the same packages into one library at once damage nothing", {
+  skip_on_os("windows")
+  skip_if_not_installed("callr")
+  skip_if_not_installed("pkgload")
+  pkgs <- paste0("tinyRace", LETTERS[1:6])
+  from <- withr::local_tempdir()
+  for (p in pkgs) tinyPkg(from, p)
+  to <- withr::local_tempdir()
+  sync <- withr::local_tempdir()
+  before <- statFiles(pkgFiles(from, pkgs))
+  md5Before <- tools::md5sum(before$file)
+  ## the source of the code under test: the package being tested, installed or loaded with pkgload
+  reqPath <- if (pkgload::is_dev_package("Require")) pkgload::pkg_path(system.file(package = "Require")) else NULL
+  worker <- function(reqPath, from, to, pkgs, sync, id) {
+    if (is.null(reqPath)) loadNamespace("Require") else pkgload::load_all(reqPath, quiet = TRUE)
+    file.create(file.path(sync, paste0("ready", id)))
+    while (!file.exists(file.path(sync, "go"))) Sys.sleep(0.005)
+    for (i in 1:8) {
+      cp <- Require:::clonablePackages(from, pkgs)
+      Require:::cloneCopies(cp, toLib = to)
+    }
+    "done"
+  }
+  procs <- lapply(1:2, function(id)
+    callr::r_bg(worker, args = list(reqPath, from, to, pkgs, sync, id), stderr = "2>&1"))
+  while (length(dir(sync, pattern = "^ready")) < 2 && all(vapply(procs, function(p) p$is_alive(), logical(1))))
+    Sys.sleep(0.05)
+  file.create(file.path(sync, "go"))
+  for (p in procs) p$wait(120000)
+  for (p in procs) expect_identical(p$get_result(), "done")
+  ## the sources are untouched
+  after <- statFiles(before$file)
+  expect_identical(after, before)
+  expect_identical(tools::md5sum(before$file), md5Before)
+  ## the clones are whole, loadable, and no file is empty unless its source is
+  dst <- statFiles(pkgFiles(to, pkgs))
+  expect_identical(sort(sub(paste0("^", to), "", dst$file)), sort(sub(paste0("^", from), "", before$file)))
+  expect_false(any(dst$size == 0 & !sub(paste0("^", to), "", dst$file) %in% sub(paste0("^", from), "", before$file[before$size == 0])))
+  expect_true(all(dst$links == 1L))
+  res <- system2(file.path(R.home("bin"), "Rscript"),
+                 c("-e", shQuote(paste0("cat(vapply(c(", paste0("'", pkgs, "'", collapse = ","),
+                                        "), function(p) as.character(requireNamespace(p)), ''))"))),
+                 env = paste0("R_LIBS=", to), stdout = TRUE, stderr = FALSE)
+  expect_identical(res, paste(rep("TRUE", length(pkgs)), collapse = " "))
+  expect_setequal(dir(to, all.files = TRUE, no.. = TRUE), pkgs)
+})
+
+test_that("a clone takes over a stale lock on the library and releases its own", {
+  from <- cloneFromLib()
+  to <- withr::local_tempdir()
+  cp <- Require:::clonablePackages(from, "tinyCloneA")
+  lock <- file.path(to, "00LOCK-RequireClone")
+  dir.create(lock)
+  Sys.setFileTime(lock, Sys.time() - 3600)          # left by a process that died
+  Require:::cloneCopies(cp, toLib = to)
+  expect_true(file.exists(file.path(to, "tinyCloneA", "DESCRIPTION")))
+  expect_false(dir.exists(lock))                    # released afterwards
 })
