@@ -594,6 +594,10 @@ test_that("two processes cloning the same packages into one library at once dama
   md5Before <- tools::md5sum(before$file)
   ## the source of the code under test: the package being tested, installed or loaded with pkgload
   reqPath <- if (pkgload::is_dev_package("Require")) pkgload::pkg_path(system.file(package = "Require")) else NULL
+  ## earlier tests may have switched .libPaths(); the worker needs wherever the loaded packages are
+  libs <- unique(c(.libPaths(), dirname(vapply(loadedNamespaces(), function(n)
+    tryCatch(getNamespaceInfo(n, "path"), error = function(e) NA_character_), ""))))
+  libs <- libs[!is.na(libs) & dir.exists(libs)]
   worker <- function(reqPath, from, to, pkgs, sync, id) {
     if (is.null(reqPath)) loadNamespace("Require") else pkgload::load_all(reqPath, quiet = TRUE)
     file.create(file.path(sync, paste0("ready", id)))
@@ -605,7 +609,7 @@ test_that("two processes cloning the same packages into one library at once dama
     "done"
   }
   procs <- lapply(1:2, function(id)
-    callr::r_bg(worker, args = list(reqPath, from, to, pkgs, sync, id), stderr = "2>&1"))
+    callr::r_bg(worker, args = list(reqPath, from, to, pkgs, sync, id), stderr = "2>&1", libpath = libs))
   while (length(dir(sync, pattern = "^ready")) < 2 && all(vapply(procs, function(p) p$is_alive(), logical(1))))
     Sys.sleep(0.05)
   file.create(file.path(sync, "go"))
