@@ -43,6 +43,18 @@ setSolve <- function(resolved = c(tinyCloneA = "0.0.1", tinyCloneB = "0.0.1"),
   }, envir = envir)
 }
 
+## `stat` columns "inode links size" for each file (GNU stat on Linux; BSD stat on macOS).
+statFiles <- function(f) {
+  fmt <- if (Sys.info()[["sysname"]] == "Darwin") c("-f", shQuote("%i %l %z")) else c("-c", shQuote("%i %h %s"))
+  out <- system2("stat", c(fmt, shQuote(f)), stdout = TRUE)
+  stopifnot(length(out) == length(f))
+  m <- do.call(rbind, strsplit(out, " "))
+  data.frame(file = f, inode = m[, 1], links = as.integer(m[, 2]), size = as.numeric(m[, 3]))
+}
+pkgFiles <- function(lib, pkgs) {
+  unlist(lapply(pkgs, function(p) dir(file.path(lib, p), recursive = TRUE, all.files = TRUE, full.names = TRUE)))
+}
+
 test_that("pakClonePackages copies packages that meet every requirement, never hard-links them", {
   from <- cloneFromLib()
   to <- withr::local_tempdir()
@@ -53,9 +65,12 @@ test_that("pakClonePackages copies packages that meet every requirement, never h
   expect_true(all(out$installResult == "OK"))
   expect_true(all(file.exists(file.path(to, c("tinyCloneA", "tinyCloneB"), "DESCRIPTION"))))
   if (!isWindows()) {
-    f <- file.path(c(from, to), "tinyCloneA", "DESCRIPTION")
-    inodes <- system2("stat", c("-c", "%i", shQuote(f)), stdout = TRUE)
-    expect_false(identical(inodes[1], inodes[2]))
+    ## (statFiles() uses the stat syntax of the platform: BSD stat on macOS has no `-c`, and an
+    ## empty result there made the two inodes look identical)
+    st <- statFiles(file.path(c(from, to), "tinyCloneA", "DESCRIPTION"))
+    expect_identical(nrow(st), 2L)
+    expect_false(identical(st$inode[1], st$inode[2]))
+    expect_true(all(st$links == 1L))
   }
   ## the solve is consumed: a later call without a fresh one clones nothing
   expect_false(exists("pakResolvedShaMap", envir = Require:::pakEnv(), inherits = FALSE))
@@ -529,17 +544,6 @@ test_that("Install() outside an interactive session load-checks clones and insta
 })
 
 ## ---- clones are copies, never hard links; concurrent clones cannot damage each other ----
-
-## `stat` columns "inode links size" for each file (GNU stat on Linux; BSD stat on macOS).
-statFiles <- function(f) {
-  fmt <- if (Sys.info()[["sysname"]] == "Darwin") c("-f", shQuote("%i %l %z")) else c("-c", shQuote("%i %h %s"))
-  out <- system2("stat", c(fmt, shQuote(f)), stdout = TRUE)
-  m <- do.call(rbind, strsplit(out, " "))
-  data.frame(file = f, inode = m[, 1], links = as.integer(m[, 2]), size = as.numeric(m[, 3]))
-}
-pkgFiles <- function(lib, pkgs) {
-  unlist(lapply(pkgs, function(p) dir(file.path(lib, p), recursive = TRUE, all.files = TRUE, full.names = TRUE)))
-}
 
 test_that("every file of a clone is its own copy: link count 1, new inode", {
   skip_on_os("windows")

@@ -115,7 +115,9 @@ setLibPathsUpdateRprofile <- function(libPaths, standAlone = TRUE, updateRprofil
         }
       }
     }
-    libPathsLine <- paste0("._libPaths <- c('", paste(libPaths, collapse = "', '"), "')")
+    ## encodeString() escapes a Windows path's backslashes (`C:\Users` is not valid in an R string);
+    ## for any other path it gives the same line as before
+    libPathsLine <- paste0("._libPaths <- c(", paste(encodeString(libPaths, quote = "'"), collapse = ", "), ")")
     standAloneLine <- paste0("._standAlone <- ", standAlone)
     old <- removeSetLibPathsBlock(updateRprofile)
     prevLibPathsLine <- NULL
