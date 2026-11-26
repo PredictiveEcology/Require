@@ -36,9 +36,12 @@ oldFormatBlock <- function(lib, prev = "/prev/lib") {
 ## First library R reports in a fresh Rscript started in `dir`, reading dir/.Rprofile. The
 ## result carries all the output as attribute "all", for the failure message.
 freshLibPath1 <- function(dir) {
-  prof <- normalizePath(file.path(dir, ".Rprofile"), winslash = "/")
   ## processx, not system2(): system2(env = ) is ignored on Windows, and the child must see
   ## R_PROFILE_USER and start in `dir` whatever R CMD check set for this session
+  ## the environment of this session without R_PROFILE_USER (callr sets one for its sessions,
+  ## and R CMD check runs the tests in one), so R reads dir/.Rprofile as it does for a user
+  childEnv <- Sys.getenv()
+  childEnv <- childEnv[!toupper(names(childEnv)) %in% c("R_PROFILE_USER", "R_PROFILE", "R_LIBS", "R_LIBS_USER")]
   res <- processx::run(
     file.path(R.home("bin"), "Rscript"),
     c("-e", paste0("cat('PROFILE_RAN=', exists('._libPaths'), '\\n', ",
@@ -47,7 +50,7 @@ freshLibPath1 <- function(dir) {
                    "' R_LIBS_SITE=', Sys.getenv('R_LIBS_SITE'), '\\n', 'getwd=', getwd(), '\\n', ",
                    "'libPaths=', paste(.libPaths(), collapse = ' | '), '\\n', sep = ''); ",
                    "cat('LIBPATH1=', .libPaths()[1], '\\n', sep = '')")),
-    wd = dir, env = c("current", R_PROFILE_USER = prof, R_LIBS = "", R_LIBS_USER = ""),
+    wd = dir, env = childEnv,
     stderr = "2>&1", error_on_status = FALSE)
   out <- strsplit(gsub("\r", "", res$stdout), "\n")[[1]]
   lib <- sub("^LIBPATH1=", "", grep("^LIBPATH1=", out, value = TRUE))
