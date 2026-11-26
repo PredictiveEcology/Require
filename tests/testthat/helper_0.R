@@ -1,5 +1,5 @@
 ## linkTestSupportInto(): put the packages testthat needs -- curl, httr, waldo
-## and their dependency closure -- into `destLib` as symlinks, from wherever
+## and their dependency closure -- into `destLib` as copies, from wherever
 ## they are already installed.
 ##
 ## Into destLib, deliberately, rather than into a separate library placed on
@@ -9,25 +9,25 @@
 ##                 knownRevDeps  <- lapply(knownRevDeps, intersect, installedPkgs)
 ##
 ## so a package that is merely *reachable* rather than *present* silently
-## shrinks what that test checks. Symlinking into destLib keeps dir(),
+## shrinks what that test checks. Copying into destLib keeps dir(),
 ## installed.packages() and .libPaths() exactly as they were when setupTest()
 ## installed these for real -- the suite asserts the same things, it just does
 ## not spend 13s per file doing it.
 ##
-## Symlinks, not copies: R resolves them when loading, so each namespace binds
-## to the permanent library rather than to this temporary one.
+## Copies, not symlinks or hard links: a package installed over one of these must
+## never write through to the library it came from (the user's own).
 ##
 ## pak is excluded on purpose. Reachable pak stops ensurePakInProjectLib()
 ## reinstalling it per project lib, and that reinstall is what re-binds pak's
 ## namespace to a live directory; without it the namespace stays pointing at a
 ## library a later test deletes, and pak:::loaded_packages() then warns on a
-## dead path, failing test-01, test-04 and test-12. pak keeps its own symlink
+## dead path, failing test-01, test-04 and test-12. pak keeps its own copy
 ## path inside Require.
 ## requireIntoTestLib(): make Require -- and the deps its own DESCRIPTION
 ## declares -- present *in* the test library.
 ##
 ## Under devtools::test() Require is loaded from source by pkgload, so there is
-## no installed copy anywhere to symlink (a developer machine may have none in
+## no installed copy anywhere to copy (a developer machine may have none in
 ## its personal library at all). Anything that must *build* against Require --
 ## test-08 installs SpaDES.project, which Imports Require -- then fails with
 ## "dependency 'Require' is not available".
@@ -36,7 +36,7 @@
 ## a standAlone test's outcome depend on what happens to be installed there,
 ## which is why test-08 passed under one R version and skipped under another on
 ## the same machine. So install the package *under test* once per session into
-## a cache library and symlink that in -- the test library then holds the code
+## a cache library and copy that in -- the test library then holds the code
 ## actually being tested, not whatever the developer happens to have.
 requireSourceLib <- local({
   cached <- NULL
@@ -65,7 +65,7 @@ requireIntoTestLib <- function(destLib) {
   if (!is.null(srcLib)) {
     linkTestSupportInto(destLib, pkgs = "Require", srcLibs = srcLib)
   } else {
-    ## Require is installed for real (e.g. under R CMD check): link it from there
+    ## Require is installed for real (e.g. under R CMD check): copy it from there
     linkTestSupportInto(destLib, pkgs = "Require")
   }
   invisible(dir.exists(file.path(destLib, "Require")))
@@ -92,7 +92,8 @@ linkTestSupportInto <- function(destLib, pkgs = c("curl", "httr", "waldo"),
     src <- tryCatch(normalizePath(file.path(ip[pkg, "LibPath"], pkg), mustWork = FALSE),
                     error = function(e) "")
     if (nzchar(src) && dir.exists(src) &&
-        isTRUE(tryCatch(file.symlink(src, dest), error = function(e) FALSE)))
+        isTRUE(tryCatch(all(file.copy(src, destLib, recursive = TRUE, copy.date = TRUE)),
+                        error = function(e) FALSE)))
       linked <- c(linked, pkg)
   }
   invisible(linked)

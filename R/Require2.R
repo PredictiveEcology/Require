@@ -3905,11 +3905,12 @@ clonePackages <- function(rcf, ipa, libPaths, skip = character(),
 # Copy each of `Packages` from `fromLib` into `toLib`, never hard-linking: a link makes two
 # libraries share one inode, so a later in-place write to either (a second clone, a reinstall)
 # empties the file in both (26,525 files in every library sharing them, 2026-11-25). Each package
-# is copied into a working folder inside `toLib` (same file system) and renamed into place, and
-# `toLib` is locked meanwhile so two processes cannot clone into it at once.
+# is copied into a working folder inside `toLib` (same file system) and renamed into place, so a
+# clone replaces the whole package folder, and `toLib` is locked meanwhile so two processes cannot
+# clone into it at once.
 copyPackageFilesInner <- function(Packages, fromLib, toLib) {
   checkPath(toLib, create = TRUE)
-  withCloneLock(toLib, {
+  withCloneLock(toLib, function(refreshLock) {
     lapply(Packages, function(packToClone) {
       from <- file.path(fromLib, packToClone)
       if (!dir.exists(from) || identical(normPath(from), normPath(file.path(toLib, packToClone))))
@@ -3919,6 +3920,7 @@ copyPackageFilesInner <- function(Packages, fromLib, toLib) {
       dir.create(work)
       ok <- all(file.copy(from, work, recursive = TRUE, copy.date = TRUE)) &&
         replaceDirByRename(file.path(work, packToClone), file.path(toLib, packToClone))
+      refreshLock() # a long clone must not look abandoned
       invisible(ok)
     })
   })
@@ -3938,16 +3940,41 @@ replaceDirByRename <- function(new, to) {
   ok
 }
 
-# Run `expr` holding an exclusive lock on library `lib`: the folder `00LOCK-RequireClone`, made
-# atomically with dir.create() as R's own install does (00LOCK-<pkg>). A lock older than `stale`
-# seconds belongs to a process that died and is taken over. filelock is neither an Import nor a
-# Suggest of Require, so it is not used.
-withCloneLock <- function(lib, expr, wait = 300, stale = 300) {
+# Run `fun(refreshLock)` holding an exclusive lock on library `lib`: the folder
+# `00LOCK-RequireClone`, made atomically with dir.create() as R's own install does
+# (00LOCK-<pkg>). Inside it is a file `owner` holding the owner's token (pid, host, random).
+# A lock is abandoned, and taken over, only if its owner is on this host and no longer running,
+# or is on another host (or its liveness cannot be tested, as on Windows) and the lock has not
+# been refreshed for `staleOtherHost` seconds. The owner refreshes the lock's time after each
+# package. A takeover first renames the lock to a unique name, which only one process can do;
+# if the folder renamed was not the one judged abandoned, it is put back. filelock is neither an
+# Import nor a Suggest of Require, so it is not used. Leftover working folders of an interrupted
+# clone (`00CLONE-*`, `00OLD-*`) are removed once the lock is held.
+withCloneLock <- function(lib, fun, wait = 300, staleOtherHost = 6 * 3600, noOwnerGrace = 60) {
   lock <- file.path(lib, "00LOCK-RequireClone")
+  host <- Sys.info()[["nodename"]]
+  token <- paste(Sys.getpid(), host, format(as.numeric(Sys.time()) * 1e6, scientific = FALSE),
+                 sample.int(.Machine$integer.max, 1))
+  ownerFile <- function(l) file.path(l, "owner")
+  readOwner <- function(l) tryCatch(readLines(ownerFile(l), n = 1, warn = FALSE),
+                                    error = function(e) character(0), warning = function(w) character(0))
+  abandoned <- function(owner) {
+    ageSecs <- as.numeric(difftime(Sys.time(), file.mtime(lock), units = "secs"))
+    if (!length(owner) || !nzchar(owner)) return(isTRUE(ageSecs > noOwnerGrace)) # just made, not yet signed
+    parts <- strsplit(owner, " ", fixed = TRUE)[[1]]
+    alive <- if (identical(parts[2], host) && !isWindows())
+      tryCatch(isTRUE(tools::pskill(as.integer(parts[1]), 0)), error = function(e) NA) else NA
+    if (is.na(alive)) isTRUE(ageSecs > staleOtherHost) else !alive
+  }
   deadline <- Sys.time() + wait
   while (!dir.create(lock, showWarnings = FALSE)) {
-    if (isTRUE(difftime(Sys.time(), file.mtime(lock), units = "secs") > stale)) {
-      unlink(lock, recursive = TRUE)
+    owner <- readOwner(lock)
+    if (dir.exists(lock) && abandoned(owner)) {
+      dead <- tempfile("00LOCK-RequireCloneDead-", tmpdir = lib)
+      if (file.rename(lock, dead)) {
+        if (identical(readOwner(dead), owner)) unlink(dead, recursive = TRUE)
+        else file.rename(dead, lock) # a fresh lock slipped in between: give it back
+      }
     } else if (Sys.time() > deadline) {
       stop("Another process has been cloning into ", lib, " for over ", wait, " seconds (",
            lock, "); if none is running, delete that folder")
@@ -3955,8 +3982,16 @@ withCloneLock <- function(lib, expr, wait = 300, stale = 300) {
       Sys.sleep(0.1)
     }
   }
-  on.exit(unlink(lock, recursive = TRUE))
-  expr
+  writeLines(token, ownerFile(lock))
+  on.exit(if (identical(readOwner(lock), token)) unlink(lock, recursive = TRUE))
+  unlink(list.files(lib, "^00(CLONE|OLD)-", full.names = TRUE), recursive = TRUE)
+  refreshLock <- function() {
+    if (!identical(readOwner(lock), token))
+      stop("The lock on ", lib, " was taken over by another process while cloning; ",
+           "nothing further was cloned")
+    Sys.setFileTime(lock, Sys.time())
+  }
+  fun(refreshLock)
 }
 
 

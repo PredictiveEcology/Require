@@ -20,3 +20,8 @@ First try to create a hardlink to the file. If that fails, try a symbolic
 link (symlink) before falling back to copying the file. "File" here can mean
 a file or a directory.
 }
+\details{
+Hard links make two paths share one file, so a write to either changes both. Require
+no longer uses \code{linkOrCopy()} (clones are copies); it stays because other packages
+import it. Do not use it for files that are later written in place.
+}

@@ -61,6 +61,8 @@
 #' Require:::.cleanup(opts)
 #' unlink(otherLib, recursive = TRUE)
 #'
+## The code that setLibPathsUpdateRprofile() writes into .Rprofile (setLibPathsBlockCode) does what
+## the body below does; change one and change the other.
 setLibPaths <- function(libPaths, standAlone = TRUE,
                         updateRprofile = getOption("Require.updateRprofile", FALSE),
                         exact = FALSE, verbose = getOption("Require.verbose")) {
