@@ -37,12 +37,16 @@ oldFormatBlock <- function(lib, prev = "/prev/lib") {
 ## result carries all the output as attribute "all", for the failure message.
 freshLibPath1 <- function(dir) {
   prof <- normalizePath(file.path(dir, ".Rprofile"), winslash = "/")
-  out <- withr::with_dir(dir, withr::with_envvar(c(R_PROFILE_USER = prof, R_LIBS = NA, R_LIBS_USER = NA),
-    system2(file.path(R.home("bin"), "Rscript"),
-            c("-e", shQuote("cat('LIBPATH1=', .libPaths()[1], '\\n', sep = '')")),
-            stdout = TRUE, stderr = TRUE)))
-  res <- sub("^LIBPATH1=", "", grep("^LIBPATH1=", out, value = TRUE))
-  structure(if (length(res)) res[length(res)] else NA_character_, all = paste(out, collapse = "\n"))
+  ## processx, not system2(): system2(env = ) is ignored on Windows, and the child must see
+  ## R_PROFILE_USER and start in `dir` whatever R CMD check set for this session
+  res <- processx::run(
+    file.path(R.home("bin"), "Rscript"),
+    c("-e", "cat('PROFILE_USER=', Sys.getenv('R_PROFILE_USER'), ' PROFILE_RAN=', exists('._libPaths'), '\\n', sep = ''); cat('LIBPATH1=', .libPaths()[1], '\\n', sep = '')"),
+    wd = dir, env = c("current", R_PROFILE_USER = prof, R_LIBS = "", R_LIBS_USER = ""),
+    stderr = "2>&1", error_on_status = FALSE)
+  out <- strsplit(gsub("\r", "", res$stdout), "\n")[[1]]
+  lib <- sub("^LIBPATH1=", "", grep("^LIBPATH1=", out, value = TRUE))
+  structure(if (length(lib)) lib[length(lib)] else NA_character_, all = paste(out, collapse = "\n"))
 }
 expectLibPath1 <- function(dir, lib) {
   got <- freshLibPath1(dir)
