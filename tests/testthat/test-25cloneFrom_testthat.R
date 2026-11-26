@@ -676,18 +676,31 @@ test_that("a lock from another host is kept until it has not been refreshed for 
   expect_identical(Require:::withCloneLock(lib, function(refresh) "ran", wait = 5, staleOtherHost = 10), "ran")
 })
 
-test_that("a clone refreshes its lock, and stops if the lock was taken over", {
+test_that("a clone refreshes its lock; if the lock is lost the clone goes back to acquire it and runs again", {
+  skip_on_os("windows")
   lib <- withr::local_tempdir()
-  Require:::withCloneLock(lib, function(refresh) {
-    lock <- file.path(lib, "00LOCK-RequireClone")
-    Sys.setFileTime(lock, Sys.time() - 1000)
-    refresh()
-    expect_lt(as.numeric(difftime(Sys.time(), file.mtime(lock), units = "secs")), 100)
-    unlink(lock, recursive = TRUE); dir.create(lock)         # someone else's lock now
-    writeLines("999 other 1 1", file.path(lock, "owner"))
-    expect_error(refresh(), "taken over")
-  })
-  expect_true(dir.exists(file.path(lib, "00LOCK-RequireClone")))  # not ours: left alone
+  lock <- file.path(lib, "00LOCK-RequireClone")
+  runs <- 0L
+  out <- Require:::withCloneLock(lib, function(refresh) {
+    runs <<- runs + 1L
+    if (runs == 1L) {
+      Sys.setFileTime(lock, Sys.time() - 1000)
+      refresh()
+      expect_lt(as.numeric(difftime(Sys.time(), file.mtime(lock), units = "secs")), 100)
+      ## the lock is taken over by another process (here: replaced by a dead process's)
+      writeLines(paste(deadPid(), Sys.info()[["nodename"]], "1 1"), file.path(lock, "owner"))
+      refresh()                                              # finds it is no longer ours
+      stop("not reached")
+    } else if (runs == 2L) {
+      unlink(lock, recursive = TRUE)                         # or: the folder is gone
+      refresh()
+      stop("not reached")
+    }
+    "finished"
+  }, wait = 10)
+  expect_identical(out, "finished")
+  expect_identical(runs, 3L)
+  expect_identical(dir(lib, all.files = TRUE, no.. = TRUE), character())
 })
 
 test_that("two processes taking over one abandoned lock never hold it together", {
@@ -706,7 +719,7 @@ test_that("two processes taking over one abandoned lock never hold it together",
     file.create(file.path(sync, paste0("ready", id)))
     while (!file.exists(file.path(sync, "go"))) Sys.sleep(0.002)
     both <- 0L
-    for (i in 1:6) Require:::withCloneLock(lib, function(refresh) {
+    for (i in 1:15) Require:::withCloneLock(lib, function(refresh) {
       if (!dir.create(file.path(sync, "inside"), showWarnings = FALSE)) both <<- both + 1L
       Sys.sleep(0.05)
       unlink(file.path(sync, "inside"), recursive = TRUE)

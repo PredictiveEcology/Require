@@ -41,7 +41,12 @@ freshLibPath1 <- function(dir) {
   ## R_PROFILE_USER and start in `dir` whatever R CMD check set for this session
   res <- processx::run(
     file.path(R.home("bin"), "Rscript"),
-    c("-e", "cat('PROFILE_USER=', Sys.getenv('R_PROFILE_USER'), ' PROFILE_RAN=', exists('._libPaths'), '\\n', sep = ''); cat('LIBPATH1=', .libPaths()[1], '\\n', sep = '')"),
+    c("-e", paste0("cat('PROFILE_RAN=', exists('._libPaths'), '\\n', ",
+                   "'R_PROFILE_USER=', Sys.getenv('R_PROFILE_USER'), ' exists=', file.exists(Sys.getenv('R_PROFILE_USER')), '\\n', ",
+                   "'R_LIBS=', Sys.getenv('R_LIBS'), ' R_LIBS_USER=', Sys.getenv('R_LIBS_USER'), ",
+                   "' R_LIBS_SITE=', Sys.getenv('R_LIBS_SITE'), '\\n', 'getwd=', getwd(), '\\n', ",
+                   "'libPaths=', paste(.libPaths(), collapse = ' | '), '\\n', sep = ''); ",
+                   "cat('LIBPATH1=', .libPaths()[1], '\\n', sep = '')")),
     wd = dir, env = c("current", R_PROFILE_USER = prof, R_LIBS = "", R_LIBS_USER = ""),
     stderr = "2>&1", error_on_status = FALSE)
   out <- strsplit(gsub("\r", "", res$stdout), "\n")[[1]]
@@ -66,7 +71,7 @@ local_rprofileDir <- function(envir = parent.frame()) {
 test_that("an old-format block for library A is replaced by one for B that parses and starts R on B", {
   dir <- local_rprofileDir()
   A <- file.path(dir, "A"); B <- file.path(dir, "B")
-  writeLines(c("# my own line", oldFormatBlock(normPath(A))), ".Rprofile")
+  writeLines(c("# my own line", "message(\"PROFILE RAN\")", oldFormatBlock(normPath(A))), ".Rprofile")
   expect_no_error(parse(".Rprofile"))
   suppressMessages(setLibPaths(B, updateRprofile = TRUE, exact = TRUE))
   expect_no_error(parse(".Rprofile"))
@@ -77,7 +82,8 @@ test_that("an old-format block for library A is replaced by one for B that parse
 test_that("a new-format block, and a fresh file, parse and start R on the new library", {
   dir <- local_rprofileDir()
   A <- file.path(dir, "A"); B <- file.path(dir, "B")
-  ## fresh file
+  ## a file with only the user's own line (setLibPaths adds its block after it)
+  writeLines("message(\"PROFILE RAN\")", ".Rprofile")
   suppressMessages(setLibPaths(A, updateRprofile = TRUE, exact = TRUE))
   expect_no_error(parse(".Rprofile"))
   expectLibPath1(dir, A)
@@ -122,4 +128,13 @@ test_that("a Windows-style path with backslashes is written as a valid string", 
   Require:::setLibPathsUpdateRprofile(c(winLib, winLib2), standAlone = TRUE, updateRprofile = ".Rprofile",
                                       verbose = 0)
   expect_identical(readLines(".Rprofile"), before)
+})
+
+test_that("a fresh .Rprofile, created by setLibPaths, parses and starts R on the new library", {
+  dir <- local_rprofileDir()
+  A <- file.path(dir, "A")
+  expect_false(file.exists(".Rprofile"))
+  suppressMessages(setLibPaths(A, updateRprofile = TRUE, exact = TRUE))
+  expect_no_error(parse(".Rprofile"))
+  expectLibPath1(dir, A)
 })
