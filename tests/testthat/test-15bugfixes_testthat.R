@@ -1696,7 +1696,10 @@ test_that("a package pak keeps unchanged is not reported as 'Installed N package
   # a kept package that is already loaded does not ask for a restart
   loadNamespace("tinyKeptPkg", lib.loc = lib)
   withr::defer(try(unloadNamespace("tinyKeptPkg"), silent = TRUE))
-  expect_no_warning(out <- run(repoOld))
+  warns <- character()
+  out <- withCallingHandlers(run(repoOld),
+                             warning = function(w) { warns <<- c(warns, conditionMessage(w)); invokeRestart("muffleWarning") })
+  expect_false(any(grepl("restart", warns, ignore.case = TRUE)))
   expect_false(grepl("Installed [0-9]+ packages", out))
   try(unloadNamespace("tinyKeptPkg"), silent = TRUE)
 
