@@ -3898,6 +3898,18 @@ pakInstalledIsReplaced <- function(pkg, descPath) {
   !is.na(installed) && !identical(as.character(installed), resolved)
 }
 
+# The commit (RemoteSha, else GithubSHA1) recorded in each installed package's
+# DESCRIPTION in `lib`; NA for a package that is absent or is not from GitHub.
+installedRemoteSHAs <- function(lib, pkgs) {
+  vapply(pkgs, function(p) {
+    f <- file.path(lib, p, "DESCRIPTION")
+    if (!file.exists(f)) return(NA_character_)
+    sha <- DESCRIPTIONFileOtherV(f, other = "RemoteSha")
+    if (is.na(sha) || !nzchar(sha)) sha <- DESCRIPTIONFileOtherV(f, other = "GithubSHA1")
+    as.character(sha)
+  }, character(1))
+}
+
 # Install only the packages Require has determined need installing (needInstall == .txtInstall).
 # pak is called with exact version pins or any:: to avoid re-resolving deps.
 pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
@@ -4313,6 +4325,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
     }
     pv
   }
+  preInstallSHAs <- installedRemoteSHAs(libPaths[1L], toInstall$Package)
 
   # ---------------------------------------------------------------------------
   # Install: iterative identify-and-defer
@@ -4761,6 +4774,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
                                LibPath = character(0))
   }
   nowInstalledAll <- NULL  # computed lazily in the else-branch below
+  nowInstalledSHAs <- installedRemoteSHAs(libPaths[1L], toInstall$Package)
   ## The name the package installs under, which for a GitHub repo named
   ## differently from its package (RNCan/BioSimClient_R -> BioSIM) is not `Package`.
   instNames <- toInstall$Package
@@ -4850,7 +4864,11 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
       set(pkgDT, wh, "installedVersionOK", TRUE)
       set(pkgDT, wh, "Version",           installedVer)
       set(pkgDT, wh, "LibPath",           nowRow$LibPath[1])
-      set(pkgDT, wh, "installResult",     "OK")
+      ## pak "keeps" a package that already satisfies the request: same version and
+      ## same commit as before the call means nothing was installed.
+      kept <- !is.na(preInstallVers[pkg]) && identical(unname(preInstallVers[pkg]), installedVer) &&
+        identical(unname(preInstallSHAs[pkg]), unname(nowInstalledSHAs[pkg]))
+      set(pkgDT, wh, "installResult",     if (kept) .txtOKKept else "OK")
     } else {
       # Package not in libPaths[1] -- may already be installed (and satisfying)
       # in another lib path (pak skips packages that are already up-to-date).
@@ -4884,7 +4902,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
           set(pkgDT, wh, "installedVersionOK", TRUE)
           set(pkgDT, wh, "Version",            elseVer)
           set(pkgDT, wh, "LibPath",            elseRow$LibPath[1])
-          set(pkgDT, wh, "installResult",      "OK")
+          set(pkgDT, wh, "installResult",      .txtOKKept) # found in another library; pak installed nothing
           next
         }
       }
