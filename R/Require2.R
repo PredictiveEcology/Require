@@ -3987,22 +3987,33 @@ cloneMethod <- function(method = getOption("Require.cloneMethod", "copy")) {
 # file or folder by rename needs only a writable directory, and directories are made new, not linked,
 # so installs, `remove.packages()` and `unlink()` still work. Returns FALSE, leaving nothing behind
 # in `to`, if anything fails (a symlink in the package, chmod not permitted, a link across file
-# systems); the caller then copies. Source files already made read-only stay read-only.
+# systems); the caller then copies. The cheap checks (symlinks, new folders) come first, then every
+# file is linked, and only then are the sources chmodded (a link shares the inode, so the mode applies
+# under both names). A failed link therefore changes no mode; a failed chmod puts back the modes of
+# exactly the files it changed. Either way the fallback copy has the original modes. The shared files
+# are writable for the moments between the links and the chmod, while the destination library is locked.
 # (`link` and `chmod` are arguments so that tests can make them fail.)
 linkPackageReadOnly <- function(from, to, link = file.link, chmod = Sys.chmod) {
   top <- file.path(to, basename(from))
+  changed <- character()
+  orig <- integer()
   ok <- tryCatch({
     files <- list.files(from, recursive = TRUE, all.files = TRUE, no.. = TRUE, include.dirs = FALSE)
     dirs <- setdiff(list.dirs(from, full.names = FALSE, recursive = TRUE), "")
     src <- file.path(from, files)
     mode <- as.integer(file.mode(src))
+    orig <- setNames(mode, src)
     ro <- bitwAnd(mode, bitwNot(strtoi("222", 8L))) # no write bit for anyone
+    todo <- mode != ro
     all(!is.na(mode)) && !any(nzchar(Sys.readlink(src))) && dir.create(top) &&
       all(vapply(file.path(top, dirs), dir.create, logical(1))) &&
-      all(chmod(src[mode != ro], mode = as.octmode(ro[mode != ro]))) &&
-      all(suppressWarnings(link(src, file.path(top, files))))
+      all(suppressWarnings(link(src, file.path(top, files)))) &&
+      { changed <- src[todo]; all(chmod(src[todo], mode = as.octmode(ro[todo]))) }
   }, error = function(e) FALSE)
-  if (!isTRUE(ok)) unlink(top, recursive = TRUE)
+  if (!isTRUE(ok)) {
+    unlink(top, recursive = TRUE)
+    if (length(changed)) Sys.chmod(changed, mode = as.octmode(orig[changed]))
+  }
   isTRUE(ok)
 }
 

@@ -599,7 +599,8 @@ for (method in c("copy", "hardlinkReadOnly")) test_that(paste0("two processes cl
   for (p in procs) expect_identical(p$get_result(), "done")
   ## the sources are untouched
   after <- statFiles(before$file)
-  expect_identical(after[c("file", "inode", "size")], before[c("file", "inode", "size")])
+  if (method == "copy") expect_identical(after, before) else # links and mode legitimately change
+    expect_identical(after[c("file", "inode", "size")], before[c("file", "inode", "size")])
   expect_identical(tools::md5sum(before$file), md5Before)
   ## the clones are whole, loadable, and no file is empty unless its source is
   dst <- statFiles(pkgFiles(to, pkgs))
@@ -845,23 +846,27 @@ test_that("hardlinkReadOnly gives up a package cleanly when a link or chmod fail
   skip_on_os("windows")
   from <- cloneFromLib()
   pkg <- file.path(from, "tinyCloneA")
-  modes <- file.mode(pkgFiles(from, "tinyCloneA"))
+  modes <- file.mode(pkgFiles(from, "tinyCloneA")); names(modes) <- pkgFiles(from, "tinyCloneA")
   noLink <- function(from, to) rep(FALSE, length(from))
   ## a link that fails part-way through (the first file is linked, as before a cross-file-system failure)
   halfLink <- function(from, to) c(base::file.link(from[1], to[1]), rep(FALSE, length(from) - 1))
   noChmod <- function(paths, mode, ...) rep(FALSE, length(paths))
-  ## (chmod first: a source file already made read-only is not chmodded again)
-  for (fns in list(list(chmod = noChmod), list(link = noLink), list(link = halfLink))) {
+  ## chmod succeeds for the first file only: that one is put back
+  partChmod <- function(paths, mode, ...) { Sys.chmod(paths[1], mode[1]); c(TRUE, rep(FALSE, length(paths) - 1)) }
+  for (fns in list(list(chmod = noChmod), list(chmod = partChmod), list(link = noLink), list(link = halfLink))) {
     work <- withr::local_tempdir()
     expect_false(do.call(Require:::linkPackageReadOnly, c(list(pkg, work), fns)))
     expect_length(dir(work, all.files = TRUE, no.. = TRUE), 0) # nothing half-linked is left behind
-    if (!is.null(fns$chmod)) expect_identical(file.mode(pkgFiles(from, "tinyCloneA")), modes) # chmod never succeeded
+    expect_identical(as.integer(file.mode(names(modes))), as.integer(modes)) # the source modes are exactly as before
+    expect_true(all(file.access(pkgFiles(from, "tinyCloneA"), 2) == 0)) # and still writable
   }
   ## a symlink in a package cannot be linked as a file: the whole package is copied instead
   file.symlink("DESCRIPTION", file.path(pkg, "linkToDESCRIPTION"))
   to <- cloneWith(from, pkgsAB, "hardlinkReadOnly")
   st <- statFiles(pkgFiles(to, "tinyCloneA"))
   expect_true(all(st$links == 1L)) # copied, so no link to the source
+  expect_true(all(file.access(pkgFiles(to, "tinyCloneA"), 2) == 0)) # and as writable as the source was
+  expect_identical(as.integer(file.mode(names(modes))), as.integer(modes))
   expect_true(all(statFiles(pkgFiles(to, "tinyCloneB"))$links == 2L)) # the other package was linked
   expect_identical(versionIn(to, "tinyCloneA"), "0.0.1")
   ## across file systems, where there is one to try: /dev/shm is not the disk of tempdir()
