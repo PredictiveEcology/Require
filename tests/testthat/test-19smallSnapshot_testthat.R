@@ -44,7 +44,8 @@ test_that("small snapshot install pins each package to the requested version", {
 
   testlib <- file.path(tempdir(), paste0("rqlib_smallsnap_", as.integer(Sys.time())))
   dir.create(testlib, recursive = TRUE)
-  on.exit(removeTestLib(testlib), add = TRUE)
+  staleBefore <- staleNamespaces()
+  on.exit(removeTestLib(testlib, staleBefore), add = TRUE)
   setLibPaths(testlib, standAlone = TRUE)
   on.exit(.libPaths(libPathsBefore), add = TRUE)  # the paths from before setupTest(): its own restore has already run when this one does
 
