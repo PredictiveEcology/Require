@@ -215,3 +215,25 @@ dontDetach <- function() {
 
   dtd
 }
+
+## Delete a test's temporary library. Install() puts pak (and what it loads with it) into the library it
+## installs to, so the session can have namespaces loaded from `lib`; deleting `lib` under them leaves
+## lazy-loading with no .rdb file to read (and on Windows a file lock). So unload them first, then check
+## that no loaded namespace points at a folder that is gone.
+removeTestLib <- function(lib) {
+  nsPath <- function(ns) vapply(ns, function(n)
+    tryCatch(getNamespaceInfo(n, "path"), error = function(e) NA_character_), character(1))
+  norm <- function(p) normalizePath(p, winslash = "/", mustWork = FALSE)
+  loaded <- loadedNamespaces()
+  fromLib <- loaded[!is.na(nsPath(loaded)) & startsWith(norm(nsPath(loaded)), paste0(norm(lib), "/"))]
+  if ("pak" %in% fromLib) try(Require:::pakResetSubprocess(), silent = TRUE)
+  for (i in seq_along(fromLib))   # a namespace others import cannot go first
+    for (n in intersect(fromLib, loadedNamespaces()))
+      try(suppressWarnings(unloadNamespace(n)), silent = TRUE)
+  unlink(lib, recursive = TRUE)
+  loaded <- loadedNamespaces()
+  paths <- nsPath(loaded)
+  gone <- loaded[!is.na(paths) & !dir.exists(paths)]
+  testthat::expect_identical(gone, character(0),
+                             info = "namespaces loaded from a folder that no longer exists")
+}
