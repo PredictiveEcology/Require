@@ -241,12 +241,7 @@ pkgSnapshot2 <-
       ref <- ip$GithubRef
       ineq <- ">="
     }
-    thePkgAndVers <- paste0(ifelse(
-      !is.na(ip$GithubRepo),
-      paste0(ip$GithubUsername, "/", ip$GithubRepo, "@", ref),
-      # github
-      paste0(ip$Package, " (", ineq, ip$Version, ")") # cran
-    ))
+    thePkgAndVers <- installedPkgSpecs(ip, ref, cranSuffix = paste0(" (", ineq, ip$Version, ")"))
     thePkgAndVers
   }
 
