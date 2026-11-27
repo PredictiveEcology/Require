@@ -3269,7 +3269,7 @@ updatePackages <- function(libPaths = .libPaths()[1], purge = FALSE,
     }
     updated <- tolower(updated)
     if (startsWith(updated, "y"))
-      pkgs[hasHash] <- paste0(unlist(lapply(pkgsSplit[hasHash], function(x) x[[1]])), " (HEAD)")
+      pkgs[hasHash] <- asHEAD(unlist(lapply(pkgsSplit[hasHash], function(x) x[[1]])))
     else {
       message("Not updating these packages")
       pkgs <- pkgs[!hasHash]
@@ -3279,20 +3279,24 @@ updatePackages <- function(libPaths = .libPaths()[1], purge = FALSE,
   Install(pkgs, libPaths = libPaths, purge = purge, verbose = verbose)
 }
 
+asHEAD <- function(x) paste0(x, " (HEAD)")
+
 # One "(HEAD)" request per installed package: "account/repo@branch (HEAD)" for
 # GitHub packages, "pkg (HEAD)" for the rest.
 installedHEADspecs <- function(ip) {
-  ref <- ip$GithubRef
-  ineq <- "HEAD"
-  head <- paste0(" (", ineq, ")")
+  installedPkgSpecs(ip, ref = ip$GithubRef, ghSuffix = asHEAD(""), cranSuffix = asHEAD(""))
+}
+
+# One spec per installed package: "account/repo[/subfolder]@ref<ghSuffix>" for
+# GitHub packages, "pkg<cranSuffix>" for the rest. Suffixes are vectors or length 1.
+installedPkgSpecs <- function(ip, ref, ghSuffix = "", cranSuffix = "") {
   noSubFolder <- is.na(ip$GithubSubFolder) | !nzchar(ip$GithubSubFolder) | ip$GithubSubFolder == "NA"
   paste0(ifelse(
     !is.na(ip$GithubRepo),
     paste0(ip$GithubUsername, "/", ip$GithubRepo,
            ifelse(noSubFolder, "", paste0("/", ip$GithubSubFolder)),
-           "@", ref, head),
-    # github
-    paste0(ip[["Package"]], head) # cran
+           "@", ref, ghSuffix),
+    paste0(ip[["Package"]], cranSuffix) # cran
   ))
 }
 
@@ -3603,7 +3607,7 @@ addHEAD <- function(pkgs) {
     ver <- extractVersionNumber(pkgs[cand])
     ver[!grepl("^[0-9]+[.-][0-9.-]*$", ver)] <- "0.0"
     best <- cand[order(!grepl("@", pkgs[cand]), -xtfrm(package_version(ver)))[1]]
-    pkgs[wh[1]] <- paste0(trimVersionNumber(pkgs[best]), " (HEAD)")
+    pkgs[wh[1]] <- asHEAD(trimVersionNumber(pkgs[best]))
     pkgs[wh[-1]] <- NA
   }
   pkgs[!is.na(pkgs)]
@@ -3669,18 +3673,13 @@ Install <- function(packages, packageVersionFile,
 #' @rdname Require
 #' @export
 #' @details
-#' `UpdateOrInstall` is exactly `Install(packages, install = "HEAD", ...)`: every
+#' `UpdateOrInstall(packages, ...)` is exactly `Install(packages, install = "HEAD", ...)`: every
 #' package named is installed if missing, or updated to the latest commit of its
 #' GitHub branch or the newest CRAN release if it is not current.
 #' Dependencies are updated only when they fail a version floor, like
 #' `pak::pak(upgrade = FALSE)`. To update the named packages and *all* their
 #' dependencies, use [updatePackages()] with its `packages` argument.
-UpdateOrInstall <- function(packages, ...) {
-  if (!missing(packages)) {
-    packages <- substitutePackages(substitute(packages), parent.frame())
-  }
-  Install(packages, install = "HEAD", ...)
-}
+UpdateOrInstall <- function(...) Install(..., install = "HEAD")
 
 rmPackageFirst <- function(toInstall, libPaths, verbose) {
   cantUpdateDeps <- toInstall[["Package"]] %in% c("Require", "data.table")

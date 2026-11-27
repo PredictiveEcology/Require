@@ -215,3 +215,26 @@ dontDetach <- function() {
 
   dtd
 }
+
+## Source tarballs of tiny packages in a local CRAN-like repository: list(name, version, imports).
+tinyRepo <- function(pkgs, envir = parent.frame()) {
+  repo <- withr::local_tempdir(.local_envir = envir)
+  contrib <- file.path(repo, "src", "contrib")
+  dir.create(contrib, recursive = TRUE)
+  src <- withr::local_tempdir()
+  for (p in pkgs) {
+    d <- file.path(src, paste0(p$name, "_", p$version), p$name)
+    dir.create(file.path(d, "R"), recursive = TRUE)
+    writeLines(c(paste0("Package: ", p$name), paste0("Version: ", p$version), "Title: t",
+                 "Description: t.", "License: MIT", "Encoding: UTF-8", "NeedsCompilation: no",
+                 if (length(p$imports)) paste0("Imports: ", paste(p$imports, collapse = ", "))),
+               file.path(d, "DESCRIPTION"))
+    writeLines("export(f)", file.path(d, "NAMESPACE"))
+    writeLines("f <- function() 1", file.path(d, "R", "f.R"))
+    withr::with_dir(contrib, system2(file.path(R.home("bin"), "R"),
+                                     c("CMD", "build", "--no-build-vignettes", shQuote(d)),
+                                     stdout = TRUE, stderr = TRUE))
+  }
+  tools::write_PACKAGES(contrib, type = "source")
+  paste0("file://", normalizePath(repo, winslash = "/"))
+}

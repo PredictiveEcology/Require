@@ -44,7 +44,7 @@ Install(
   ...
 )
 
-UpdateOrInstall(packages, ...)
+UpdateOrInstall(...)
 }
 \arguments{
 \item{packages}{Either a character vector of packages to install via
@@ -225,7 +225,7 @@ wherever Require is installed.
 
 \code{Install} is the same as \code{Require(..., require = FALSE)}, for convenience.
 
-\code{UpdateOrInstall} is exactly \code{Install(packages, install = "HEAD", ...)}: every
+\code{UpdateOrInstall(packages, ...)} is exactly \code{Install(packages, install = "HEAD", ...)}: every
 package named is installed if missing, or updated to the latest commit of its
 GitHub branch or the newest CRAN release if it is not current.
 Dependencies are updated only when they fail a version floor, like
