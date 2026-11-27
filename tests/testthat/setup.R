@@ -321,18 +321,19 @@ PEUniverseRepo <- function() {
   unique(tolower(c("https://predictiveecology.r-universe.dev", getOption("repos"))))
 }
 
-## TEMPORARY DIAGNOSTIC (to be removed): record what is running when Windows R-devel hangs
+## TEMPORARY DIAGNOSTIC (to be removed): after 15 min, record and kill whatever the test process is waiting on
 if (.Platform$OS.type == "windows" && nzchar(Sys.getenv("GITHUB_ACTIONS"))) {
-  dir.create("_snaps", showWarnings = FALSE)
+  hangOut <- file.path(tempdir(), "hang_procs.txt")
   dbgScript <- tempfile(fileext = ".R")
   writeLines(c(
-    "out <- file.path(commandArgs(TRUE)[1], '_snaps', 'procs.txt')",
-    "ps <- \"Get-CimInstance Win32_Process | Where-Object { $_.Name -match '^(R|Rterm|Rscript|Rcmd|sh|make|gcc|g\\\\+\\\\+|pak|curl|git)' } | Select-Object ProcessId,ParentProcessId,Name,CreationDate,CommandLine | Format-List | Out-String -Width 600\"",
-    "repeat {",
-    "  Sys.sleep(120)",
-    "  o <- try(system2('powershell', c('-NoProfile', '-Command', shQuote(ps)), stdout = TRUE, stderr = TRUE), silent = TRUE)",
-    "  cat('=====', format(Sys.time()), '\\n', o, sep = '\\n', file = out, append = TRUE)",
-    "}"), dbgScript)
-  system2(file.path(R.home("bin"), "Rscript"), c(shQuote(dbgScript), shQuote(getwd())),
+    "args <- commandArgs(TRUE); parent <- args[1]; out <- args[2]; me <- Sys.getpid()",
+    "Sys.sleep(900)",
+    "ps <- paste0(\"function Kill-Tree($p) { Get-CimInstance Win32_Process -Filter ('ParentProcessId=' + $p) | ForEach-Object { if ($_.ProcessId -ne \", me, \") { Kill-Tree $_.ProcessId; Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue } } }; \",",
+    "  \"Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,CommandLine | Format-List | Out-String -Width 500 | Out-File \", shQuote(out, 'cmd'), \"; Kill-Tree \", parent)",
+    "system2('powershell', c('-NoProfile', '-Command', shQuote(ps)), stdout = FALSE, stderr = FALSE)"),
+    dbgScript)
+  system2(file.path(R.home("bin"), "Rscript"), c(shQuote(dbgScript), Sys.getpid(), shQuote(hangOut)),
           wait = FALSE, stdout = FALSE, stderr = FALSE)
+  withr::defer(if (file.exists(hangOut)) cat("\n=== HANG PROCESSES ===\n", readLines(hangOut), sep = "\n"),
+               envir = teardown_env())
 }
