@@ -8,7 +8,7 @@
 
 * Every package cloned by `Require.cloneFrom` is now loaded in a fresh R process after the install. A clone that fails to load is deleted (the source copy is untouched), installed normally instead, and never cloned into that library again. In an interactive session the check runs in the background and the next `Require()`/`Install()` on that library acts on it; in scripts and CI the call waits for it and repairs at once. Compiled packages are no longer cloned from a library on a network drive.
 
-* `UpdateOrInstall()` now forwards its arguments to `Install(install = "HEAD")` unevaluated, so unquoted package names work as they do in `Install()`. The install code reuses one helper for the installed-package specs and one for the `(HEAD)` suffix, and the tests that changed `.libPaths()` now restore it.
+* `UpdateOrInstall()` now forwards its arguments to `Install(install = "HEAD")` unevaluated, so unquoted package names work as they do in `Install()`. The install code now builds the installed-package specs and the `(HEAD)` suffix in one place each.
 
 ## Bug fixes
 

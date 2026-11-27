@@ -206,7 +206,6 @@ test_that("a small snapshot installs through the install.packages chain", {
   ## on all four Windows legs, while Linux and macOS pass. Not being fixed --
   ## this chain is slated for removal (#182).
   skip_on_os("windows")
-  libPathsBefore <- .libPaths()
   setupInitial <- setupTest()
   skip_if_offline2()
 
@@ -225,8 +224,8 @@ test_that("a small snapshot installs through the install.packages chain", {
   testlib <- file.path(tempdir(), paste0("rqlib_ipsnap_", as.integer(Sys.time())))
   dir.create(testlib, recursive = TRUE)
   on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
-  setLibPaths(testlib, standAlone = TRUE)
-  on.exit(.libPaths(libPathsBefore), add = TRUE)  # the paths from before setupTest(): its own restore has already run when this one does
+  origLibPaths <- setLibPaths(testlib, standAlone = TRUE)
+  on.exit(setLibPaths(origLibPaths), add = TRUE)
 
   withr::local_options(
     Require.snapshotInstaller = "install.packages",

@@ -3,7 +3,6 @@ test_that("small snapshot install pins each package to the requested version", {
   ## The fixture pins packages that are not Require Suggests -- so this is
   ## CI-only.
   skip_on_cran()
-  libPathsBefore <- .libPaths()
   setupInitial <- setupTest()
   skip_if_offline2()
 
@@ -45,8 +44,8 @@ test_that("small snapshot install pins each package to the requested version", {
   testlib <- file.path(tempdir(), paste0("rqlib_smallsnap_", as.integer(Sys.time())))
   dir.create(testlib, recursive = TRUE)
   on.exit(unlink(testlib, recursive = TRUE), add = TRUE)
-  setLibPaths(testlib, standAlone = TRUE)
-  on.exit(.libPaths(libPathsBefore), add = TRUE)  # the paths from before setupTest(): its own restore has already run when this one does
+  origLibPaths <- setLibPaths(testlib, standAlone = TRUE)
+  on.exit(setLibPaths(origLibPaths), add = TRUE)
 
   warns <- capture_warnings(
     out <- Require(packageVersionFile = snf, require = FALSE,
