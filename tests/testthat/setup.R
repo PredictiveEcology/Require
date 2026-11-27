@@ -320,3 +320,19 @@ rcmdLoad <- function(interactive = TRUE, counterName = "a", num = "max", path = 
 PEUniverseRepo <- function() {
   unique(tolower(c("https://predictiveecology.r-universe.dev", getOption("repos"))))
 }
+
+## TEMPORARY DIAGNOSTIC (to be removed): record what is running when Windows R-devel hangs
+if (.Platform$OS.type == "windows" && nzchar(Sys.getenv("GITHUB_ACTIONS"))) {
+  dir.create("_snaps", showWarnings = FALSE)
+  dbgScript <- tempfile(fileext = ".R")
+  writeLines(c(
+    "out <- file.path(commandArgs(TRUE)[1], '_snaps', 'procs.txt')",
+    "ps <- \"Get-CimInstance Win32_Process | Where-Object { $_.Name -match '^(R|Rterm|Rscript|Rcmd|sh|make|gcc|g\\\\+\\\\+|pak|curl|git)' } | Select-Object ProcessId,ParentProcessId,Name,CreationDate,CommandLine | Format-List | Out-String -Width 600\"",
+    "repeat {",
+    "  Sys.sleep(120)",
+    "  o <- try(system2('powershell', c('-NoProfile', '-Command', shQuote(ps)), stdout = TRUE, stderr = TRUE), silent = TRUE)",
+    "  cat('=====', format(Sys.time()), '\\n', o, sep = '\\n', file = out, append = TRUE)",
+    "}"), dbgScript)
+  system2(file.path(R.home("bin"), "Rscript"), c(shQuote(dbgScript), shQuote(getwd())),
+          wait = FALSE, stdout = FALSE, stderr = FALSE)
+}
