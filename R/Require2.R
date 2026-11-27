@@ -3941,13 +3941,14 @@ clonePackages <- function(rcf, ipa, libPaths, skip = character(),
   ipa
 }
 
-# Copy each of `Packages` from `fromLib` into `toLib`, never hard-linking: a link makes two
-# libraries share one inode, so a later in-place write to either (a second clone, a reinstall)
-# empties the file in both (26,525 files in every library sharing them, 2026-11-25). Each package
-# is copied into a working folder inside `toLib` (same file system) and renamed into place, so a
-# clone replaces the whole package folder, and `toLib` is locked meanwhile so two processes cannot
-# clone into it at once.
-copyPackageFilesInner <- function(Packages, fromLib, toLib) {
+# Copy each of `Packages` from `fromLib` into `toLib`. By default (`Require.cloneMethod = "copy"`) every
+# file is copied, never hard-linked: a link makes two libraries share one inode, so a later in-place
+# write to either (a second clone, a reinstall) empties the file in both (26,525 files in every
+# library sharing them, 2026-11-25). Each package is copied into a working folder inside `toLib`
+# (same file system) and renamed into place, so a clone replaces the whole package folder, and `toLib`
+# is locked meanwhile so two processes cannot clone into it at once. With `"hardlinkReadOnly"`
+# (experimental) only the per-file step changes; see linkPackageReadOnly().
+copyPackageFilesInner <- function(Packages, fromLib, toLib, method = cloneMethod()) {
   checkPath(toLib, create = TRUE)
   withCloneLock(toLib, function(refreshLock) {
     lapply(Packages, function(packToClone) {
@@ -3957,12 +3958,52 @@ copyPackageFilesInner <- function(Packages, fromLib, toLib) {
       work <- tempfile("00CLONE-", tmpdir = toLib)
       on.exit(unlink(work, recursive = TRUE), add = TRUE)
       dir.create(work)
-      ok <- all(file.copy(from, work, recursive = TRUE, copy.date = TRUE)) &&
-        replaceDirByRename(file.path(work, packToClone), file.path(toLib, packToClone))
+      ok <- (identical(method, "hardlinkReadOnly") && linkPackageReadOnly(from, work)) ||
+        all(file.copy(from, work, recursive = TRUE, copy.date = TRUE))
+      ok <- ok && replaceDirByRename(file.path(work, packToClone), file.path(toLib, packToClone))
       refreshLock() # a long clone must not look abandoned
       invisible(ok)
     })
   })
+}
+
+# `Require.cloneMethod`: "copy" (the default) or "hardlinkReadOnly". Never a link on Windows, and
+# an unknown value is a warning and "copy". (A link that fails, e.g. across file systems, is
+# handled per package by linkPackageReadOnly().)
+cloneMethod <- function(method = getOption("Require.cloneMethod", "copy")) {
+  method <- as.character(method)[1]
+  if (is.na(method) || !method %in% c("copy", "hardlinkReadOnly")) {
+    warning("Require.cloneMethod must be 'copy' or 'hardlinkReadOnly', not '", method, "'; using 'copy'",
+            call. = FALSE)
+    return("copy")
+  }
+  if (isWindows()) "copy" else method
+}
+
+# Experimental: make the folder `from` appear as `to`/<basename(from)> by hard-linking every file,
+# after taking the write bits off the source file. Permissions belong to the inode, so the file is
+# read-only under every name and a later write in place (`file.copy(overwrite = TRUE)`, `writeBin()`)
+# fails with EACCES instead of truncating the file in every library that shares it. Replacing a
+# file or folder by rename needs only a writable directory, and directories are made new, not linked,
+# so installs, `remove.packages()` and `unlink()` still work. Returns FALSE, leaving nothing behind
+# in `to`, if anything fails (a symlink in the package, chmod not permitted, a link across file
+# systems); the caller then copies. Source files already made read-only stay read-only.
+# (`link` and `chmod` are arguments so that tests can make them fail.)
+linkPackageReadOnly <- function(from, to, link = file.link, chmod = Sys.chmod) {
+  top <- file.path(to, basename(from))
+  ok <- tryCatch({
+    files <- list.files(from, recursive = TRUE, all.files = TRUE, no.. = TRUE, include.dirs = FALSE)
+    dirs <- setdiff(list.dirs(from, full.names = FALSE, recursive = TRUE), "")
+    src <- file.path(from, files)
+    mode <- as.integer(file.mode(src))
+    ro <- bitwAnd(mode, bitwNot(strtoi("222", 8L))) # no write bit for anyone
+    all(!is.na(mode)) && !any(nzchar(Sys.readlink(src))) && dir.create(top) &&
+      all(vapply(file.path(top, dirs), dir.create, logical(1))) &&
+      all(chmod(src[mode != ro], mode = as.octmode(ro[mode != ro]))) &&
+      all(suppressWarnings(link(src, file.path(top, files))))
+  }, error = function(e) FALSE)
+  if (!isTRUE(ok)) unlink(top, recursive = TRUE)
+  isTRUE(ok)
 }
 
 # Put the folder `new` at `to` with file.rename(), never writing into `to`. An existing `to` is

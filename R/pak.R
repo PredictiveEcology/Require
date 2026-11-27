@@ -3667,7 +3667,7 @@ ensurePakInProjectLib <- function(projLib, repos = getOption("repos"),
     projLibNorm <- tryCatch(normalizePath(projLib, mustWork = FALSE),
                             error = function(e) projLib)
     if (!is.null(src) && !identical(dirname(src), projLibNorm)) {
-      linked <- all(unlist(copyPackageFilesInner("pak", dirname(src), projLib)))
+      linked <- all(unlist(copyPackageFilesInner("pak", dirname(src), projLib, method = "copy")))
       if (linked)
         messageVerbose("  Copied pak from ", src, " (no reinstall needed)",
                        verbose = verbose, verboseLevel = 1)
