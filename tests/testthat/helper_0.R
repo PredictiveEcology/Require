@@ -216,12 +216,17 @@ dontDetach <- function() {
   dtd
 }
 
+## Folder each loaded namespace was loaded from (named by namespace; NA if unknown).
+loadedNamespacePaths <- function() {
+  loaded <- loadedNamespaces()
+  vapply(stats::setNames(loaded, loaded), function(n)
+    tryCatch(getNamespaceInfo(n, "path"), error = function(e) NA_character_), character(1))
+}
+
 ## Loaded namespaces whose folder no longer exists (lazy-loading from them fails; on Windows R-devel it hangs).
 staleNamespaces <- function() {
-  loaded <- loadedNamespaces()
-  paths <- vapply(loaded, function(n)
-    tryCatch(getNamespaceInfo(n, "path"), error = function(e) NA_character_), character(1))
-  loaded[!is.na(paths) & !dir.exists(paths)]
+  paths <- loadedNamespacePaths()
+  names(paths)[!is.na(paths) & !dir.exists(paths)]
 }
 
 ## Delete a test's temporary library. Install() puts pak (and what it loads with it) into the library it
@@ -230,10 +235,8 @@ staleNamespaces <- function() {
 ## stale namespace behind (`staleBefore` is staleNamespaces() from the start of the test).
 removeTestLib <- function(lib, staleBefore = character(0)) {
   norm <- function(p) normalizePath(p, winslash = "/", mustWork = FALSE)
-  loaded <- loadedNamespaces()
-  paths <- vapply(loaded, function(n)
-    tryCatch(getNamespaceInfo(n, "path"), error = function(e) NA_character_), character(1))
-  fromLib <- loaded[!is.na(paths) & startsWith(norm(paths), paste0(norm(lib), "/"))]
+  paths <- loadedNamespacePaths()
+  fromLib <- names(paths)[!is.na(paths) & startsWith(norm(paths), paste0(norm(lib), "/"))]
   if ("pak" %in% fromLib) try(Require:::pakResetSubprocess(), silent = TRUE)
   for (i in seq_along(fromLib))   # a namespace others import cannot go first
     for (n in intersect(fromLib, loadedNamespaces()))
