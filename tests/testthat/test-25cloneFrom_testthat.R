@@ -562,7 +562,7 @@ test_that("cloning over an existing clone replaces it and leaves the source alon
   expect_setequal(dir(to, all.files = TRUE, no.. = TRUE), c("tinyCloneA", "tinyCloneB"))
 })
 
-test_that("two processes cloning the same packages into one library at once damage nothing", {
+for (method in c("copy", "hardlinkReadOnly")) test_that(paste0("two processes cloning the same packages into one library at once damage nothing (", method, ")"), {
   skip_on_os("windows")
   skip_if_not_installed("callr")
   skip_if_not_installed("pkgload")
@@ -579,8 +579,9 @@ test_that("two processes cloning the same packages into one library at once dama
   libs <- unique(c(.libPaths(), dirname(vapply(loadedNamespaces(), function(n)
     tryCatch(getNamespaceInfo(n, "path"), error = function(e) NA_character_), ""))))
   libs <- libs[!is.na(libs) & dir.exists(libs)]
-  worker <- function(reqPath, from, to, pkgs, sync, id) {
+  worker <- function(reqPath, from, to, pkgs, sync, id, method) {
     if (is.null(reqPath)) loadNamespace("Require") else pkgload::load_all(reqPath, quiet = TRUE)
+    options(Require.cloneMethod = method)
     file.create(file.path(sync, paste0("ready", id)))
     while (!file.exists(file.path(sync, "go"))) Sys.sleep(0.005)
     for (i in 1:8) {
@@ -590,7 +591,7 @@ test_that("two processes cloning the same packages into one library at once dama
     "done"
   }
   procs <- lapply(1:2, function(id)
-    callr::r_bg(worker, args = list(reqPath, from, to, pkgs, sync, id), stderr = "2>&1", libpath = libs))
+    callr::r_bg(worker, args = list(reqPath, from, to, pkgs, sync, id, method), stderr = "2>&1", libpath = libs))
   while (length(dir(sync, pattern = "^ready")) < 2 && all(vapply(procs, function(p) p$is_alive(), logical(1))))
     Sys.sleep(0.05)
   file.create(file.path(sync, "go"))
@@ -598,13 +599,14 @@ test_that("two processes cloning the same packages into one library at once dama
   for (p in procs) expect_identical(p$get_result(), "done")
   ## the sources are untouched
   after <- statFiles(before$file)
-  expect_identical(after, before)
+  if (method == "copy") expect_identical(after, before) else # links and mode legitimately change
+    expect_identical(after[c("file", "inode", "size")], before[c("file", "inode", "size")])
   expect_identical(tools::md5sum(before$file), md5Before)
   ## the clones are whole, loadable, and no file is empty unless its source is
   dst <- statFiles(pkgFiles(to, pkgs))
   expect_identical(sort(sub(paste0("^", to), "", dst$file)), sort(sub(paste0("^", from), "", before$file)))
   expect_false(any(dst$size == 0 & !sub(paste0("^", to), "", dst$file) %in% sub(paste0("^", from), "", before$file[before$size == 0])))
-  expect_true(all(dst$links == 1L))
+  expect_true(all(dst$links == if (method == "copy") 1L else 2L)) # 2: this file and its source
   res <- system2(file.path(R.home("bin"), "Rscript"),
                  c("-e", shQuote(paste0("cat(vapply(c(", paste0("'", pkgs, "'", collapse = ","),
                                         "), function(p) as.character(requireNamespace(p)), ''))"))),
@@ -712,4 +714,202 @@ test_that("two processes taking over one abandoned lock never hold it together",
   for (p in procs) expect_identical(p$get_result(), 0L)
   expect_false(dir.exists(file.path(lib, "00LOCK-RequireClone")))
   expect_identical(dir(lib, all.files = TRUE, no.. = TRUE), character())
+})
+
+## ---- Require.cloneMethod = "hardlinkReadOnly" (experimental) ----------------------------------
+
+## Clone `pkgs` from `from` into a new library with the given method; return the library.
+cloneWith <- function(from, pkgs, method, envir = parent.frame()) {
+  to <- withr::local_tempdir(.local_envir = envir)
+  withr::local_options(Require.cloneMethod = method)
+  Require:::cloneCopies(Require:::clonablePackages(from, pkgs), toLib = to)
+  to
+}
+## Version of `pkg` as a fresh R process loads it from `lib` ("FAIL" if it does not load).
+versionIn <- function(lib, pkg) {
+  out <- system2(file.path(R.home("bin"), "Rscript"),
+                 c("-e", shQuote(paste0("cat(if (suppressWarnings(requireNamespace('", pkg, "', quietly = TRUE))) as.character(packageVersion('", pkg, "')) else 'FAIL')"))),
+                 env = paste0("R_LIBS=", lib), stdout = TRUE, stderr = FALSE)
+  if (length(out)) out else "FAIL"
+}
+pkgsAB <- c("tinyCloneA", "tinyCloneB")
+## chmod does not stop root, so the in-place writes below would succeed
+skipIfRoot <- function() testthat::skip_if(identical(Sys.info()[["effective_user"]], "root"), "root ignores file permissions")
+
+test_that("the default clone method is copy, also from the environment variable", {
+  expect_identical(RequireOptions()$Require.cloneMethod, "copy")
+  expect_identical(getOption("Require.cloneMethod"), "copy")
+  withr::local_envvar(R_REQUIRE_CLONE_METHOD = "hardlinkReadOnly")
+  expect_identical(RequireOptions()$Require.cloneMethod, "hardlinkReadOnly")
+  expect_identical(Require:::cloneMethod("copy"), "copy")
+  expect_warning(expect_identical(Require:::cloneMethod("symlink"), "copy"), "must be 'copy' or 'hardlinkReadOnly'")
+})
+
+test_that("hardlinkReadOnly: files are shared and read-only; an in-place write fails and truncates nothing", {
+  skip_on_os("windows")
+  skipIfRoot()
+  from <- cloneFromLib()
+  to <- cloneWith(from, pkgsAB, "hardlinkReadOnly")
+  src <- pkgFiles(from, pkgsAB)
+  rel <- sub(paste0("^", from, "/"), "", src)
+  st <- statFiles(c(src, file.path(to, rel)))
+  n <- length(src)
+  expect_identical(st$inode[1:n], st$inode[n + 1:n]) # one file, two names
+  expect_true(all(st$links == 2L))
+  expect_false(any(file.access(c(src, file.path(to, rel)), 2) == 0)) # read-only under both names
+  expect_true(all(dir.exists(file.path(to, pkgsAB))) && all(file.access(file.path(to, pkgsAB), 2) == 0)) # folders are new and writable
+  expect_setequal(dir(to, all.files = TRUE, no.. = TRUE), pkgsAB) # nothing of the clone's own working left
+
+  ## the 2026-11-25 incident: an in-place write onto a shared file. It fails; both names keep their bytes.
+  rdb <- "tinyCloneA/R/tinyCloneA.rdb"
+  empty <- withr::local_tempfile()
+  file.create(empty)
+  size <- file.size(file.path(from, rdb))
+  expect_gt(size, 0)
+  for (f in file.path(c(from, to), rdb)) {
+    expect_warning(expect_false(file.copy(empty, f, overwrite = TRUE)))
+    expect_error(suppressWarnings(writeBin(raw(0), f)))
+    expect_error(suppressWarnings(cat("", file = f)))
+  }
+  expect_identical(file.size(file.path(c(from, to), rdb)), c(size, size))
+
+  ## contrast: the plain hard link the old code made, with no chmod, is emptied under both names
+  plainFrom <- withr::local_tempdir()
+  plainTo <- withr::local_tempdir()
+  tinyPkg(plainFrom, "tinyCloneA")
+  old <- file.path(plainFrom, rdb)
+  expect_true(file.link(old, file.path(plainTo, "x.rdb")))
+  expect_true(file.copy(empty, file.path(plainTo, "x.rdb"), overwrite = TRUE))
+  expect_identical(file.size(c(old, file.path(plainTo, "x.rdb"))), c(0, 0))
+})
+
+test_that("hardlinkReadOnly through pakClonePackages: the clone loads and the source is still intact", {
+  skip_on_os("windows")
+  from <- cloneFromLib()
+  to <- withr::local_tempdir()
+  withr::local_options(Require.cloneFrom = from, Require.cloneMethod = "hardlinkReadOnly")
+  setSolve()
+  out <- Require:::pakClonePackages(planDT(), libPaths = to, verbose = 0)
+  expect_true(all(out$installResult == "OK"))
+  expect_true(all(statFiles(pkgFiles(to, pkgsAB))$links == 2L))
+  expect_identical(versionIn(to, "tinyCloneB"), "0.0.1")
+  expect_identical(versionIn(from, "tinyCloneB"), "0.0.1")
+})
+
+test_that("hardlinkReadOnly: a newer version installed into the SOURCE library leaves the clone intact and loadable", {
+  skip_on_os("windows")
+  skipIfRoot()
+  from <- cloneFromLib()
+  to <- cloneWith(from, pkgsAB, "hardlinkReadOnly")
+  cloned <- pkgFiles(to, pkgsAB)
+  md5 <- tools::md5sum(cloned)
+  repo <- tinyRepo(list(list(name = "tinyCloneA", version = "0.0.2")))
+  withr::local_options(repos = c(tiny = repo))
+  utils::install.packages("tinyCloneA", lib = from, type = "source", quiet = TRUE) # R CMD INSTALL over read-only, linked files
+  expect_identical(versionIn(from, "tinyCloneA"), "0.0.2")
+  expect_identical(versionIn(to, "tinyCloneA"), "0.0.1")  # the clone keeps the old one
+  expect_identical(versionIn(to, "tinyCloneB"), "0.0.1")  # and still loads what imports it
+  expect_identical(tools::md5sum(cloned), md5)
+  clonedA <- pkgFiles(to, "tinyCloneA")
+  expect_true(all(statFiles(clonedA)$links == 1L)) # its files lost their other name, and are still read-only
+  expect_true(all(statFiles(pkgFiles(to, "tinyCloneB"))$links == 2L)) # B is still shared with the source
+  expect_false(any(file.access(cloned, 2) == 0))
+  expect_length(dir(from, pattern = "^00LOCK|^00OLD", all.files = TRUE), 0)
+  ## and the other way: a newer version into the CLONE's library
+  utils::install.packages("tinyCloneA", lib = to, type = "source", quiet = TRUE)
+  expect_identical(versionIn(to, "tinyCloneA"), "0.0.2")
+  expect_identical(versionIn(from, "tinyCloneA"), "0.0.2")
+})
+
+test_that("hardlinkReadOnly: remove.packages() and unlink() in either library leave the other intact", {
+  skip_on_os("windows")
+  skipIfRoot()
+  from <- cloneFromLib()
+  to <- cloneWith(from, pkgsAB, "hardlinkReadOnly")
+  to2 <- cloneWith(from, pkgsAB, "hardlinkReadOnly")
+  md5 <- tools::md5sum(pkgFiles(from, pkgsAB))
+  utils::remove.packages("tinyCloneB", lib = to)           # R's own remover
+  expect_false(dir.exists(file.path(to, "tinyCloneB")))
+  expect_identical(unlink(file.path(to2, "tinyCloneA"), recursive = TRUE), 0L) # a plain recursive unlink
+  expect_false(dir.exists(file.path(to2, "tinyCloneA")))
+  expect_identical(tools::md5sum(names(md5)), md5)
+  expect_identical(versionIn(from, "tinyCloneB"), "0.0.1")
+  expect_identical(versionIn(to, "tinyCloneA"), "0.0.1")
+  expect_identical(versionIn(to2, "tinyCloneA"), "FAIL") # removed there only
+  ## removing from the source library: the clone is intact
+  utils::remove.packages(pkgsAB, lib = from)
+  expect_identical(versionIn(to, "tinyCloneA"), "0.0.1")
+  expect_true(all(file.exists(pkgFiles(to, "tinyCloneA"))))
+})
+
+test_that("hardlinkReadOnly gives up a package cleanly when a link or chmod fails, and the clone then copies", {
+  skip_on_os("windows")
+  from <- cloneFromLib()
+  pkg <- file.path(from, "tinyCloneA")
+  modes <- file.mode(pkgFiles(from, "tinyCloneA")); names(modes) <- pkgFiles(from, "tinyCloneA")
+  noLink <- function(from, to) rep(FALSE, length(from))
+  ## a link that fails part-way through (the first file is linked, as before a cross-file-system failure)
+  halfLink <- function(from, to) c(base::file.link(from[1], to[1]), rep(FALSE, length(from) - 1))
+  noChmod <- function(paths, mode, ...) rep(FALSE, length(paths))
+  ## chmod succeeds for the first file only: that one is put back
+  partChmod <- function(paths, mode, ...) { Sys.chmod(paths[1], mode[1]); c(TRUE, rep(FALSE, length(paths) - 1)) }
+  for (fns in list(list(chmod = noChmod), list(chmod = partChmod), list(link = noLink), list(link = halfLink))) {
+    work <- withr::local_tempdir()
+    expect_false(do.call(Require:::linkPackageReadOnly, c(list(pkg, work), fns)))
+    expect_length(dir(work, all.files = TRUE, no.. = TRUE), 0) # nothing half-linked is left behind
+    expect_identical(as.integer(file.mode(names(modes))), as.integer(modes)) # the source modes are exactly as before
+    expect_true(all(file.access(pkgFiles(from, "tinyCloneA"), 2) == 0)) # and still writable
+  }
+  ## a symlink in a package cannot be linked as a file: the whole package is copied instead
+  file.symlink("DESCRIPTION", file.path(pkg, "linkToDESCRIPTION"))
+  to <- cloneWith(from, pkgsAB, "hardlinkReadOnly")
+  st <- statFiles(pkgFiles(to, "tinyCloneA"))
+  expect_true(all(st$links == 1L)) # copied, so no link to the source
+  expect_true(all(file.access(pkgFiles(to, "tinyCloneA"), 2) == 0)) # and as writable as the source was
+  expect_identical(as.integer(file.mode(names(modes))), as.integer(modes))
+  expect_true(all(statFiles(pkgFiles(to, "tinyCloneB"))$links == 2L)) # the other package was linked
+  expect_identical(versionIn(to, "tinyCloneA"), "0.0.1")
+  ## across file systems, where there is one to try: /dev/shm is not the disk of tempdir()
+  shm <- "/dev/shm"
+  if (dir.exists(shm) && file.access(shm, 2) == 0) {
+    fromShm <- withr::local_tempdir(tmpdir = shm)
+    file.copy(file.path(from, pkgsAB), fromShm, recursive = TRUE)
+    dev <- function(p) as.numeric(system2("stat", c(if (Sys.info()[["sysname"]] == "Darwin") c("-f", "%d") else c("-c", "%d"), shQuote(p)), stdout = TRUE))
+    toDisk <- cloneWith(fromShm, pkgsAB, "hardlinkReadOnly")
+    if (dev(fromShm) != dev(toDisk)) expect_true(all(statFiles(pkgFiles(toDisk, pkgsAB))$links == 1L))
+    expect_identical(versionIn(toDisk, "tinyCloneB"), "0.0.1")
+  }
+})
+
+test_that("hardlinkReadOnly is never used on Windows", {
+  testthat::local_mocked_bindings(isWindows = function() TRUE, .package = "Require")
+  expect_identical(Require:::cloneMethod("hardlinkReadOnly"), "copy")
+})
+
+test_that("hardlinkReadOnly: space and time against copy, on about 20 packages", {
+  skip_on_os("windows")
+  skip_if_not(nzchar(Sys.which("du")))
+  ip <- utils::installed.packages(lib.loc = .libPaths())
+  pkgs <- unique(ip[, "Package"][!ip[, "Package"] %in% Require:::.pakNoCopyPkgs()])
+  pkgs <- head(pkgs[order(ip[match(pkgs, ip[, "Package"]), "Priority"] %in% "base")], 20) # not-base first
+  from <- withr::local_tempdir()
+  for (p in pkgs) file.copy(file.path(ip[match(p, ip[, "Package"]), "LibPath"], p), from, recursive = TRUE) # a temporary source library
+  pkgs <- intersect(pkgs, dir(from))
+  res <- lapply(c("copy", "hardlinkReadOnly"), function(method) {
+    to <- withr::local_tempdir()
+    withr::local_options(Require.cloneMethod = method)
+    cp <- Require:::clonablePackages(from, pkgs)
+    secs <- system.time(Require:::cloneCopies(cp, toLib = to))[["elapsed"]]
+    ## `du` given both libraries counts a file once: the second line is what the clone added
+    kb <- as.numeric(sub("\\t.*", "", system2("du", c("-sk", shQuote(from), shQuote(to)), stdout = TRUE)))
+    data.frame(method = method, packages = length(cp$Package), files = length(pkgFiles(to, pkgs)),
+               sourceKB = kb[1], addedKB = kb[2], seconds = round(secs, 2))
+  })
+  res <- do.call(rbind, res)
+  cat("\n\nclone cost, ", res$packages[1], " packages from a temporary library:\n", sep = "")
+  print(res, row.names = FALSE)
+  cat("\n")
+  expect_identical(res$packages[1], res$packages[2])
+  expect_identical(res$files[1], res$files[2])
+  expect_gt(res$addedKB[1], 0)
 })

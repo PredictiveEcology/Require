@@ -117,6 +117,25 @@ resolved is preferred, then the highest. Under \code{Require.usePak = FALSE} the
 copy must be exactly the version that would be installed, and neither
 GitHub packages nor the always-from-source packages (\code{\link[=sourcePkgs]{sourcePkgs()}}) are
 cloned.}
+\item{\code{cloneMethod}}{ Default: \code{"copy"}. How \code{cloneFrom} puts a package into the
+destination library: \code{"copy"} copies every file. \code{"hardlinkReadOnly"} is
+experimental: each file is hard-linked, not copied, after the write
+permission is taken off the \emph{source} file. Permissions belong to the file,
+not to a name for it, so the file is read-only in every library that shares it,
+and writing into it in place (\code{file.copy(overwrite = TRUE)}, \code{writeBin()},
+\verb{cat >}) is an error instead of silently emptying the file in all of them.
+Replacing a file or folder by renaming one over it, as R's installer and
+\code{Require} do, needs only a writable folder and still works, as do
+\code{remove.packages()} and \code{unlink()}. \strong{This mode changes the source library:
+its package files become read-only, so any tool that edits an installed
+package's files in place (a package that writes into its own folder at run
+time, a manual edit) now fails there and in every clone.} Installing a
+newer version into either library gives that library its own new files; the
+other keeps the old ones. Space is saved and cloning is faster, but nothing
+is shared across file systems or on Windows, where a package is copied; a
+package that cannot be chmodded or linked (a symlink in it, a source you do
+not own) is copied too, never left half-linked. Also set by the environment
+variable \code{R_REQUIRE_CLONE_METHOD}.}
 \item{\code{downloadTimeout}}{Default: \code{300L} (seconds). Used as the floor for
 \code{options("timeout")} during GitHub source-archive downloads in the legacy
 (non-pak) install path. R's stock 60-second timeout is too short for

@@ -107,6 +107,25 @@
 #'   copy must be exactly the version that would be installed, and neither
 #'   GitHub packages nor the always-from-source packages ([sourcePkgs()]) are
 #'   cloned.}
+#' \item{`cloneMethod`}{ Default: `"copy"`. How `cloneFrom` puts a package into the
+#'   destination library: `"copy"` copies every file. `"hardlinkReadOnly"` is
+#'   experimental: each file is hard-linked, not copied, after the write
+#'   permission is taken off the *source* file. Permissions belong to the file,
+#'   not to a name for it, so the file is read-only in every library that shares it,
+#'   and writing into it in place (`file.copy(overwrite = TRUE)`, `writeBin()`,
+#'   `cat >`) is an error instead of silently emptying the file in all of them.
+#'   Replacing a file or folder by renaming one over it, as R's installer and
+#'   `Require` do, needs only a writable folder and still works, as do
+#'   `remove.packages()` and `unlink()`. **This mode changes the source library:
+#'   its package files become read-only, so any tool that edits an installed
+#'   package's files in place (a package that writes into its own folder at run
+#'   time, a manual edit) now fails there and in every clone.** Installing a
+#'   newer version into either library gives that library its own new files; the
+#'   other keeps the old ones. Space is saved and cloning is faster, but nothing
+#'   is shared across file systems or on Windows, where a package is copied; a
+#'   package that cannot be chmodded or linked (a symlink in it, a source you do
+#'   not own) is copied too, never left half-linked. Also set by the environment
+#'   variable `R_REQUIRE_CLONE_METHOD`.}
 #' \item{`downloadTimeout`}{Default: `300L` (seconds). Used as the floor for
 #'   `options("timeout")` during GitHub source-archive downloads in the legacy
 #'   (non-pak) install path. R's stock 60-second timeout is too short for
@@ -173,6 +192,7 @@ RequireOptions <- function() {
     Require.cachePkgDir = "default",
     Require.checkInternet = TRUE,
     Require.cloneFrom = TRUE,
+    Require.cloneMethod = "copy",
     Require.downloadTimeout = 300L,
     Require.install = TRUE,
     Require.installPackagesSys = 2L, # if (isMacOS()) 2L else 2L,
