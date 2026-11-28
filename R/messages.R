@@ -86,6 +86,8 @@ comma <- ", "
 .txtLocal <- "Local"
 .txtNoLocal <- "noLocal"
 
+## starts with "OK" (so it still counts as a usable package) but is not "OK" (nothing was installed, so it is not counted as installed)
+.txtOKKept <- "OK; kept (unchanged)"
 .txtShaUnchangedNoInstall <- "SHA unchanged; no install"
 
 .txtNoneAvailable <- "noneAvailable"

@@ -472,12 +472,7 @@ installSnapshotViaInstallPackages <- function(snapshot,
   ipDesc <- function(p) {
     f <- file.path(destLib, p, "DESCRIPTION")
     if (!file.exists(f)) return(NA_character_)
-    dcf <- tryCatch(read.dcf(f, fields = c("RemoteSha", "GithubSHA1")),
-                    error = function(e) NULL)
-    if (is.null(dcf) || nrow(dcf) == 0) return(NA_character_)
-    sha <- dcf[1, "RemoteSha"]
-    if (is.na(sha) || !nzchar(sha)) sha <- dcf[1, "GithubSHA1"]
-    sha
+    installedSHA(f)
   }
 
   isGH <- !is.na(pkgs$GithubRepo) & nzchar(pkgs$GithubRepo)
@@ -1570,15 +1565,9 @@ installSnapshotViaInstallPackages <- function(snapshot,
       ## ("+ visualTest 1.0.0 -> 1.0.0" update-to-itself churn).
       f <- file.path(destLib, pkgs$Package[i], "DESCRIPTION")
       if (file.exists(f)) {
-        dcf <- tryCatch(read.dcf(f, fields = c("RemoteSha","GithubSHA1")),
-                        error = function(e) NULL)
-        if (!is.null(dcf) && nrow(dcf) > 0) {
-          sha <- dcf[1, "RemoteSha"]
-          if (is.na(sha) || !nzchar(sha)) sha <- dcf[1, "GithubSHA1"]
-          if (!is.na(sha) && nzchar(sha))
-            return(isTRUE(as.character(sha) ==
-                          as.character(pkgs$GithubSHA1[i])))
-        }
+        sha <- installedSHA(f)
+        if (!is.na(sha) && nzchar(sha))
+          return(isTRUE(as.character(sha) == as.character(pkgs$GithubSHA1[i])))
       }
       ## Fallback: version match. Snapshot's Version pin is enough when
       ## the installed copy doesn't carry SHA metadata.

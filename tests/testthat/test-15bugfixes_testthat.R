@@ -1669,3 +1669,42 @@ test_that("pkgSnapshot2() and updatePackages() keep a GitHub subfolder", {
   expect_identical(Require:::pkgSnapshot2(libPaths = "x", exact = TRUE),
                    c("acct/mono/sub@abc", "acct/plain@def", "cranPkg (==1.0)"))
 })
+
+test_that("a package pak keeps unchanged is not reported as 'Installed N packages'", {
+  skip_on_cran()
+  withr::local_options(Require.cloneFrom = FALSE)
+  lib <- withr::local_tempdir()
+  # two repositories (pak caches a repository's metadata per session): the second has a newer version
+  repoOld <- tinyRepo(list(list(name = "tinyKeptPkg", version = "1.0.0")))
+  repoNew <- tinyRepo(list(list(name = "tinyKeptPkg", version = "1.0.1")))
+  run <- function(repo, ...) {
+    msgs <- character()
+    withCallingHandlers(
+      UpdateOrInstall("tinyKeptPkg", libPaths = lib, standAlone = TRUE, repos = repo, verbose = 1, ...),
+      message = function(m) { msgs <<- c(msgs, conditionMessage(m)); invokeRestart("muffleMessage") })
+    paste(msgs, collapse = "")
+  }
+  ver <- function() as.character(utils::packageVersion("tinyKeptPkg", lib.loc = lib))
+
+  expect_match(run(repoOld), "Installed 1 packages")      # a real install is counted
+  expect_identical(ver(), "1.0.0")
+
+  out <- run(repoOld)                                     # already the latest: pak keeps it
+  expect_identical(ver(), "1.0.0")
+  expect_match(out, "pak install strategy")               # these runs go through the pak path
+  expect_false(grepl("Installed [0-9]+ packages", out))
+
+  # a kept package that is already loaded does not ask for a restart
+  loadNamespace("tinyKeptPkg", lib.loc = lib)
+  withr::defer(try(unloadNamespace("tinyKeptPkg"), silent = TRUE))
+  warns <- character()
+  out <- withCallingHandlers(run(repoOld),
+                             warning = function(w) { warns <<- c(warns, conditionMessage(w)); invokeRestart("muffleWarning") })
+  expect_false(any(grepl("restart", warns, ignore.case = TRUE)))   # (HEAD + loaded + counted as installed warns)
+  expect_match(out, "pak install strategy")
+  expect_false(grepl("Installed [0-9]+ packages", out))
+  try(unloadNamespace("tinyKeptPkg"), silent = TRUE)
+
+  expect_match(run(repoNew), "Installed 1 packages")      # a real update is counted
+  expect_identical(ver(), "1.0.1")
+})
