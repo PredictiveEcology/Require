@@ -3898,14 +3898,19 @@ pakInstalledIsReplaced <- function(pkg, descPath) {
   !is.na(installed) && !identical(as.character(installed), resolved)
 }
 
-# When each package's DESCRIPTION in `lib` was last written (NA if absent). pak
-# writes a new one on every install, even of the same version and commit, and
-# leaves it alone when it keeps a package, so a change means "installed".
-# (pak's own result, lib_status, says "current" for a kept package but does not
-# reach here: pakInstallFiltered makes many pak calls across retry/serial paths.)
+# A fingerprint of each package's DESCRIPTION in `lib` (NA if absent): mtime, size
+# and Built. pak writes a new DESCRIPTION on every install, even of the same
+# version and commit, and leaves it alone when it keeps a package, so a change
+# means "installed". Not ctime: chmod and hard links (Require.cloneFrom's
+# hardlinkReadOnly) change that without installing anything. (pak's own result,
+# lib_status, says "current" for a kept package but does not reach here:
+# pakInstallFiltered makes many pak calls across retry/serial paths.)
 installedStamps <- function(lib, pkgs) {
   f <- file.path(lib, pkgs, "DESCRIPTION")
-  setNames(file.info(f, extra_cols = FALSE)$ctime, pkgs)
+  fi <- file.info(f, extra_cols = FALSE)
+  built <- vapply(f, function(x) if (file.exists(x)) as.character(DESCRIPTIONFileOtherV(x, other = "Built")) else NA_character_,
+                  character(1), USE.NAMES = FALSE)
+  setNames(ifelse(is.na(fi$mtime), NA_character_, paste(format(fi$mtime, "%Y%m%d%H%M%OS6"), fi$size, built)), pkgs)
 }
 
 # Install only the packages Require has determined need installing (needInstall == .txtInstall).
@@ -4863,7 +4868,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
       set(pkgDT, wh, "Version",           installedVer)
       set(pkgDT, wh, "LibPath",           nowRow$LibPath[1])
       ## pak "keeps" a package that already satisfies the request: its DESCRIPTION
-      ## is untouched, so nothing was installed (see installedStamps).
+      ## is unchanged, so nothing was installed (see installedStamps).
       kept <- !is.na(preInstallStamps[pkg]) && identical(preInstallStamps[pkg], nowInstalledStamps[pkg])
       set(pkgDT, wh, "installResult",     if (kept) .txtOKKept else "OK")
     } else {

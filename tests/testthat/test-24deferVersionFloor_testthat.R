@@ -116,3 +116,17 @@ test_that("a kept loaded HEAD package is not flagged for restart, a reinstalled 
   expect_match(flag("OK"), "restart")
   expect_identical(flag(Require:::.txtOKKept), Require:::.txtOKKept)
 })
+
+test_that("installedStamps ignores chmod and hard links but sees a rewritten DESCRIPTION", {
+  lib <- tinyPkgLib("0.0.1")
+  before <- Require:::installedStamps(lib, "tinyFloorPkg")
+  f <- file.path(lib, "tinyFloorPkg", "DESCRIPTION")
+  Sys.sleep(1.1)
+  Sys.chmod(f, "444")
+  suppressWarnings(file.link(f, file.path(withr::local_tempdir(), "DESCRIPTION")))
+  expect_identical(Require:::installedStamps(lib, "tinyFloorPkg"), before)
+  Sys.chmod(f, "644")
+  writeLines(readLines(f), f)
+  expect_false(identical(Require:::installedStamps(lib, "tinyFloorPkg"), before))
+  expect_true(is.na(Require:::installedStamps(lib, "notThere")))
+})
