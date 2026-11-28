@@ -145,6 +145,14 @@ DESCRIPTIONFileOtherV <- function(file, other = "RemoteSha") {
   unlist(out)
 }
 
+# The commit an installed package was built from: RemoteSha (pak), else
+# GithubSHA1 (Require); NA if neither is recorded.
+installedSHA <- function(descFile) {
+  sha <- DESCRIPTIONFileOtherV(descFile, other = "RemoteSha")
+  if (is.na(sha) || !nzchar(sha)) sha <- DESCRIPTIONFileOtherV(descFile, other = "GithubSHA1")
+  sha
+}
+
 .compareVersionV <- Vectorize(compareVersion)
 .evalV <- Vectorize(eval, vectorize.args = "expr")
 .parseV <- Vectorize(parse, vectorize.args = "text")

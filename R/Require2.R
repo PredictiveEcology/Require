@@ -1165,8 +1165,7 @@ installedShaDiffersFromPin <- function(pkgDT, libPaths) {
     descFile <- file.path(libPaths, pkgDT[["Package"]][k], "DESCRIPTION")
     descFile <- descFile[file.exists(descFile)][1]
     if (is.na(descFile)) next
-    sha <- DESCRIPTIONFileOtherV(descFile, other = "RemoteSha")
-    if (is.na(sha) || !nzchar(sha)) sha <- DESCRIPTIONFileOtherV(descFile, other = "GithubSHA1")
+    sha <- installedSHA(descFile)
     if (!is.na(sha) && nzchar(sha) && !startsWith(tolower(sha), tolower(pkgDT[["Branch"]][k])))
       set(pkgDT, k, "installedVersionOK", FALSE)
   }
@@ -4815,7 +4814,7 @@ alreadyExistingDESCFile <- function(libPaths, Repo, Account, Branch, installResu
   alreadyExistingDESCRIPTIONFile <- file.path(libPaths[1], Repo, "DESCRIPTION")
   SHAonGH <- getSHAfromGitHubMemoise(repo = Repo, acct = Account, br = Branch, verbose = verbose)
   if (file.exists(alreadyExistingDESCRIPTIONFile)) {
-    SHAonLocal <- DESCRIPTIONFileOtherV(alreadyExistingDESCRIPTIONFile, other = "GithubSHA1")
+    SHAonLocal <- installedSHA(alreadyExistingDESCRIPTIONFile)
     SHAonLocal <- unique(SHAonLocal)[1] # seems like it can be >1, which is an error
     # SHAonGH <- if (identical(SHAonGH, SHAonLocal)) FALSE else SHAonGH
     if (identical(SHAonGH, SHAonLocal)) {

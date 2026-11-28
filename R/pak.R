@@ -3898,16 +3898,14 @@ pakInstalledIsReplaced <- function(pkg, descPath) {
   !is.na(installed) && !identical(as.character(installed), resolved)
 }
 
-# The commit (RemoteSha, else GithubSHA1) recorded in each installed package's
-# DESCRIPTION in `lib`; NA for a package that is absent or is not from GitHub.
-installedRemoteSHAs <- function(lib, pkgs) {
-  vapply(pkgs, function(p) {
-    f <- file.path(lib, p, "DESCRIPTION")
-    if (!file.exists(f)) return(NA_character_)
-    sha <- DESCRIPTIONFileOtherV(f, other = "RemoteSha")
-    if (is.na(sha) || !nzchar(sha)) sha <- DESCRIPTIONFileOtherV(f, other = "GithubSHA1")
-    as.character(sha)
-  }, character(1))
+# When each package's DESCRIPTION in `lib` was last written (NA if absent). pak
+# writes a new one on every install, even of the same version and commit, and
+# leaves it alone when it keeps a package, so a change means "installed".
+# (pak's own result, lib_status, says "current" for a kept package but does not
+# reach here: pakInstallFiltered makes many pak calls across retry/serial paths.)
+installedStamps <- function(lib, pkgs) {
+  f <- file.path(lib, pkgs, "DESCRIPTION")
+  setNames(file.info(f, extra_cols = FALSE)$ctime, pkgs)
 }
 
 # Install only the packages Require has determined need installing (needInstall == .txtInstall).
@@ -4325,7 +4323,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
     }
     pv
   }
-  preInstallSHAs <- installedRemoteSHAs(libPaths[1L], toInstall$Package)
+  preInstallStamps <- installedStamps(libPaths[1L], toInstall$Package)
 
   # ---------------------------------------------------------------------------
   # Install: iterative identify-and-defer
@@ -4774,7 +4772,7 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
                                LibPath = character(0))
   }
   nowInstalledAll <- NULL  # computed lazily in the else-branch below
-  nowInstalledSHAs <- installedRemoteSHAs(libPaths[1L], toInstall$Package)
+  nowInstalledStamps <- installedStamps(libPaths[1L], toInstall$Package)
   ## The name the package installs under, which for a GitHub repo named
   ## differently from its package (RNCan/BioSimClient_R -> BioSIM) is not `Package`.
   instNames <- toInstall$Package
@@ -4864,10 +4862,9 @@ pakInstallFiltered <- function(pkgDT, libPaths, repos, standAlone, verbose,
       set(pkgDT, wh, "installedVersionOK", TRUE)
       set(pkgDT, wh, "Version",           installedVer)
       set(pkgDT, wh, "LibPath",           nowRow$LibPath[1])
-      ## pak "keeps" a package that already satisfies the request: same version and
-      ## same commit as before the call means nothing was installed.
-      kept <- !is.na(preInstallVers[pkg]) && identical(unname(preInstallVers[pkg]), installedVer) &&
-        identical(unname(preInstallSHAs[pkg]), unname(nowInstalledSHAs[pkg]))
+      ## pak "keeps" a package that already satisfies the request: its DESCRIPTION
+      ## is untouched, so nothing was installed (see installedStamps).
+      kept <- !is.na(preInstallStamps[pkg]) && identical(preInstallStamps[pkg], nowInstalledStamps[pkg])
       set(pkgDT, wh, "installResult",     if (kept) .txtOKKept else "OK")
     } else {
       # Package not in libPaths[1] -- may already be installed (and satisfying)

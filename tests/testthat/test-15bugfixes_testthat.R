@@ -1691,6 +1691,7 @@ test_that("a package pak keeps unchanged is not reported as 'Installed N package
 
   out <- run(repoOld)                                     # already the latest: pak keeps it
   expect_identical(ver(), "1.0.0")
+  expect_match(out, "pak install strategy")               # these runs go through the pak path
   expect_false(grepl("Installed [0-9]+ packages", out))
 
   # a kept package that is already loaded does not ask for a restart
@@ -1699,7 +1700,8 @@ test_that("a package pak keeps unchanged is not reported as 'Installed N package
   warns <- character()
   out <- withCallingHandlers(run(repoOld),
                              warning = function(w) { warns <<- c(warns, conditionMessage(w)); invokeRestart("muffleWarning") })
-  expect_false(any(grepl("restart", warns, ignore.case = TRUE)))
+  expect_false(any(grepl("restart", warns, ignore.case = TRUE)))   # (HEAD + loaded + counted as installed warns)
+  expect_match(out, "pak install strategy")
   expect_false(grepl("Installed [0-9]+ packages", out))
   try(unloadNamespace("tinyKeptPkg"), silent = TRUE)
 

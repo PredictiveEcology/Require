@@ -65,3 +65,54 @@ test_that("identify-and-defer retries a package installed below its floor", {
   expect_true(any(grepl("tinyFloorPkg", asked$refs)))
   expect_identical(unname(installed.packages(lib, noCache = TRUE)[, "Version"]), "0.0.2")
 })
+
+test_that("a package pak reinstalls at the same version is counted as installed; one it keeps is not", {
+  ## pak reports a kept package and a same-version reinstall alike (same version, and for CRAN no
+  ## commit), so pakInstallFiltered looks at whether the package's DESCRIPTION was rewritten.
+  run <- function(reinstall, gh = FALSE) {
+    lib <- tinyPkgLib("0.0.1")
+    src <- withr::local_tempdir(.local_envir = parent.frame())
+    p <- file.path(src, "tinyFloorPkg"); dir.create(file.path(p, "R"), recursive = TRUE)
+    writeLines(c("Package: tinyFloorPkg", "Version: 0.0.1", "Title: t", "Description: t.",
+                 "License: MIT", "Encoding: UTF-8", if (gh) "RemoteSha: new"),
+               file.path(p, "DESCRIPTION"))
+    writeLines("export(f)", file.path(p, "NAMESPACE")); writeLines("f <- function() 1", file.path(p, "R", "f.R"))
+    ## the first pak call is the one that (re)installs or keeps the package
+    testthat::local_mocked_bindings(
+      pak = function(...) {
+        if (reinstall) {
+          Sys.sleep(1.1)
+          system2(file.path(R.home("bin"), "R"), c("CMD", "INSTALL", "--no-test-load", "-l", shQuote(lib), shQuote(p)),
+                  stdout = TRUE, stderr = TRUE)
+        }
+        invisible(NULL)
+      }, .package = "pak")
+    testthat::local_mocked_bindings(pakResetSubprocess = function(...) invisible(NULL), .package = "Require")
+    pkgDT <- data.table::data.table(
+      Package = "tinyFloorPkg", packageFullName = if (gh) "Owner/tinyFloorPkg@main" else "tinyFloorPkg",
+      needInstall = Require:::.txtInstall, versionSpec = NA_character_, inequality = NA_character_,
+      Version = NA_character_, LibPath = lib, installed = FALSE, installedVersionOK = FALSE,
+      loadedSufficient = FALSE, repoLocation = if (gh) "GitHub" else "CRAN",
+      Account = if (gh) "Owner" else NA_character_, Repo = if (gh) "tinyFloorPkg" else NA_character_,
+      Branch = if (gh) "main" else NA_character_, GitSubFolder = NA_character_)
+    suppressWarnings(Require:::pakInstallFiltered(pkgDT, libPaths = lib, repos = getOption("repos"),
+                                                  standAlone = TRUE, verbose = -2))$installResult
+  }
+  skip_if_not_installed("pak")
+  expect_identical(run(reinstall = FALSE), Require:::.txtOKKept)
+  expect_identical(run(reinstall = TRUE), "OK")                  # same version, CRAN
+  expect_identical(run(reinstall = TRUE, gh = TRUE), "OK")       # same version, new commit
+})
+
+test_that("a kept loaded HEAD package is not flagged for restart, a reinstalled one is", {
+  loadedPkg <- "data.table"   # loaded (and not a base package); the flag only needs a loaded namespace
+  mk <- function(res) data.table::data.table(
+    Package = loadedPkg, versionSpec = NA_character_, inequality = NA_character_,
+    Version = "1.0", needInstall = Require:::.txtInstall, installResult = res, hasHEAD = TRUE)
+  flag <- function(res) {
+    d <- mk(res); data.table::setnames(d, "hasHEAD", Require:::hasHEADtxt)
+    Require:::flagRestartForLoadedInsufficient(d)$installResult
+  }
+  expect_match(flag("OK"), "restart")
+  expect_identical(flag(Require:::.txtOKKept), Require:::.txtOKKept)
+})
